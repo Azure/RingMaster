@@ -1,0 +1,208 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterTestApplication" ApplicationTypeVersion="1.0.0.38" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <Parameter Name="EnvironmentName" DefaultValue="" />
+    <Parameter Name="Tenant" DefaultValue="" />
+    <Parameter Name="MdmAccountName" DefaultValue="" />
+    <Parameter Name="MdmNamespace" DefaultValue="RingMasterStress" />
+    <Parameter Name="TargetConnectionString" DefaultValue="" />
+    <Parameter Name="ConnectionStress.TestPath" DefaultValue="/Data" />
+    <Parameter Name="ConnectionStress.NumberOfConnections" DefaultValue="10000" />
+    <Parameter Name="ConnectionStress.MaxConcurrentRequests" DefaultValue="4" />
+    <Parameter Name="ConnectionStress.MinConnectionLifetimeSeconds" DefaultValue="300" />
+    <Parameter Name="ConnectionStress.MaxConnectionLifetimeSeconds" DefaultValue="600" />
+    <Parameter Name="ControlPlaneStress.TestPath" DefaultValue="/Data" />
+    <Parameter Name="ControlPlaneStress.TimeStream" DefaultValue="0" />
+    <Parameter Name="ControlPlaneStress.MaxConcurrentBatches" DefaultValue="8" />
+    <Parameter Name="ControlPlaneStress.BatchLength" DefaultValue="0" />
+    <Parameter Name="ControlPlaneStress.MaxNodesToLoad" DefaultValue="100000" />
+    <Parameter Name="ControlPlaneStress.MinDataSizePerNode" DefaultValue="8" />
+    <Parameter Name="ControlPlaneStress.MaxDataSizePerNode" DefaultValue="64" />
+    <Parameter Name="EnumerationStress.TestPath" DefaultValue="/Flat10M" />
+    <Parameter Name="EnumerationStress.TimeStream" DefaultValue="0" />
+    <Parameter Name="EnumerationStress.MaxChildren" DefaultValue="100" />
+    <Parameter Name="EnumerationStress.MaxConcurrentRequests" DefaultValue="4" />
+    <Parameter Name="PopulationStress.TestPath" DefaultValue="/Hierarchy" />
+    <Parameter Name="PopulationStress.TimeStream" DefaultValue="0" />
+    <Parameter Name="PopulationStress.MaxNodes" DefaultValue="100000" />
+    <Parameter Name="PopulationStress.UseScheduledDelete" DefaultValue="true" />
+    <Parameter Name="PopulationStress.Create.MaxConcurrentBatches" DefaultValue="4" />
+    <Parameter Name="PopulationStress.Create.BatchLength" DefaultValue="4" />
+    <Parameter Name="PopulationStress.Create.MinChildrenCountPerNode" DefaultValue="0" />
+    <Parameter Name="PopulationStress.Create.MaxChildrenCountPerNode" DefaultValue="128" />
+    <Parameter Name="PopulationStress.Create.MinDataSizePerNode" DefaultValue="0" />
+    <Parameter Name="PopulationStress.Create.MaxDataSizePerNode" DefaultValue="512" />
+    <Parameter Name="PopulationStress.Create.MaxNodeNameLength" DefaultValue="8" />
+    <Parameter Name="PopulationStress.Delete.MaxConcurrentBatches" DefaultValue="2" />
+    <Parameter Name="PopulationStress.Delete.BatchLength" DefaultValue="4" />
+    <Parameter Name="ServingPlaneStress.TestPath" DefaultValue="/Data" />
+    <Parameter Name="ServingPlaneStress.TimeStream" DefaultValue="0" />
+    <Parameter Name="ServingPlaneStress.MaxConcurrentBatches" DefaultValue="48" />
+    <Parameter Name="ServingPlaneStress.BatchLength" DefaultValue="100" />
+    <Parameter Name="ServingPlaneStress.MaxNodesToLoad" DefaultValue="100000" />
+    <Parameter Name="SubscribeStress.TestPath" DefaultValue="/Data" />
+    <Parameter Name="SubscribeStress.TimeStream" DefaultValue="0" />
+    <Parameter Name="SubscribeStress.MaxNodesToLoad" DefaultValue="100000" />
+    <Parameter Name="SubscribeStress.MaxChildrenEnumerationCount" DefaultValue="1000" />
+    <Parameter Name="SubscribeStress.MaxConcurrentWatchers" DefaultValue="10000" />
+  </Parameters>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="ConnectionStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ConnectionStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="ConnectPerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TestPath" Value="[ConnectionStress.TestPath]" />
+            <Parameter Name="NumberOfConnections" Value="[ConnectionStress.NumberOfConnections]" />
+            <Parameter Name="MaxConcurrentRequests" Value="[ConnectionStress.MaxConcurrentRequests]" />
+            <Parameter Name="MinConnectionLifetimeSeconds" Value="[ConnectionStress.MinConnectionLifetimeSeconds]" />
+            <Parameter Name="MaxConnectionLifetimeSeconds" Value="[ConnectionStress.MaxConnectionLifetimeSeconds]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="ControlPlaneStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ControlPlaneStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="SetDataPerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TestPath" Value="[ControlPlaneStress.TestPath]" />
+            <Parameter Name="TimeStream" Value="[ControlPlaneStress.TimeStream]" />
+            <Parameter Name="MaxConcurrentBatches" Value="[ControlPlaneStress.MaxConcurrentBatches]" />
+            <Parameter Name="BatchLength" Value="[ControlPlaneStress.BatchLength]" />
+            <Parameter Name="MaxNodesToLoad" Value="[ControlPlaneStress.MaxNodesToLoad]" />
+            <Parameter Name="MinDataSizePerNode" Value="[ControlPlaneStress.MinDataSizePerNode]" />
+            <Parameter Name="MaxDataSizePerNode" Value="[ControlPlaneStress.MaxDataSizePerNode]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="EnumerationStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ControlPlaneStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="EnumerationPerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TestPath" Value="[EnumerationStress.TestPath]" />
+            <Parameter Name="TimeStream" Value="[EnumerationStress.TimeStream]" />
+            <Parameter Name="MaxChildren" Value="[EnumerationStress.MaxChildren]" />
+            <Parameter Name="MaxConcurrentRequests" Value="[EnumerationStress.MaxConcurrentRequests]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="PopulationStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ControlPlaneStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="PopulationPerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TimeStream" Value="[PopulationStress.TimeStream]" />
+            <Parameter Name="CreateAndDeleteHierarchy.TestPath" Value="[PopulationStress.TestPath]" />
+            <Parameter Name="CreateAndDeleteHierarchy.MaxNodes" Value="[PopulationStress.MaxNodes]" />
+            <Parameter Name="CreateAndDeleteHierarchy.UseScheduledDelete" Value="[PopulationStress.UseScheduledDelete]" />
+            <Parameter Name="Create.MaxConcurrentBatches" Value="[PopulationStress.Create.MaxConcurrentBatches]" />
+            <Parameter Name="Create.BatchLength" Value="[PopulationStress.Create.BatchLength]" />
+            <Parameter Name="Create.MinChildrenCountPerNode" Value="[PopulationStress.Create.MinChildrenCountPerNode]" />
+            <Parameter Name="Create.MaxChildrenCountPerNode" Value="[PopulationStress.Create.MaxChildrenCountPerNode]" />
+            <Parameter Name="Create.MinDataSizePerNode" Value="[PopulationStress.Create.MinDataSizePerNode]" />
+            <Parameter Name="Create.MaxDataSizePerNode" Value="[PopulationStress.Create.MaxDataSizePerNode]" />
+            <Parameter Name="Create.MaxNodeNameLength" Value="[PopulationStress.Create.MaxNodeNameLength]" />
+            <Parameter Name="Delete.MaxConcurrentBatches" Value="[PopulationStress.Delete.MaxConcurrentBatches]" />
+            <Parameter Name="Delete.BatchLength" Value="[PopulationStress.Delete.BatchLength]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="ServingPlaneStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ServingPlaneStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="GetDataPerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TestPath" Value="[ServingPlaneStress.TestPath]" />
+            <Parameter Name="TimeStream" Value="[ServingPlaneStress.TimeStream]" />
+            <Parameter Name="MaxConcurrentBatches" Value="[ServingPlaneStress.MaxConcurrentBatches]" />
+            <Parameter Name="BatchLength" Value="[ServingPlaneStress.BatchLength]" />
+            <Parameter Name="MaxNodesToLoad" Value="[ServingPlaneStress.MaxNodesToLoad]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="SubscribeStressService" ServiceManifestVersion="1.0.0.38" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="ServingPlaneStressService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+          <Section Name="SubscribePerformanceTest">
+            <Parameter Name="TargetConnectionString" Value="[TargetConnectionString]" />
+            <Parameter Name="TestPath" Value="[SubscribeStress.TestPath]" />
+            <Parameter Name="TimeStream" Value="[SubscribeStress.TimeStream]" />
+            <Parameter Name="MaxNodesToLoad" Value="[SubscribeStress.MaxNodesToLoad]" />
+            <Parameter Name="MaxChildrenEnumerationCount" Value="[SubscribeStress.MaxChildrenEnumerationCount]" />
+            <Parameter Name="MaxConcurrentWatchers" Value="[SubscribeStress.MaxConcurrentWatchers]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+</ApplicationManifest>

@@ -1,0 +1,14 @@
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <ItemGroup>
+    <ProjectReference Include=".\client\SecureTransportClientTool.csproj" />
+    <ProjectReference Include=".\service\SecureTransportServiceTool.csproj" />
+    <ProjectReference Include=".\src\SecureTransport.csproj" />
+    <ProjectReference Include=".\unittest\SecureTransportUnitTest.csproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>ResolveReferences</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

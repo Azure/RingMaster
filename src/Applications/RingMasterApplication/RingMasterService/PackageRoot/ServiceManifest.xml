@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ServiceManifest Name="RingMasterService" Version="1.0.0.96" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ServiceTypes>
+    <StatefulServiceType ServiceTypeName="RingMasterService" HasPersistedState="true" />
+  </ServiceTypes>
+  <CodePackage Name="Code" Version="1.0.0.96">
+    <EntryPoint>
+      <ExeHost>
+        <Program>Microsoft.RingMaster.RingMasterService.exe</Program>
+      </ExeHost>
+    </EntryPoint>
+  </CodePackage>
+  <ConfigPackage Name="Config" Version="1.0.0.96" />
+  <Resources>
+    <Endpoints>
+      <Endpoint Name="ServiceEndpoint" Protocol="tcp" Type="Internal" Port="99" />
+      <Endpoint Name="ReadOnlyEndpoint" Protocol="tcp" Type="Internal" />
+      <Endpoint Name="ReplicatorEndpoint" Protocol="tcp" Type="Internal" />
+      <Endpoint Name="ZkprServiceEndpoint" Protocol="tcp" Port="100" Type="Internal" />
+    </Endpoints>
+  </Resources>
+</ServiceManifest>

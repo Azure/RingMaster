@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>f481d5f0-2a06-493a-86f3-9e77d257f2c4</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Id>VegaBackend$(NamePostfix)</Id>
+    <Title>Vega Backend components</Title>
+    <Authors>vegab@microsoft.com</Authors>
+    <Owners>vegab@microsoft.com</Owners>
+    <Description>Vega Backend Component</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <Tags>VegaBackend</Tags>
+    <IncludeBuiltProjectOutputGroupDependencies>false</IncludeBuiltProjectOutputGroupDependencies>
+    <GenerateSymbolPackage>False</GenerateSymbolPackage>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <UserName Condition="'$(Q_SYNCTO_CHANGELIST)' != ''">cloudbuilduser</UserName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectRef Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectRef Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectRef Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectRef Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+    <ProjectRef Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" />
+    <ProjectRef Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+    <ProjectReference Include="@(ProjectRef)">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Common\Microsoft.RingMaster.Backend.Common.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Common\Microsoft.RingMaster.Backend.Common.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Core\Microsoft.RingMaster.Backend.Core.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Core\Microsoft.RingMaster.Backend.Core.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.HelperTypes\Microsoft.RingMaster.Backend.HelperTypes.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.HelperTypes\Microsoft.RingMaster.Backend.HelperTypes.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Instrumentation\Microsoft.RingMaster.Backend.Instrumentation.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Instrumentation\Microsoft.RingMaster.Backend.Instrumentation.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Native\Microsoft.RingMaster.Backend.Native.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Backend.Native\Microsoft.RingMaster.Backend.Native.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Server\Microsoft.RingMaster.Server.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Server\Microsoft.RingMaster.Server.dll" />
+    <Library Include="@(libs)">
+      <TargetFramework>net45</TargetFramework>
+    </Library>
+  </ItemGroup>
+  <Import Project="$(PkgNuProj)\NuProj.Targets" />
+</Project>

@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{95E7832E-3DDA-43A5-9C77-3575B1AC1307}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.TestCases</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RingMasterInterfaceTest.cs" />
+    <Compile Include="TestAccessControl.cs" />
+    <Compile Include="TestErrorPaths.cs" />
+    <Compile Include="TestExecutionQueue.cs" />
+    <Compile Include="TestFunctionality.cs" />
+    <Compile Include="TestRecursiveDeleter.cs" />
+    <Compile Include="TestWatcher.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
+      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
+      <Name>RingMasterCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
+      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

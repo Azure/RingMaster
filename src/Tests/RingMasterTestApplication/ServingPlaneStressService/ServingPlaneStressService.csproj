@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{E60788A8-6341-43B7-B7AD-13DB2A8390CB}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.ServingPlaneStressService</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Test.ServingPlaneStressService</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <OacrDisabled>true</OacrDisabled>
+    <CoverageDisabled>true</CoverageDisabled>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Events">
+      <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework)\lib\net40\Microsoft.Cloud.InstrumentationFramework.Events.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Metrics">
+      <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework)\lib\net40\Microsoft.Cloud.InstrumentationFramework.Metrics.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Fabric">
+      <HintPath>$(PkgMicrosoft_ServiceFabric)\lib\net45\System.Fabric.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Data">
+      <HintPath>$(PkgMicrosoft_ServiceFabric_Data)\lib\net45\Microsoft.ServiceFabric.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Data.Interfaces">
+      <HintPath>$(PkgMicrosoft_ServiceFabric_Data)\lib\net45\Microsoft.ServiceFabric.Data.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Internal">
+      <HintPath>$(PkgMicrosoft_ServiceFabric)\lib\net45\Microsoft.ServiceFabric.Internal.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Internal.Strings">
+      <HintPath>$(PkgMicrosoft_ServiceFabric)\lib\net45\Microsoft.ServiceFabric.Internal.Strings.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Services">
+      <HintPath>$(PkgMicrosoft_ServiceFabric_Services)\lib\net45\Microsoft.ServiceFabric.Services.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="ServingPlaneStressService.cs" />
+    <Compile Include="ServingPlaneStressServiceEventSource.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Infrastructure\IfxInstrumentation\IfxInstrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\PerformanceTestCases\PerformanceTestCases.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Infrastructure\ServiceFabric\ServiceFabric.csproj" />
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <QCustomInput Include="PackageRoot\ServiceManifest.xml" />
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ServiceProject.targets" />
+</Project>

@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{B1E18AE7-2B8C-4B4F-8F8B-A20BD0D2F04B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUnitTest</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.SecureTransportUnitTest</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <QTestType>MsTest_Latest</QTestType>
+    <QTestDirToDeploy>$(BinariesBuildTypeArchDirectory)\$(AssemblyName)</QTestDirToDeploy>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="TestSecureTransport.cs" />
+    <Compile Include="TestSslConnection.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
+      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
+      <Name>RingMasterCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj">
+      <Project>{f43d5ceb-344b-4a7c-93ed-953238ed9239}</Project>
+      <Name>SecureTransport</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
+      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.dll" />
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.Core.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Robocopy Include="$(CoreXTTools)\amd64\makecert.exe">
+      <DestinationFolder>$(OutDir)</DestinationFolder>
+    </Robocopy>
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

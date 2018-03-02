@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{679B42D6-6CD1-4511-B6C0-BA861633E8C9}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.LogFileEventTracing</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.LogFileEventTracing</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
+    <CoverageDisabled>true</CoverageDisabled>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="LogFileEventTracing.cs" />
+    <Compile Include="LogFileTraceListener.cs" />
+  </ItemGroup>
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

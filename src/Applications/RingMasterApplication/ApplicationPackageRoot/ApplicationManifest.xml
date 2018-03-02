@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="1.0.0.96" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <!-- Note: These should be overridden in your Params Override file as needed -->
+    <Parameter Name="EnvironmentName" DefaultValue="" />
+    <Parameter Name="Tenant" DefaultValue="" />
+    <Parameter Name="MdmAccountName" DefaultValue="" />
+    <Parameter Name="MdmNamespace" DefaultValue="RingMasterWorker" />
+    <Parameter Name="RingMasterWatchdog.MdmNamespace" DefaultValue="RingMasterWorker/Watchdog" />
+    <Parameter Name="VIP" DefaultValue="" />
+    <Parameter Name="RingMasterService_TargetReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="RingMasterService_MinReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="RingMasterWatchdog_InstanceCount" DefaultValue="1" />
+  </Parameters>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="1.0.0.96" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="RingMasterService" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[MdmNamespace]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="RingMasterWatchdog" ServiceManifestVersion="1.0.0.96" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="Monitoring">
+            <Parameter Name="Environment" Value="[EnvironmentName]" />
+            <Parameter Name="Tenant" Value="[Tenant]" />
+            <Parameter Name="Role" Value="RingMasterWatchdog" />
+            <Parameter Name="IfxSession" Value="RingMasterWorkerIfxSession" />
+            <Parameter Name="MdmAccount" Value="[MdmAccountName]" />
+            <Parameter Name="MdmNamespace" Value="[RingMasterWatchdog.MdmNamespace]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <DefaultServices>
+    <Service Name="RingMasterService">
+      <StatefulService ServiceTypeName="RingMasterService" TargetReplicaSetSize="5" MinReplicaSetSize="3">
+        <SingletonPartition />
+      </StatefulService>
+    </Service>
+    <Service Name="RingMasterWatchdog">
+      <StatelessService ServiceTypeName="RingMasterWatchdog" InstanceCount="[RingMasterWatchdog_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
+    </Service>
+  </DefaultServices>
+</ApplicationManifest>

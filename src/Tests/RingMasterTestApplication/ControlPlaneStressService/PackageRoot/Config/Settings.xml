@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Section Name="Monitoring">
+    <Parameter Name="Environment" Value="" MustOverride="true" /> <!-- This setting is required. It identifies if we're running under azure SDK in that case this would be RoleEnvironment -->
+    <Parameter Name="Tenant" Value="" MustOverride="true" />
+    <Parameter Name="Role" Value="ControlPlaneStressService" />
+    <Parameter Name="IfxSession" Value="" MustOverride="true" />
+    <Parameter Name="MdmAccount" Value="" MustOverride="true" />
+    <Parameter Name="MdmNamespace" Value="RingMasterStress" />
+  </Section>
+  <Section Name="SetDataPerformanceTest">
+    <Parameter Name="TargetConnectionString" Value="" MustOverride="true" />
+    <Parameter Name="TestPath" Value="/Data" MustOverride="true" />
+    <Parameter Name="TimeStream" Value="0" />
+    <Parameter Name="MaxConcurrentBatches" Value="2" />
+    <Parameter Name="BatchLength" Value="1" />
+    <Parameter Name="MaxNodesToLoad" Value="100000" />
+    <Parameter Name="MinDataSizePerNode" Value="8" />
+    <Parameter Name="MaxDataSizePerNode" Value="64" />
+  </Section>
+</Settings>

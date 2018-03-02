@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{005ADD15-D48B-4BB7-B101-1910AFA98F3B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Tools.FiniteModelCheckerUnitTest</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.FiniteModelCheckerUnitTest</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll" />
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.dll" />
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.Core.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Tools\FiniteModelChecker\FiniteModelChecker.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="GeneralizedDieHard\Actions.cs" />
+    <Compile Include="GeneralizedDieHard\Constants.cs" />
+    <Compile Include="GeneralizedDieHard\EmptyJug.cs" />
+    <Compile Include="GeneralizedDieHard\FillJug.cs" />
+    <Compile Include="GeneralizedDieHard\Goal.cs" />
+    <Compile Include="GeneralizedDieHard\InitialStateGenerator.cs" />
+    <Compile Include="GeneralizedDieHard\Models.cs" />
+    <Compile Include="GeneralizedDieHard\SafetyProperties.cs" />
+    <Compile Include="GeneralizedDieHard\TransferBetweenJugs.cs" />
+    <Compile Include="GeneralizedDieHard\Variables.cs" />
+    <Compile Include="TestFiniteModelChecker.cs" />
+  </ItemGroup>
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

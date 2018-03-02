@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{A57E2E5B-38BA-4976-8DE7-6CA766488319}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientUnitTest</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.ClientUnitTest</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <OacrDisabled>false</OacrDisabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RingMasterClientUnitTest.cs" />
+    <Compile Include="TestClient.cs" />
+    <Compile Include="TestErrorPaths.cs" />
+    <Compile Include="TestFunctionality.cs" />
+    <Compile Include="TestTransport.cs" />
+    <Compile Include="TestWatcher.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\testcases\RingMasterInterfaceTestCases.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\Common\Common.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
+      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  <PropertyGroup>
+    <QTestType>Taef_Latest</QTestType>
+    <QTestDirToDeploy>$(OutputPath)</QTestDirToDeploy>
+  </PropertyGroup>
+</Project>

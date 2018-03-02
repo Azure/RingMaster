@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>ad998c3f-f17b-494a-be1a-b927bcd422b8</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Id>VegaPersistence$(NamePostfix)</Id>
+    <Title>Vega Persistence</Title>
+    <Authors>vegab@microsoft.com</Authors>
+    <Owners>vegab@microsoft.com</Owners>
+    <Description>Vega Persistence layer implementation</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <Tags>Vega</Tags>
+    <GenerateSymbolPackage>False</GenerateSymbolPackage>
+    <IncludeBuiltProjectOutputGroupDependencies>false</IncludeBuiltProjectOutputGroupDependencies>
+    <UserName Condition="'$(Q_SYNCTO_CHANGELIST)' != ''">cloudbuilduser</UserName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Persistence\ServiceFabric\src\ServiceFabricPersistence.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Persistence.Common\Microsoft.RingMaster.Persistence.Common.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Persistence.Common\Microsoft.RingMaster.Persistence.Common.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Persistence.InMemory\Microsoft.RingMaster.Persistence.InMemory.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.Persistence.InMemory\Microsoft.RingMaster.Persistence.InMemory.pdb" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.RingMasterService\System.Fabric.Management.ServiceModel.XmlSerializers.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.WinFabPersistence\Microsoft.RingMaster.WinFabPersistence.dll" />
+    <libs Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.WinFabPersistence\Microsoft.RingMaster.WinFabPersistence.pdb" />
+    <Library Include="@(libs)">
+      <TargetFramework>net45</TargetFramework>
+    </Library>
+  </ItemGroup>
+  <Import Project="$(PkgNuProj)\NuProj.Targets" />
+</Project>

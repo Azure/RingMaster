@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <ItemGroup>
+    <ProjectReference Include="Common\Common.csproj" />
+    <ProjectReference Include="EventSourceValidation\EventSourceValidation.csproj" />
+    <ProjectReference Include="PerformanceTestCases\PerformanceTestCases.csproj" />
+    <ProjectReference Include="RSLValidation\RSLValidation.csproj" />
+    <ProjectReference Include="RingMasterBVT\RingMasterBVT.csproj" />
+    <ProjectReference Include="RingMasterPerformance\RingMasterPerformance.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\RingMasterTestApplication.sfproj" />
+    <ProjectReference Include="VegaInMemoryPerf\VegaInMemoryPerf.csproj" />
+    <ProjectReference Include="VegaTracingPerf\VegaTracingPerf.csproj" />
+    <ProjectReference Include="VegaServiceFabricPerf\VegaServiceFabricPerf.csproj" />
+    <ProjectReference Include="RSLValidation\RSLValidation.csproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>ResolveReferences</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

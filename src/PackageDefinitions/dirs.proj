@@ -1,0 +1,16 @@
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <ItemGroup>
+    <ProjectReference Include="RingMasterBackend\RingMasterBackend.nuproj" />
+    <ProjectReference Include="RingMasterClient\RingMasterClient.nuproj" />
+    <ProjectReference Include="RingMasterCommon\RingMasterCommon.nuproj" />
+    <ProjectReference Include="RingMasterTools\RingMasterTools.nuproj" />
+    <ProjectReference Include="RingMasterPersistence\RingMasterPersistence.nuproj" />
+    <ProjectReference Include="ServiceFabricApplication\ServiceFabricApplication.nuproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>ResolveReferences</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

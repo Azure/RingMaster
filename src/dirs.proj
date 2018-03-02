@@ -1,0 +1,17 @@
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <ItemGroup>
+    <ProjectReference Include="Applications\dirs.proj" />
+    <ProjectReference Include="Backend\dirs.proj" />
+    <ProjectReference Include="Common\dirs.proj" />
+    <ProjectReference Include="Infrastructure\dirs.proj" />
+    <ProjectReference Include="Persistence\dirs.proj" />
+    <ProjectReference Include="Tests\dirs.proj" />
+    <ProjectReference Include="Tools\dirs.proj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>ResolveReferences</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

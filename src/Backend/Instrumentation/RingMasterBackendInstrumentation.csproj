@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{BE83D63E-F895-41AE-B67E-B3093434ED78}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumentation</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Backend.Instrumentation</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <CoverageDisabled>true</CoverageDisabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj">
+      <Project>{20583543-6391-4930-AB3A-52B04B022D8B}</Project>
+      <Name>Instrumentation</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj">
+      <Project>{5899CE51-48E8-46EA-A12A-4206688CDCBA}</Project>
+      <Name>RingMasterBackendCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj">
+      <Project>{22ac66a6-3e79-49d4-b896-e5e3c15d7158}</Project>
+      <Name>RingMasterBackendCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RingMasterBackendInstrumentation.cs" />
+  </ItemGroup>
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

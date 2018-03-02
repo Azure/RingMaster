@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{22AC66A6-3E79-49D4-B896-E5E3C15D7158}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Backend.Common</AssemblyName>
+    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="AbstractRingMaster.cs" />
+    <Compile Include="DataEncoderHelper.cs" />
+    <Compile Include="FxCopRulesModifications.cs" />
+    <Compile Include="MarshallerChannel.cs" />
+    <Compile Include="RingMasterBackendRequests.cs" />
+    <Compile Include="SslWrapping.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj">
+      <Project>{0F4FADD2-3470-4A24-BDF5-4DB7E9679BD9}</Project>
+      <Name>HelperTypes</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
+      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
+      <Name>RingMasterCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+  </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

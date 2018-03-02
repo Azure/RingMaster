@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+  <PropertyGroup>
+    <ProjectGuid>{93DF976D-D768-4222-82E3-A6930F1962DB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackendCoreUnitTest</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Backend.CoreUnitTest</AssemblyName>
+    <RunCodeAnalysis>$(RunCodeAnalysis)</RunCodeAnalysis>
+    <OacrDisabled>true</OacrDisabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll" />
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.dll" />
+    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.Core.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AuditTests.cs" />
+    <Compile Include="LimitTests.cs" />
+    <Compile Include="RingMasterBackendCoreUnitTest.cs" />
+    <Compile Include="TestAccessControl.cs" />
+    <Compile Include="TestErrorPaths.cs" />
+    <Compile Include="TestExecutionQueue.cs" />
+    <Compile Include="TestFunctionality.cs" />
+    <Compile Include="TestRecursiveDeleter.cs" />
+    <Compile Include="TestRepro.cs" />
+    <Compile Include="TestScheduler.cs" />
+    <Compile Include="TestWatcher.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\testcases\RingMasterInterfaceTestCases.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+</Project>

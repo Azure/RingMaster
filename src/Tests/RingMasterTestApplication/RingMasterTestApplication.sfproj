@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build;Package" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>37D80B41-0442-456D-8D53-D6FD9709917C</ProjectGuid>
+    <ProjectVersion>1.0</ProjectVersion>
+    <PackageLocation>$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)</PackageLocation>
+    <ApplicationManifestFilePath>ApplicationManifest.xml</ApplicationManifestFilePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="ApplicationPackageRoot\ApplicationManifest.xml" />
+    <None Include="ApplicationParameters\RingMaster.WestCentralUS.xml" />
+    <None Include="PublishProfiles\Local.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
+  </ItemGroup>
+  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.targets" />
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

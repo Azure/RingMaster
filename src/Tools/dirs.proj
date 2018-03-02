@@ -1,0 +1,15 @@
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(EnvironmentConfig)" />
+  <ItemGroup>
+    <ProjectReference Include="FiniteModelChecker\FiniteModelChecker.csproj" />
+    <ProjectReference Include="FiniteModelChecker\UnitTest\FiniteModelCheckerUnitTest.csproj" />
+    <ProjectReference Include="RingMasterClientModule\RingMasterClientModule.csproj" />
+    <ProjectReference Include="RingMasterTool\RingMasterTool.csproj" />
+    <ProjectReference Include="RingMasterBackendTool\RingMasterBackendTool.csproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>ResolveReferences</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="VerifyAlteredTargetsUsed" />
+</Project>

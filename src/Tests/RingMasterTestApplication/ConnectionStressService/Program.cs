@@ -1,0 +1,75 @@
+﻿// <copyright file="Program.cs" company="Microsoft">
+//     Copyright ©  2015
+// </copyright>
+
+namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ConnectionStressService
+{
+    using System;
+    using System.Diagnostics;
+    using System.Fabric;
+    using System.Fabric.Description;
+    using System.Reflection;
+    using System.Threading;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
+    using Microsoft.ServiceFabric.Services.Runtime;
+
+    /// <summary>
+    /// Connection Stress service.
+    /// </summary>
+    public class Program
+    {
+        /// <summary>
+        /// Entry point
+        /// </summary>
+        /// <param name="args">Arguments provided to the program</param>
+        public static void Main(string[] args)
+        {
+            Trace.Listeners.Add(IfxInstrumentation.CreateTraceListener());
+
+            using (FabricRuntime fabricRuntime = FabricRuntime.Create())
+            {
+                try
+                {
+                    var monitoringConfiguration = new MonitoringConfiguration(FabricRuntime.GetActivationContext());
+
+                    IfxInstrumentation.Initialize(monitoringConfiguration.IfxSession, monitoringConfiguration.MdmAccount);
+
+                    ConnectionStressServiceEventSource.Log.ConfigurationSettings(
+                        monitoringConfiguration.Environment,
+                        monitoringConfiguration.Tenant,
+                        monitoringConfiguration.Role,
+                        monitoringConfiguration.IfxSession,
+                        monitoringConfiguration.MdmAccount);
+
+                    var metricsFactory = IfxInstrumentation.CreateMetricsFactory(
+                        monitoringConfiguration.MdmAccount,
+                        monitoringConfiguration.MdmNamespace,
+                        monitoringConfiguration.Environment,
+                        monitoringConfiguration.Tenant,
+                        monitoringConfiguration.Role,
+                        monitoringConfiguration.RoleInstance);
+
+                    ServiceRuntime.RegisterServiceAsync("ConnectionStressService", serviceContext => new ConnectionStressService(serviceContext, metricsFactory)).Wait();
+                    ConnectionStressServiceEventSource.Log.RegisterServiceSucceeded();
+
+                    Assembly assembly = Assembly.GetExecutingAssembly();
+                    FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+                    string version = fvi.FileVersion;
+                    var uptime = Stopwatch.StartNew();
+
+                    while (true)
+                    {
+                        ConnectionStressServiceEventSource.Log.ReportServiceStatus(version, (long)uptime.Elapsed.TotalSeconds);
+                        Thread.Sleep(TimeSpan.FromSeconds(30));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConnectionStressServiceEventSource.Log.RegisterServiceFailed(ex.ToString());
+                    throw;
+                }
+            }
+        }
+    }
+}
