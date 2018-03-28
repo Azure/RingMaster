@@ -23,6 +23,13 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+/src/**/objd/**/*
+/src/**/obj/**/*
+/out/
+msbuild.log
+.*.sw*
+/ossbuild/packageList.props
+pingme.txt
 
 # Visual Studio 2015 cache/options directory
 .vs/
