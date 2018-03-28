@@ -1,12 +1,10 @@
-﻿// <copyright file="AllowCertificatesRule.cs" company="Microsoft">
+﻿// <copyright file="AllowCertificatesRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -46,18 +44,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         {
             if (cert == null)
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: AllowCertificates: cert was null:");
+                CertificateRulesEventSource.Log.AllowCertificatesRules_CertWasNull();
                 return Behavior.NotAllowed;
             }
 
             if (this.isCertificateIncluded(cert))
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: AllowCertificates: Found allowed certificate: {0}", CertAccessor.Instance.GetThumbprint(cert));
+                CertificateRulesEventSource.Log.AllowCertificatesRules_CertAllowed(CertAccessor.Instance.GetThumbprint(cert));
                 return Behavior.Allowed;
             }
 
-            Trace.TraceError("ValidateSslPolicyErrors: AllowCertificates: Found no allowed certificate: {0}", CertAccessor.Instance.GetThumbprint(cert));
-
+            CertificateRulesEventSource.Log.AllowCertificatesRules_CertNotAllowed(CertAccessor.Instance.GetThumbprint(cert));
             return Behavior.NotAllowed;
         }
     }

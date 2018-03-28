@@ -1,4 +1,4 @@
-﻿// <copyright file="StandardValidationRuleSet.cs" company="Microsoft">
+﻿// <copyright file="StandardValidationRuleSet.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 

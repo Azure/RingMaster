@@ -1,15 +1,11 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="LockDownSet.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="LockDownSet.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
-    using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Class LockDownSet will encapsulate the management of lock down paths in a thread safe manner
@@ -40,12 +36,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         {
             HashSet<string> result = this.paths;
 
-            if (IgnoreAllpaths)
-            {
-                return false;
-            }
-
-            if (result == null || result.Count == 0)
+            if (this.IgnoreAllpaths || result == null || result.Count == 0)
             {
                 return false;
             }
@@ -68,21 +59,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <returns>the enumeration with all the paths</returns>
         public IEnumerable<string> GetPaths()
         {
-            HashSet<string> result = this.paths;
-
-            if (IgnoreAllpaths)
-            {
-                return new string[0];
-            }
-
-            if (result != null)
-            {
-                return result;
-            }
-            else
-            {
-                return new string[0];
-            }
+            var result = this.paths;
+            return this.IgnoreAllpaths || result == null
+                ? Enumerable.Empty<string>()
+                : result;
         }
 
         /// <summary>
@@ -91,12 +71,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <returns><c>true</c> if this instance is empty; otherwise, <c>false</c>.</returns>
         internal bool IsEmpty()
         {
-            HashSet<string> result = this.paths;
-            if (IgnoreAllpaths)
-            {
-                return true;
-            }
-            return (result == null || result.Count == 0);
+            var result = this.paths;
+            return this.IgnoreAllpaths || result == null || result.Count == 0;
         }
     }
 }

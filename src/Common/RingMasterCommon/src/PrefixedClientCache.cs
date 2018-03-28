@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMasterCommon
-// <copyright file="PrefixedClientCache.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="PrefixedClientCache.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
@@ -29,7 +25,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// Indicates if we want to debug the cache
         /// </summary>
         private bool debugCache = false;
-        
+
         /// <summary>
         /// The maximum capacity per prefix
         /// </summary>
@@ -66,7 +62,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 }
             }
         }
-        
+
         /// <summary>
         /// Gets the parent of the given path
         /// </summary>
@@ -323,7 +319,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <returns>text for the stack</returns>
         private string GetStack()
         {
-            string stackstr = (new StackTrace(1, true)).ToString();
+            string stackstr = new StackTrace(1, true).ToString();
             return stackstr;
             /*
             string[] lines = stackstr.Split(new char[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);

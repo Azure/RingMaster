@@ -25,11 +25,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
         private int serverListenPort;
         private IPEndPoint[] clientEndPoints;
 
-        static TestSecureTransport()
-        {
-            SecureTransport.TraceLevel = TraceLevel.Verbose;
-        }
-
         /// <summary>
         /// Initializes the test.
         /// </summary>
@@ -568,6 +563,49 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             }
 
             connectionLost.Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestStartServerWithDynamicPortAndStop()
+        {
+            using (var transport = CreateTransport())
+            {
+                transport.StartServer(0);
+
+                // Wait until the server is active
+                bool transportIsActive = false;
+                for (int i = 0; i < 10 && !transportIsActive; i++)
+                {
+                    // IsAction means the server is *about* to start
+                    if (transport.IsActive && transport.LocalEndpoint != null)
+                    {
+                        transportIsActive = true;
+                    }
+                    else
+                    {
+                        Thread.Sleep(125);
+                    }
+                }
+
+                Assert.IsTrue(transportIsActive, "Transport should be active");
+
+                bool portIsGood = false;
+                for (int i = 0; i < 125 && !portIsGood; i++)
+                {
+                    if (((IPEndPoint)transport.LocalEndpoint).Port > 0)
+                    {
+                        portIsGood = true;
+                    }
+                    else
+                    {
+                        Thread.Sleep(1);
+                    }
+                }
+
+                Assert.IsTrue(portIsGood, "Local endpoint should have a valid port");
+                transport.Stop();
+            }
         }
 
         internal static int GetAvailablePort(int startPort)

@@ -13,7 +13,7 @@ namespace Microsoft.Vega.Performance
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using static Microsoft.Vega.Performance.TestCommon;
+    using static TestCommon;
 
     /// <summary>
     /// The Vega Bulk Watcher Performance test class
@@ -82,9 +82,9 @@ namespace Microsoft.Vega.Performance
         private static string server;
 
         /// <summary>
-        /// RingMaster client
+        /// RingMaster clients
         /// </summary>
-        private static RingMasterClient client;
+        private static RingMasterClient[] clients;
 
         /// <summary>
         /// Total amount of data being processed
@@ -119,14 +119,32 @@ namespace Microsoft.Vega.Performance
             nodeCountPerPartition = int.Parse(ConfigurationManager.AppSettings["NodeCountPerPartition"]);
             channelCount = int.Parse(ConfigurationManager.AppSettings["ChannelCount"]);
 
-            server = TestCommon.GetVegaServiceEndpoint().Result;
+            if (threadCount < 0)
+            {
+                threadCount = Environment.ProcessorCount;
+            }
 
-            client = new RingMasterClient(
+            var serviceInfo = TestCommon.GetVegaServiceInfo().Result;
+
+            // Allow the endpoint address being specified from the command line
+            if (context.Properties.Contains("ServerAddress"))
+            {
+                server = context.Properties["ServerAddress"] as string;
+            }
+            else
+            {
+                server = serviceInfo.Item1;
+            }
+
+            clients = Enumerable.Range(0, channelCount).Select(n => new RingMasterClient(
                 connectionString: server,
                 clientCerts: null,
                 serverCerts: null,
                 requestTimeout: requestTimeout,
-                watcher: null);
+                watcher: null))
+                .ToArray();
+
+            MdmHelper.Initialize(serviceInfo.Item2);
         }
 
         /// <summary>
@@ -135,7 +153,10 @@ namespace Microsoft.Vega.Performance
         [ClassCleanup]
         public static void TestClassCleanup()
         {
-            client.Dispose();
+            foreach (var client in clients)
+            {
+                client.Dispose();
+            }
         }
 
         /// <summary>
@@ -175,40 +196,25 @@ namespace Microsoft.Vega.Performance
 
             var cancel = new CancellationTokenSource();
             var unused = ShowProgress(cancel.Token);
-            await this.CreateNodeTree(client, cancellation).ConfigureAwait(false);
-            cancel.Cancel();
+            await this.CreateNodeTree().ConfigureAwait(false);
 
             log("Reading all nodes...");
-            cancel.Dispose();
-            cancel = new CancellationTokenSource();
-            unused = ShowProgress(cancel.Token);
-            await this.ReadNodeTree(client, cancellation).ConfigureAwait(false);
+            await this.ReadNodeTree().ConfigureAwait(false);
             cancel.Cancel();
 
             var watchers = new ConcurrentBag<IWatcher>();
             int watcherTriggerCount = 0;
+            long watcherDataDelivered = 0;
             var startTime = stopwatch.Elapsed;
-
-            // Create more ring master connections to the backend
-            var ringMasterClients = new RingMasterClient[channelCount];
-            ringMasterClients[0] = client;
-            for (int i = 1; i < ringMasterClients.Length; i++)
-            {
-                ringMasterClients[i] = new RingMasterClient(
-                    connectionString: server,
-                    clientCerts: null,
-                    serverCerts: null,
-                    requestTimeout: requestTimeout,
-                    watcher: null);
-            }
 
             log($"Installing bulk watchers...");
 
+            long watcherId = 0;
             await TestCommon.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
-                    foreach (var client in ringMasterClients)
+                    foreach (var client in clients)
                     {
                         var path = $"{PartitionKeyPrefix}{partitionIndex}";
                         var watcher = new CallbackWatcher
@@ -217,20 +223,22 @@ namespace Microsoft.Vega.Performance
                             {
                                 if (watchedEvent.EventType == WatchedEvent.WatchedEventType.NodeDataChanged)
                                 {
-                                    var data = client.GetData(watchedEvent.Path, false).GetAwaiter().GetResult();
-
+                                    Interlocked.Add(ref watcherDataDelivered, watchedEvent.Data.Length);
                                     Interlocked.Increment(ref watcherTriggerCount);
-                                    Interlocked.Add(ref totalDataSize, data.Length);
                                 }
                                 else if (watchedEvent.EventType != WatchedEvent.WatchedEventType.WatcherRemoved)
                                 {
                                     log($" -- {watchedEvent.EventType} / {watchedEvent.KeeperState} - {watchedEvent.Path}");
                                 }
                             },
+                            Id = (ulong)Interlocked.Increment(ref watcherId),
                         };
                         try
                         {
+                            var operationStartTime = stopwatch.Elapsed;
                             await client.RegisterBulkWatcher(path, watcher).ConfigureAwait(false);
+                            var operationDuration = stopwatch.Elapsed - operationStartTime;
+                            MdmHelper.LogOperationDuration((long)operationDuration.TotalMilliseconds, OperationType.InstallBulkWatcher);
 
                             watchers.Add(watcher);
                         }
@@ -244,7 +252,9 @@ namespace Microsoft.Vega.Performance
                 .ConfigureAwait(false);
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
-            log($"Finished installing bulk watchers in {duration} sec. Rate: {watchers.Count / duration} /sec");
+            var installRate = watchers.Count / duration;
+            log($"Finished installing bulk watchers in {duration:F3} sec. Rate: {installRate:G4} /sec");
+            MdmHelper.LogWatcherCountProcessed(watchers.Count, OperationType.InstallBulkWatcher);
 
             // Make some random change, one node in each partition, and wait for watcher being triggered
             for (int i = 0; i < testRepetitions; i++)
@@ -252,23 +262,28 @@ namespace Microsoft.Vega.Performance
                 startTime = stopwatch.Elapsed;
                 totalDataSize = 0;
                 watcherTriggerCount = 0;
+                watcherDataDelivered = 0;
 
-                await this.ChangeRandomNodeInTree(client, cancellation).ConfigureAwait(false);
+                var unused1 = Task.Run(() => this.ChangeRandomNodeInTree());
 
-                while (watcherTriggerCount < partitionCount * ringMasterClients.Length)
+                var timeoutClock = Stopwatch.StartNew();
+                while (watcherTriggerCount < partitionCount * clients.Length && timeoutClock.ElapsedMilliseconds < 30 * 1000)
                 {
                     await Task.Delay(1000, cancellation).ConfigureAwait(false);
-                    log($" -- watcher event received: {watcherTriggerCount}");
+                    log($" -- watcher event received: {watcherTriggerCount}, data received: {watcherDataDelivered}");
                 }
 
                 duration = (stopwatch.Elapsed - startTime).TotalSeconds;
-                log($"Iteration {i} - {watcherTriggerCount} events received in {duration} seconds. Read {totalDataSize} bytes.");
+                log($"Iteration {i} - {watcherTriggerCount} events / {watcherDataDelivered} bytes received in {duration} seconds. Read {totalDataSize} bytes.");
+                MdmHelper.LogWatcherCountProcessed(watcherTriggerCount, OperationType.BulkWatcherTrigger);
+                MdmHelper.LogOperationDuration((long)(duration * 1000), OperationType.BulkWatcherTrigger);
+                MdmHelper.LogBytesProcessed(watcherDataDelivered, OperationType.BulkWatcherTrigger);
             }
 
-            await this.DeleteNodeTree(client, cancellation).ConfigureAwait(false);
+            await this.DeleteNodeTree().ConfigureAwait(false);
         }
 
-        private async Task CreateNodeTree(RingMasterClient client, CancellationToken cancellation)
+        private async Task CreateNodeTree()
         {
             totalDataCount = 0;
             totalDataSize = 0;
@@ -287,7 +302,10 @@ namespace Microsoft.Vega.Performance
 
                         try
                         {
-                            await client.Create(path, data, null, CreateMode.PersistentAllowPathCreation, false).ConfigureAwait(false);
+                            var operationStartTime = stopwatch.Elapsed;
+                            await clients[partitionCount % channelCount].Create(path, data, null, CreateMode.PersistentAllowPathCreation, false).ConfigureAwait(false);
+                            var operationDuration = stopwatch.Elapsed - operationStartTime;
+                            MdmHelper.LogOperationDuration((long)operationDuration.TotalMilliseconds, OperationType.BulkWatcherCreateNode);
 
                             Interlocked.Add(ref totalDataSize, data.Length);
                             Interlocked.Increment(ref totalDataCount);
@@ -302,10 +320,13 @@ namespace Microsoft.Vega.Performance
                 .ConfigureAwait(false);
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
-            log($"{nameof(this.CreateNodeTree)}: {totalDataCount} nodes created, total data size is {totalDataSize}. Rate: {totalDataSize / duration} byte/sec {totalDataCount / duration} /sec");
+            var bps = totalDataSize / duration;
+            var qps = totalDataCount / duration;
+            log($"{nameof(this.CreateNodeTree)}: {totalDataCount} nodes created, total data size is {totalDataSize}. Rate: {bps:G4} byte/sec {qps:G4} /sec");
+            MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherCreateNode);
         }
 
-        private async Task ChangeRandomNodeInTree(RingMasterClient client, CancellationToken cancellation)
+        private async Task ChangeRandomNodeInTree()
         {
             totalDataCount = 0;
             totalDataSize = 0;
@@ -319,11 +340,14 @@ namespace Microsoft.Vega.Performance
 
                     var index = rnd.Next(nodeCountPerPartition);
                     var path = $"{PartitionKeyPrefix}{partitionIndex}/{RelativePathPrefix}/{index}";
-                    var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+                    var data = MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
 
                     try
                     {
-                        await client.SetData(path, data, -1).ConfigureAwait(false);
+                        var operationStartTime = stopwatch.Elapsed;
+                        await clients[partitionIndex % channelCount].SetData(path, data, -1).ConfigureAwait(false);
+                        var operationDuration = stopwatch.Elapsed - operationStartTime;
+                        MdmHelper.LogOperationDuration((long)operationDuration.TotalMilliseconds, OperationType.BulkWatcherChangeNode);
 
                         Interlocked.Add(ref totalDataSize, data.Length);
                         Interlocked.Increment(ref totalDataCount);
@@ -337,10 +361,13 @@ namespace Microsoft.Vega.Performance
                 .ConfigureAwait(false);
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
-            log($"{nameof(this.ChangeRandomNodeInTree)}: {totalDataCount} nodes updated, total data size is {totalDataSize}. Rate: {totalDataSize / duration} byte/sec {totalDataCount / duration} /sec");
+            var bps = totalDataSize / duration;
+            var qps = totalDataCount / duration;
+            log($"{nameof(this.ChangeRandomNodeInTree)}: {totalDataCount} nodes updated, total data size is {totalDataSize}. Rate: {bps:G4} byte/sec {qps:G4} /sec");
+            MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherChangeNode);
         }
 
-        private async Task ReadNodeTree(RingMasterClient client, CancellationToken cancellation)
+        private async Task ReadNodeTree()
         {
             totalDataCount = 0;
             totalDataSize = 0;
@@ -356,7 +383,10 @@ namespace Microsoft.Vega.Performance
 
                         try
                         {
-                            var data = await client.GetData(path, false).ConfigureAwait(false);
+                            var operationStartTime = stopwatch.Elapsed;
+                            var data = await clients[partitionCount % channelCount].GetData(path, false).ConfigureAwait(false);
+                            var operationDuration = stopwatch.Elapsed - operationStartTime;
+                            MdmHelper.LogOperationDuration((long)operationDuration.TotalMilliseconds, OperationType.BulkWatcherReadNode);
 
                             Interlocked.Add(ref totalDataSize, data.Length);
                             Interlocked.Increment(ref totalDataCount);
@@ -371,10 +401,13 @@ namespace Microsoft.Vega.Performance
                 .ConfigureAwait(false);
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
-            log($"{nameof(this.ReadNodeTree)}: {totalDataCount} nodes read, total data size is {totalDataSize}. Rate: {totalDataSize / duration} byte/sec {totalDataCount / duration} /sec");
+            var bps = totalDataSize / duration;
+            var qps = totalDataCount / duration;
+            log($"{nameof(this.ReadNodeTree)}: {totalDataCount} nodes read, total data size is {totalDataSize}. Rate: {bps:G4} byte/sec {qps:G4} /sec");
+            MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherReadNode);
         }
 
-        private async Task DeleteNodeTree(RingMasterClient client, CancellationToken cancellation)
+        private async Task DeleteNodeTree()
         {
             await TestCommon.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
@@ -386,7 +419,7 @@ namespace Microsoft.Vega.Performance
 
                         try
                         {
-                            await client.Delete(path, -1, DeleteMode.CascadeDelete).ConfigureAwait(false);
+                            await clients[partitionIndex % channelCount].Delete(path, -1, DeleteMode.CascadeDelete).ConfigureAwait(false);
                         }
                         catch (Exception ex)
                         {

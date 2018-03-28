@@ -1,5 +1,5 @@
-﻿// <copyright file="RequestCreate.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestCreate.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         public IReadOnlyList<Acl> Acl { get; set; }
 
         /// <summary>
-        /// Gets or sets a value that specifies how the node will be created. 
+        /// Gets or sets a value that specifies how the node will be created.
         /// </summary>
         public CreateMode CreateMode { get; set; }
 

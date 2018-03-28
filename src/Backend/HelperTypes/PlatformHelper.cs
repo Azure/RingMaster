@@ -1,4 +1,4 @@
-﻿// <copyright file="PlatformHelper.cs" company="Microsoft">
+﻿// <copyright file="PlatformHelper.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -55,6 +55,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// <value><c>true</c> if this instance is single processor; otherwise, <c>false</c>.</value>
         public static bool IsSingleProcessor => ProcessorCount == 1;
 
+        /// <summary>
+        /// Gets the available physical memory in GB
+        /// </summary>
         public static double MemoryGb
         {
             get
@@ -66,54 +69,54 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                 return gb;
             }
         }
-    }
 
-    internal static class PerformanceInfo
-    {
-        [DllImport("psapi.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass", Justification = "Unnecessary")]
-        public static extern bool GetPerformanceInfo([Out] out PerformanceInformation performanceInformation, [In] int size);
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct PerformanceInformation
+        private static class PerformanceInfo
         {
-            public int Size;
-            public IntPtr CommitTotal;
-            public IntPtr CommitLimit;
-            public IntPtr CommitPeak;
-            public IntPtr PhysicalTotal;
-            public IntPtr PhysicalAvailable;
-            public IntPtr SystemCache;
-            public IntPtr KernelTotal;
-            public IntPtr KernelPaged;
-            public IntPtr KernelNonPaged;
-            public IntPtr PageSize;
-            public int HandlesCount;
-            public int ProcessCount;
-            public int ThreadCount;
-        }
+            [DllImport("psapi.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            [SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass", Justification = "Unnecessary")]
+            public static extern bool GetPerformanceInfo([Out] out PerformanceInformation performanceInformation, [In] int size);
 
-        public static long GetPhysicalAvailableMemoryInMiB()
-        {
-            PerformanceInformation pi = new PerformanceInformation();
-            if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+            public static long GetPhysicalAvailableMemoryInMiB()
             {
-                return Convert.ToInt64(pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64() / 1048576);
+                PerformanceInformation pi = default(PerformanceInformation);
+                if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+                {
+                    return Convert.ToInt64(pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64() / 1048576);
+                }
+
+                return -1;
             }
 
-            return -1;
-        }
-
-        public static long GetTotalMemoryInMiB()
-        {
-            PerformanceInformation pi = new PerformanceInformation();
-            if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+            public static long GetTotalMemoryInMiB()
             {
-                return Convert.ToInt64(pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64() / 1048576);
+                PerformanceInformation pi = default(PerformanceInformation);
+                if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+                {
+                    return Convert.ToInt64(pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64() / 1048576);
+                }
+
+                return -1;
             }
 
-            return -1;
+            [StructLayout(LayoutKind.Sequential)]
+            public struct PerformanceInformation
+            {
+                public int Size;
+                public IntPtr CommitTotal;
+                public IntPtr CommitLimit;
+                public IntPtr CommitPeak;
+                public IntPtr PhysicalTotal;
+                public IntPtr PhysicalAvailable;
+                public IntPtr SystemCache;
+                public IntPtr KernelTotal;
+                public IntPtr KernelPaged;
+                public IntPtr KernelNonPaged;
+                public IntPtr PageSize;
+                public int HandlesCount;
+                public int ProcessCount;
+                public int ThreadCount;
+            }
         }
     }
 }

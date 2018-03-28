@@ -1,4 +1,4 @@
-﻿// <copyright file="CertAccessor.cs" company="Microsoft">
+﻿// <copyright file="CertAccessor.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         /// <param name="thumbprint">The thumbprints to look for.</param>
         /// <returns>array of certificates found</returns>
         /// <exception cref="System.Exception">
-        /// two certs found in the same path 
+        /// two certs found in the same path
         /// or
         /// no cert found in path
         /// </exception>
@@ -119,7 +119,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
                 }
                 catch (Exception e)
                 {
-                    System.Diagnostics.Trace.TraceError("GetCertsFromThumbprintOrFileName: Exception {0}", e);
+                    CertificateRulesEventSource.Log.CertAccessor_GetCertsFromThumbprintOrFileNameFailed(e.ToString());
                 }
             }
 
@@ -138,7 +138,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             {
                 return default(DateTime);
             }
-            
+
             return certificate.NotBefore;
         }
 

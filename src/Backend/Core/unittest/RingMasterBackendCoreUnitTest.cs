@@ -20,11 +20,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         private RingMasterBackendCore backend;
         private PseudoNodes ps;
 
-        static RingMasterBackendCoreUnitTest()
-        {
-            RingMasterEventSource.Log.TraceLevel = TraceLevel.Verbose;
-        }
-
         protected RingMasterBackendCoreUnitTest()
         {
             this.backend = CreateBackend(null);

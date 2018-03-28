@@ -1,5 +1,5 @@
-﻿// <copyright file="ZooKeeperServerInstrumentation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ZooKeeperServerInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
@@ -20,6 +20,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
         private readonly IMetric0D watcherSet;
         private readonly IMetric0D watcherNotified;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ZooKeeperServerInstrumentation"/> class.
+        /// </summary>
+        /// <param name="metricsFactory">Metrics factory object</param>
         public ZooKeeperServerInstrumentation(IMetricsFactory metricsFactory)
         {
             if (metricsFactory == null)

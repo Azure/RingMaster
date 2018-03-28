@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterServerInstrumentation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterServerInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
@@ -20,6 +20,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
         private readonly IMetric0D watcherSet;
         private readonly IMetric0D watcherNotified;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RingMasterServerInstrumentation"/> class.
+        /// </summary>
+        /// <param name="metricsFactory">Metrics factory for getting notification of internal state</param>
         public RingMasterServerInstrumentation(IMetricsFactory metricsFactory)
         {
             if (metricsFactory == null)

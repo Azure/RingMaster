@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IRingMasterServerInstrumentation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IRingMasterServerInstrumentation.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -52,13 +48,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="reqType">Type of the req.</param>
         /// <param name="callid">The callid.</param>
         void OnNewRequest(ulong sid, string reqType, ulong callid);
-        
+
         /// <summary>
         /// Called when [bad request].
         /// </summary>
         /// <param name="sid">The sid.</param>
         void OnBadRequest(ulong sid);
-        
+
         /// <summary>
         /// Called when [request enqueued].
         /// </summary>
@@ -66,7 +62,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="reqType">Type of the req.</param>
         /// <param name="callid">The callid.</param>
         void OnRequestEnqueued(ulong sid, string reqType, ulong callid);
-        
+
         /// <summary>
         /// Called when [request dequeued].
         /// </summary>
@@ -74,7 +70,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="reqType">Type of the req.</param>
         /// <param name="callid">The callid.</param>
         void OnRequestDequeued(ulong sid, string reqType, ulong callid);
-        
+
         /// <summary>
         /// Called when [request completed].
         /// </summary>
@@ -91,25 +87,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="totalDataSize">Total size of the data.</param>
         /// <param name="totalCount">The total count.</param>
         void UpdateEphemeralNodeCounts(ulong totalDataSize, ulong totalCount);
-        
+
         /// <summary>
         /// Updates the persistent node counts.
         /// </summary>
         /// <param name="totalDataSize">Total size of the data.</param>
         /// <param name="totalCount">The total count.</param>
         void UpdatePersistentNodeCounts(ulong totalDataSize, ulong totalCount);
-        
+
         /// <summary>
         /// Called when [tx committed].
         /// </summary>
         void OnTxCommitted();
-        
+
         /// <summary>
         /// Called when [load state].
         /// </summary>
         /// <param name="totalMilliseconds">The total milliseconds.</param>
         void OnLoadState(long totalMilliseconds);
-        
+
         /// <summary>
         /// Called when [save state].
         /// </summary>
@@ -120,18 +116,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Called when [before load state].
         /// </summary>
         void OnBeforeLoadState();
-        
+
         /// <summary>
         /// Called when [before save state].
         /// </summary>
         void OnBeforeSaveState();
-        
+
         /// <summary>
         /// Updates the bulk watcher count.
         /// </summary>
         /// <param name="globalWatchersCount">The global watchers count.</param>
         void UpdateBulkWatcherCount(int globalWatchersCount);
-        
+
         /// <summary>
         /// Updates the bulk watcher execution backlog.
         /// </summary>
@@ -141,6 +137,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Called when an Authentication failed
         /// </summary>
+        /// <param name="exception">Exception object when the failure occurs</param>
         void OnAuthFailed(InvalidAclException exception);
 
         /// <summary>
@@ -183,6 +180,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="replicationLockedDown">True if this is a replication lockdown event.</param>
         void OnLockDownFound(IEnumerable<string> nodepaths, bool replicationLockedDown);
 
+        /// <summary>
         /// during load state, we found a lost child
         /// </summary>
         /// <param name="name">name of the created node to fake that child</param>

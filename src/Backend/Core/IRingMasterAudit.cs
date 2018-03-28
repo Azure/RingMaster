@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IRingMasterAudit.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IRingMasterAudit.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {

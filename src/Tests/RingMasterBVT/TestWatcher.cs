@@ -80,6 +80,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         }
 
         /// <summary>
+        /// Verifies that the watcher is notified when the data of a watched node is changed and the change is delivered
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDataChangedEventWithChangeDelivery()
+        {
+            this.watcherTest.TestDataChangedEvent(true).Wait();
+        }
+
+        /// <summary>
         /// Verifies that the watcher is notified when the session that set the watcher is terminated.
         /// </summary>
         [TestMethod]

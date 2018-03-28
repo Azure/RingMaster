@@ -1,19 +1,14 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IPersistedData.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IPersistedData.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
-    using System;
     using System.Collections.Generic;
-    using System.Net;
-    using System.Threading;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data;
+
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+
+    using IMutableStat = Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data.IMutableStat;
 
     /// <summary>
     /// Interface IPersistedData.
@@ -52,29 +47,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         byte[] Data { get; set; }
 
         /// <summary>
-        /// Deletes the specified instance.
-        /// </summary>
-        void Delete();
-
-        /// <summary>
-        /// Adds a child to this instance.
-        /// </summary>
-        /// <param name="child">The child.</param>
-        void AddChild(IPersistedData child);
-
-        /// <summary>
-        /// Removes the child from this instance's children.
-        /// </summary>
-        /// <param name="child">The child.</param>
-        void RemoveChild(IPersistedData child);
-
-        /// <summary>
-        /// Gets the children count.
-        /// </summary>
-        /// <returns>the number of children</returns>
-        int GetChildrenCount();
-
-        /// <summary>
         /// Gets or sets the acl.
         /// </summary>
         /// <value>The acl.</value>
@@ -97,6 +69,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// </summary>
         /// <value>The node.</value>
         Node Node { get; set; }
+
+        /// <summary>
+        /// Deletes the specified instance.
+        /// </summary>
+        void Delete();
+
+        /// <summary>
+        /// Adds a child to this instance.
+        /// </summary>
+        /// <param name="child">The child.</param>
+        void AddChild(IPersistedData child);
+
+        /// <summary>
+        /// Removes the child from this instance's children.
+        /// </summary>
+        /// <param name="child">The child.</param>
+        void RemoveChild(IPersistedData child);
+
+        /// <summary>
+        /// Gets the children count.
+        /// </summary>
+        /// <returns>the number of children</returns>
+        int GetChildrenCount();
 
         /// <summary>
         /// Ensures the data is fresh before reading it. May block the call until it is fresh
@@ -156,6 +151,5 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <param name="spec">Poison pill specification</param>
         /// <param name="chgs">The changelist.</param>
         void AppendPoison(string spec, ref IChangeList chgs);
-
     }
 }

@@ -1,15 +1,14 @@
-﻿// <copyright file="ZooKeeperRequestType.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="ZooKeeperRequestType.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
-    using System;
+#pragma warning disable CS1591, SA1602 // TODO: document every enum items
 
     /// <summary>
     /// ZooKeeper Request Types
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1602:EnumerationItemsMustBeDocumented", Justification = "These come from Zookeeper")]
     public enum ZooKeeperRequestType
     {
         Notification = 0,
@@ -39,4 +38,5 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         CloseSession = -11,
         Error = -1,
     }
+#pragma warning restore
 }

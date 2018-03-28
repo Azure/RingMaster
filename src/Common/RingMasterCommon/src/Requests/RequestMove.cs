@@ -1,5 +1,5 @@
-﻿// <copyright file="RequestMove.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestMove.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         public string PathDst { get; private set; }
 
         /// <summary>
-        /// Gets a value that specifies how the node will be moved. 
+        /// Gets a value that specifies how the node will be moved.
         /// </summary>
         public MoveMode MoveMode { get; private set; }
 

@@ -1,16 +1,17 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build;Package" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build;Package" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" />
   <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>37D80B41-0442-456D-8D53-D6FD9709917C</ProjectGuid>
     <ProjectVersion>1.0</ProjectVersion>
-    <PackageLocation>$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)</PackageLocation>
+    <PackageLocation>$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)-Pkg\$(MsBuildProjectName)</PackageLocation>
     <ApplicationManifestFilePath>ApplicationManifest.xml</ApplicationManifestFilePath>
   </PropertyGroup>
   <ItemGroup>
     <None Include="ApplicationPackageRoot\ApplicationManifest.xml" />
     <None Include="ApplicationParameters\RingMaster.WestCentralUS.xml" />
+    <None Include="ApplicationParameters\Local.xml" />
     <None Include="PublishProfiles\Local.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -22,5 +23,8 @@
     <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
   </ItemGroup>
   <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.targets" />
+  <Target Name="CopyApplicationParameter" AfterTargets="Build">
+    <Copy SourceFiles="ApplicationParameters\Local.xml" DestinationFolder="$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)-Pkg"/>  
+  </Target>
   <Target Name="VerifyAlteredTargetsUsed" />
 </Project>

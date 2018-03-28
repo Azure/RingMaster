@@ -31,11 +31,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
     {
         private const string TestCertPrefix = "SecureTransportTestCert";
 
-        static TestSslConnection()
-        {
-            SecureTransport.TraceLevel = TraceLevel.Verbose;
-        }
-
         [AssemblyInitialize]
         public static void InstallCerts(TestContext context)
         {

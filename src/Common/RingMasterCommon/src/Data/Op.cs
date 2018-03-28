@@ -1,5 +1,5 @@
-// <copyright file="Op.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="Op.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
@@ -113,13 +113,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         public static Op Check(string path, Guid uniqueIncarnationId, bool isExtended = false)
         {
             return new Op(
-                OpCode.Check, 
+                OpCode.Check,
                 new RequestCheck(
-                    path: path, 
-                    version: -1, 
-                    cversion: -1, 
-                    aversion: -1, 
-                    uniqueIncarnation: uniqueIncarnationId, 
+                    path: path,
+                    version: -1,
+                    cversion: -1,
+                    aversion: -1,
+                    uniqueIncarnation: uniqueIncarnationId,
                     uniqueIncarnationIdKind: isExtended ? RequestCheck.UniqueIncarnationIdType.Extended : RequestCheck.UniqueIncarnationIdType.Simple));
         }
 
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         {
             return Delete(path, version, recursive ? DeleteMode.CascadeDelete : DeleteMode.None);
         }
-        
+
         /// <summary>
         /// Create a new instance of the <see cref="Op"/> class that represents a  Delete operation.
         /// </summary>
@@ -215,7 +215,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             {
                 throw new ArgumentNullException("data");
             }
-            
+
             return new Op(OpCode.SetData, new RequestSetData(path, data.RawData, version, dataCommand: true));
         }
 

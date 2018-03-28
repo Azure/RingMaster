@@ -45,6 +45,12 @@
     <Parameter Name="SubscribeStress.MaxNodesToLoad" DefaultValue="100000" />
     <Parameter Name="SubscribeStress.MaxChildrenEnumerationCount" DefaultValue="1000" />
     <Parameter Name="SubscribeStress.MaxConcurrentWatchers" DefaultValue="10000" />
+    <Parameter Name="ConnectionStressService.InstanceCount" DefaultValue="1" />
+    <Parameter Name="ControlPlaneStressService.InstanceCount" DefaultValue="1" />
+    <Parameter Name="EnumerationStressService.InstanceCount" DefaultValue="1" />
+    <Parameter Name="PopulationStressService.InstanceCount" DefaultValue="1" />
+    <Parameter Name="ServingPlaneStressService.InstanceCount" DefaultValue="1" />
+    <Parameter Name="SubscribeStressService.InstanceCount" DefaultValue="1" />
   </Parameters>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="ConnectionStressService" ServiceManifestVersion="1.0.0.38" />
@@ -205,4 +211,24 @@
       </ConfigOverride>
     </ConfigOverrides>
   </ServiceManifestImport>
+  <ServiceTemplates>
+    <StatelessService ServiceTypeName="ConnectionStressService" InstanceCount="[ConnectionStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+    <StatelessService ServiceTypeName="ControlPlaneStressService" InstanceCount="[ControlPlaneStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+    <StatelessService ServiceTypeName="EnumerationStressService" InstanceCount="[EnumerationStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+    <StatelessService ServiceTypeName="SubscribeStressService" InstanceCount="[SubscribeStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+    <StatelessService ServiceTypeName="ServingPlaneStressService" InstanceCount="[ServingPlaneStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+    <StatelessService ServiceTypeName="PopulationStressService" InstanceCount="[PopulationStressService.InstanceCount]">
+      <SingletonPartition />
+    </StatelessService>
+  </ServiceTemplates>
 </ApplicationManifest>

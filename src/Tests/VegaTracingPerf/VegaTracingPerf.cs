@@ -109,9 +109,11 @@ namespace Microsoft.Vega.Test
 
                 stopWatch.Stop();
                 Console.WriteLine(
-                    "Total execution time: {0} ms, throughput = {1:F3} count/sec\n",
+                    "Total execution time: {0} ms, throughput: {1:F3} count/sec. Received: {2} Dropped: {3}\n",
                     stopWatch.ElapsedMilliseconds,
-                    count * 1000.0 / stopWatch.ElapsedMilliseconds);
+                    count * 1000.0 / stopWatch.ElapsedMilliseconds,
+                    LogFileEventTracing.ReceivedTraceCount,
+                    LogFileEventTracing.DroppedTraceCount);
 
                 Thread.Sleep(1000 * 2);
             }

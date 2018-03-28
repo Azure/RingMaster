@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="RetriableOperationException.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RetriableOperationException.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -17,9 +13,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     public class RetriableOperationException : Exception
     {
         /// <summary>
-        /// the constructor, taking the message
+        /// Initializes a new instance of the <see cref="RetriableOperationException"/> class.
         /// </summary>
-        /// <param name="msg"></param>
+        /// <param name="msg">Exception message</param>
         public RetriableOperationException(string msg)
             : base(msg)
         {

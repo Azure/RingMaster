@@ -1,6 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" />
+  <Import Project="$(PkgNuproj)\tools\NuProj.props" Condition="'$(OSSBUILD)' != ''" />
   <Import Project="..\NuprojCommon.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>941a7859-a9aa-4f29-ba29-a6b2500de35e</ProjectGuid>
@@ -30,5 +31,12 @@
       <TargetFramework>net45</TargetFramework>
     </Library>
   </ItemGroup>
-  <Import Project="$(PkgNuProj)\NuProj.Targets" />
+  <Import Project="$(PkgNuProj)\tools\NuProj.targets" Condition="'$(OSSBUILD)' != ''" />
+  <Target Name="AfterBuild" Condition="'$(OSSBUILD)' != ''">
+    <ItemGroup>
+      <nupkgs Include="$(IntermediateOutputPath)\*.nupkg" />
+    </ItemGroup>
+    <Copy SourceFiles="@(nupkgs)" DestinationFolder="$(OUTPUTROOT)\packages\$(BuildType)" />
+  </Target>
+  <Import Project="$(PkgNuProj)\NuProj.Targets" Condition="'$(OSSBUILD)' == ''" />
 </Project>

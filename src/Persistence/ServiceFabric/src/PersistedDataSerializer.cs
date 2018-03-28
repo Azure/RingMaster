@@ -1,5 +1,5 @@
-﻿// <copyright file="PersistedDataSerializer.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="PersistedDataSerializer.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric
@@ -8,14 +8,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     using System.IO;
     using Microsoft.ServiceFabric.Data;
 
-    using PersistedData = Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.PersistedData;
-    using WinFabPersistedData = Microsoft.Azure.Networking.Infrastructure.RingMaster.WinFabPersistence.PersistedData;
-
     /// <summary>
     /// Custom serializer for <see cref="PersistedData"/>.
     /// </summary>
-    internal sealed class PersistedDataSerializer : IStateSerializer<WinFabPersistedData>
+    internal sealed class PersistedDataSerializer : IStateSerializer<ServiceFabricPersistedData>
     {
+        /// <summary>
+        /// Gets or sets the persisted data factory instance
+        /// </summary>
         internal PersistedDataFactory Factory { get; set; }
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// </summary>
         /// <param name="binaryReader">The <see cref="BinaryReader"/> to deserialize from</param>
         /// <returns>The deserialized <see cref="PersistedData"/></returns>
-        public WinFabPersistedData Read(BinaryReader binaryReader)
+        public ServiceFabricPersistedData Read(BinaryReader binaryReader)
         {
             if (binaryReader == null)
             {
@@ -34,7 +34,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             pd.ReadFrom(binaryReader);
             ServiceFabricPersistenceEventSource.Log.PersistedDataSerializer_Read(pd.Id, pd.Name);
 
-            return new WinFabPersistedData(pd);
+            return new ServiceFabricPersistedData(pd);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// </summary>
         /// <param name="value">The value to serialize</param>
         /// <param name="binaryWriter">The <see cref="BinaryWriter"/> to serialize to</param>
-        public void Write(WinFabPersistedData value, BinaryWriter binaryWriter)
+        public void Write(ServiceFabricPersistedData value, BinaryWriter binaryWriter)
         {
             if (value == null)
             {
@@ -65,9 +65,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="baseValue">The base value for the deserialization</param>
         /// <param name="binaryReader">The <see cref="BinaryReader"/> to deserialize from</param>
         /// <returns>The deserialized <see cref="PersistedData"/></returns>
-        public WinFabPersistedData Read(WinFabPersistedData baseValue, BinaryReader binaryReader)
+        public ServiceFabricPersistedData Read(ServiceFabricPersistedData baseValue, BinaryReader binaryReader)
         {
-            WinFabPersistedData pd = this.Read(binaryReader);
+            ServiceFabricPersistedData pd = this.Read(binaryReader);
             if (baseValue != null)
             {
                 ServiceFabricPersistenceEventSource.Log.PersistedDataSerializer_ReadDifferential(baseValue.Data.Id, baseValue.Data.Name, pd.Data.Id, pd.Data.Name);
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="baseValue">The base value for the serialization</param>
         /// <param name="targetValue">The value to serialize</param>
         /// <param name="binaryWriter">The <see cref="BinaryWriter"/> to serialize to</param>
-        public void Write(WinFabPersistedData baseValue, WinFabPersistedData targetValue, BinaryWriter binaryWriter)
+        public void Write(ServiceFabricPersistedData baseValue, ServiceFabricPersistedData targetValue, BinaryWriter binaryWriter)
         {
             if (baseValue != null && targetValue != null)
             {

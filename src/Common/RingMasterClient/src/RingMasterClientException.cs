@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterClientException.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterClientException.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -7,6 +7,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System;
     using System.Runtime.Serialization;
 
+    /// <summary>
+    /// Ring master client exception
+    /// </summary>
     [Serializable]
     public class RingMasterClientException : Exception
     {
@@ -22,18 +25,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.ErrorCode = (Code)info.GetValue("Code", typeof(Code));
         }
 
+        /// <summary>
+        /// Error code
+        /// </summary>
         public enum Code
         {
-            RequestQueueFull
+            /// <summary>
+            /// Request queue is full
+            /// </summary>
+            RequestQueueFull,
         }
 
+        /// <summary>
+        /// Gets the error code of the exception
+        /// </summary>
         public Code ErrorCode { get; private set; }
 
+        /// <summary>
+        /// Creates an exception with RequestQueueFull code
+        /// </summary>
+        /// <param name="queueLength">Length of the queue</param>
+        /// <returns>Exception created</returns>
         public static RingMasterClientException RequestQueueFull(int queueLength)
         {
             return new RingMasterClientException(Code.RequestQueueFull, $"RequestQueue has reached his configured limit {queueLength}");
         }
 
+        /// <inheritdoc />
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);

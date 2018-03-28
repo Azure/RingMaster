@@ -1,5 +1,5 @@
-// <copyright file="Stat.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="Stat.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
@@ -207,7 +207,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         {
             return t.ToFileTimeUtc();
         }
-        
+
         /// <summary>
         /// Deserializes the object from <see cref="BinaryReader"/> object
         /// </summary>
@@ -256,10 +256,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
+        /// Determines whether the specified <see cref="object" /> is equal to this instance.
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             IStat other = obj as IStat;
@@ -301,9 +301,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+        /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
             return string.Format("[STAT czxid:{0} mzxid:{1} pzxid:{2} ctime:{3} mtime:{4} version:{5} cversion:{6} aversion:{7} ephemeralOwner:{8} dataLength:{9} numChildren:{10} uniqueIncId:{11} uniqueExtIncId:{12}]", this.Czxid, this.Mzxid, this.Pzxid, ConvertTime(this.Ctime).ToString("o"), ConvertTime(this.Mtime).ToString("o"), this.Version, this.Cversion, this.Aversion, this.EphemeralOwner, this.DataLength, this.NumChildren, this.UniqueIncarnationId, this.UniqueExtendedIncarnationId);

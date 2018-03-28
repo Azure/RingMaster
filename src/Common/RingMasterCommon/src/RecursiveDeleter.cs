@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterExtensions.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RecursiveDeleter.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -30,6 +30,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <summary>
         /// Initializes a new instance of the <see cref="RecursiveDeleter"/> class.
         /// </summary>
+        /// <param name="instrumentation">Instrumentation object to get the internal state notification</param>
+        /// <param name="maxChildrenEnumerationCount">maximum number of children that the RecursiveDeleter will enumerate at one time</param>
         public RecursiveDeleter(IInstrumentation instrumentation, int maxChildrenEnumerationCount = 1000)
         {
             this.instrumentation = instrumentation;
@@ -42,18 +44,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public interface IInstrumentation
         {
             /// <summary>
+            /// Report that delete has been queued for a node.
+            /// </summary>
+            /// <param name="nodesDeleted">Number of nodes deleted so far</param>
+            /// <param name="nodePath">Path to the node</param>
+            void DeleteQueued(int nodesDeleted, string nodePath);
+
+            /// <summary>
             /// Report that a multi of delete operations has been successfully applied.
             /// </summary>
+            /// <param name="nodesDeleted">Number of nodes deleted so far</param>
             /// <param name="operationsCount">Number of operations in the multi</param>
             /// <param name="latency">Time taken by the multi</param>
-            void DeleteMultiSucceeded(int operationsCount, TimeSpan latency);
+            void DeleteMultiSucceeded(int nodesDeleted, int operationsCount, TimeSpan latency);
 
             /// <summary>
             /// Report that a multi of delete operations has failed.
             /// </summary>
+            /// <param name="nodesDeleted">Number of nodes deleted so far</param>
             /// <param name="operationsCount">Number of operations in the multi</param>
             /// <param name="latency">Time taken by the multi</param>
-            void DeleteMultiFailed(int operationsCount, TimeSpan latency);
+            void DeleteMultiFailed(int nodesDeleted, int operationsCount, TimeSpan latency);
 
             /// <summary>
             /// Report that a recursive delete operation succeeded.
@@ -115,17 +126,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                         {
                             Path = currentNode.Path,
                             StartingChildName = children.Count > 0 ? children[children.Count - 1] : string.Empty,
-                            AllChildrenProcessed = children.Count < this.MaxChildrenEnumerationCount
+                            AllChildrenProcessed = children.Count < this.MaxChildrenEnumerationCount,
                         });
 
                         foreach (var child in children)
                         {
                             string childFullPath = (currentNode.Path == "/") ? $"/{child}" : $"{currentNode.Path}/{child}";
                             pendingNodes.Push(new NodeState(childFullPath));
-                        };
+                        }
                     }
                     else
                     {
+                        this.instrumentation?.DeleteQueued(this.deletedCount, currentNode.Path);
                         deleteOperations.Add(Op.Delete(currentNode.Path, version: -1));
                     }
 
@@ -156,20 +168,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         /// <param name="ringMaster">Interface to RingMaster</param>
         /// <param name="deleteOperations">Delete operations to apply as a batch</param>
-        /// <returns></returns>
+        /// <returns>Async task to indicate the completion of the request</returns>
         private async Task DeleteMulti(IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> deleteOperations)
         {
             var timer = Stopwatch.StartNew();
             var multiRequest = new RequestMulti(deleteOperations, completeSynchronously: true);
             var response = await ringMaster.Request(multiRequest);
+
             if (response.ResultCode == (int)RingMasterException.Code.Ok)
             {
-                this.instrumentation?.DeleteMultiSucceeded(deleteOperations.Count, timer.Elapsed);
                 this.deletedCount += deleteOperations.Count;
+                this.instrumentation?.DeleteMultiSucceeded(this.deletedCount, deleteOperations.Count, timer.Elapsed);
             }
             else
             {
-                this.instrumentation?.DeleteMultiFailed(deleteOperations.Count, timer.Elapsed);
+                this.instrumentation?.DeleteMultiFailed(this.deletedCount, deleteOperations.Count, timer.Elapsed);
                 throw RingMasterException.GetException(response);
             }
         }
@@ -182,7 +195,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// <summary>
             /// Initializes a new instance of the <see cref="NodeState"/> struct.
             /// </summary>
-            /// <param name="path"></param>
+            /// <param name="path">Path of the node</param>
             public NodeState(string path)
             {
                 this.Path = path;

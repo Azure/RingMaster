@@ -281,7 +281,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 backend.ProcessMessage(
                     new RequestSetAuth(authDigest, null),
                     session,
-                    response => response.ResultCode.Should().Be((int)Code.Ok));
+                    (response, ex) => response.ResultCode.Should().Be((int)Code.Ok));
             }
 
             return session;
@@ -379,7 +379,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             backend.ProcessMessage(
                 request,
                 session,
-                response =>
+                (response, ex) =>
                 {
                     response.ResultCode.Should().Be((int)expectedResponseCode);
                     evt.Set();

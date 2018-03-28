@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="EphemeralFactory.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="EphemeralFactory.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
@@ -22,252 +18,58 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
     /// </summary>
     public class EphemeralFactory : IPersistedDataFactory<Node>
     {
-        /// <summary>
-        /// Class PersistedData.
-        /// </summary>
-        public class PersistedData : IPersistedData
-        {
-            /// <summary>
-            /// Ensures the data is fresh before reading it. May block the call until it is fresh
-            /// </summary>
-            /// <param name="chgs">The changelist.</param>
-            public void AppendRead(ref IChangeList chgs)
-            {
-            }
+        private long totalData;
 
-            /// <summary>
-            /// The _uid
-            /// </summary>
-            private static UIdProvider _uid = new UIdProvider();
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="PersistedData"/> class.
-            /// </summary>
-            public PersistedData()
-            {
-                this.Stat = new MutableStat();
-                this.Id = _uid.NextUniqueId();
-            }
-
-            /// <summary>
-            /// Gets a value indicating whether this instance is ephemeral.
-            /// </summary>
-            /// <value><c>true</c> if this instance is ephemeral; otherwise, <c>false</c>.</value>
-            public bool IsEphemeral { get { return true; } }
-
-            /// <summary>
-            /// Gets or sets the node.
-            /// </summary>
-            /// <value>The node.</value>
-            public Node Node { get; set; }
-
-            /// <summary>
-            /// Gets the saved zxid.
-            /// </summary>
-            /// <value>The saved zxid.</value>
-            public long SavedZxid { get { return this.Stat.Mzxid; } }
-
-            /// <summary>
-            /// Gets or sets the identifier.
-            /// </summary>
-            /// <value>The identifier.</value>
-            public ulong Id { get; set; }
-
-            /// <summary>
-            /// the parent. Not to be set directly!
-            /// </summary>
-            public IPersistedData Parent { get; set; }
-
-            /// <summary>
-            /// Gets or sets the stat.
-            /// </summary>
-            /// <value>The stat.</value>
-            public IMutableStat Stat { get; set; }
-
-            /// <summary>
-            /// Gets or sets the data.
-            /// </summary>
-            /// <value>The data.</value>
-            public byte[] Data { get; set; }
-
-            /// <summary>
-            /// the count of children.
-            /// </summary>
-            private int _childrenCount = 0;
-
-            /// <summary>
-            /// Deletes the specified instance.
-            /// </summary>
-            public void Delete()
-            {
-                this.Parent = null;
-            }
-
-            /// <summary>
-            /// Adds the child.
-            /// </summary>
-            /// <param name="child">The child.</param>
-            public void AddChild(IPersistedData child)
-            {
-                if (child == null)
-                {
-                    throw new ArgumentNullException("child");
-                }
-
-                if (child.Parent != null)
-                {
-                    child.Parent.RemoveChild(child);
-                }
-                child.Parent = this;
-                this._childrenCount++;
-            }
-
-            /// <summary>
-            /// Removes the child.
-            /// </summary>
-            /// <param name="child">The child.</param>
-            public void RemoveChild(IPersistedData child)
-            {
-                if (child == null)
-                {
-                    throw new ArgumentNullException("child");
-                }
-
-                if (child.Parent == null)
-                {
-                    return;
-                }
-
-                if (child.Parent != this)
-                {
-                    RmAssert.Fail("cannot remove a node that is not a child.");
-                }
-                child.Parent = null;
-                this._childrenCount--;
-            }
-
-            /// <summary>
-            /// Gets the children count.
-            /// </summary>
-            /// <returns>the count of children</returns>
-            public int GetChildrenCount()
-            {
-                return this._childrenCount;
-            }
-
-            /// <summary>
-            /// Gets or sets the acl.
-            /// </summary>
-            /// <value>The acl.</value>
-            public IReadOnlyList<Acl> Acl { get; set; }
-
-            /// <summary>
-            /// Gets or sets the name.
-            /// </summary>
-            /// <value>The name.</value>
-            public string Name { get; set; }
-
-            /// <summary>
-            /// Appends the create.
-            /// </summary>
-            /// <param name="chgs">The CHGS.</param>
-            /// <returns>IChangeList.</returns>
-            public void AppendCreate(ref IChangeList chgs)
-            {
-            }
-
-            /// <summary>
-            /// Appends the add child.
-            /// </summary>
-            /// <param name="chgs">The CHGS.</param>
-            /// <param name="child">The child.</param>
-            /// <returns>IChangeList.</returns>
-            public void AppendAddChild(ref IChangeList chgs, IPersistedData child)
-            {
-            }
-
-            /// <summary>
-            /// Appends the remove child operation to the changelist.
-            /// </summary>
-            /// <param name="chgs">The changelist object, or null if none exists yet.</param>
-            /// <param name="child">The child being removed.</param>
-            public void AppendRemoveChild(ref IChangeList chgs, IPersistedData child)
-            {
-            }
-
-            /// <summary>
-            /// Appends the remove.
-            /// </summary>
-            /// <param name="chgs">The CHGS.</param>
-            /// <param name="parent">The parent.</param>
-            /// <param name="isRecursive">if true the deletion is recursive</param>
-            /// <returns>IChangeList.</returns>
-            public void AppendRemove(ref IChangeList chgs, IPersistedData parent, bool isRecursive = false)
-            {
-            }
-
-            /// <summary>
-            /// records the parent node
-            /// </summary>
-            /// <param name="parent">the parent, not null</param>
-            public void AppendSetParent(IPersistedData parent)
-            {
-                this.Parent = parent;
-            }
-
-            /// <summary>
-            /// Appends the set acl.
-            /// </summary>
-            /// <param name="chgs">The CHGS.</param>
-            /// <returns>IChangeList.</returns>
-            public void AppendSetAcl(ref IChangeList chgs)
-            {
-            }
-
-            /// <summary>
-            /// Appends the set data.
-            /// </summary>
-            /// <param name="chgs">The CHGS.</param>
-            public void AppendSetData(ref IChangeList chgs)
-            {
-            }
-
-            /// <summary>
-            /// Appends a poison pill for this node to the changelist.
-            /// </summary>
-            /// <param name="spec">Poison pill specification</param>
-            /// <param name="chgs">The changelist.</param>
-            public void AppendPoison(string spec, ref IChangeList chgs)
-            {
-            }
-        }
+        private long totalNodes;
 
         /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public string Name { get { return  "ephemeral"; } }
-
-        private long _totalData;
-        private long _totalNodes;
+        public string Name
+        {
+            get { return "ephemeral"; }
+        }
 
         /// <summary>
         /// Gets the total data.
         /// </summary>
         /// <value>The total data.</value>
-        public ulong TotalData { get { return (ulong)_totalData; } }
+        public ulong TotalData
+        {
+            get { return (ulong)this.totalData; }
+        }
 
         /// <summary>
         /// Gets the total nodes.
         /// </summary>
         /// <value>The total nodes.</value>
-        public ulong TotalNodes { get { return (ulong)_totalNodes; } }
+        public ulong TotalNodes
+        {
+            get { return (ulong)this.totalNodes; }
+        }
 
         /// <summary>
         /// Gets a value indicating whether this instance is active.
         /// </summary>
         /// <value><c>true</c> if this instance is active; otherwise, <c>false</c>.</value>
-        public bool IsActive { get { return true; } }
+        public bool IsActive
+        {
+            get { return true; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the factory requires calls for each delete object, or the caller can just not call Delete for each,
+        /// and instead invoke RecordDataDelta
+        /// </summary>
+        /// <value><c>true</c> if the factory requires calls for each delete; otherwise, <c>false</c>.</value>
+        public bool RequiresCallsForEachDelete
+        {
+            get
+            {
+                return false;
+            }
+        }
 
         /// <summary>
         /// Dumps all nodes for debugging purposes only.
@@ -323,6 +125,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// changes the agreed memberset based on the given mapping
         /// </summary>
         /// <param name="changeMapping">the mapping function for the modified members</param>
+        /// <returns>Always false</returns>
         public bool ChangeAgreedMembers(Dictionary<string, ClusterMember> changeMapping)
         {
             return false;
@@ -335,12 +138,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <param name="client">The client.</param>
         public void Activate(RingMasterBackendCore argBackend, IPersistedDataFactoryClient client)
         {
-            if (client!=null)
+            if (client != null)
             {
                 while (!client.CanBecomePrimary())
                 {
                     Thread.Sleep(100);
                 }
+
                 client.OnBecomePrimary();
             }
         }
@@ -363,6 +167,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
             return null;
         }
 
+        /// <inheritdoc />
         public long GetLastXId()
         {
             return 0;
@@ -374,8 +179,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <returns>IPersistedData.</returns>
         public IPersistedData CreateNew()
         {
-            IPersistedData res= new PersistedData();
-            RecordStatsDelta(1, 0);
+            IPersistedData res = new PersistedData();
+            this.RecordStatsDelta(1, 0);
             return res;
         }
 
@@ -391,20 +196,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
             }
 
             node.Delete();
-            RecordStatsDelta(-1, -node.Stat.DataLength);
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether the factory requires calls for each delete object, or the caller can just not call Delete for each,
-        /// and instead invoke RecordDataDelta
-        /// </summary>
-        /// <value><c>true</c> if the factory requires calls for each delete; otherwise, <c>false</c>.</value>
-        public bool RequiresCallsForEachDelete
-        {
-            get
-            {
-                return false;
-            }
+            this.RecordStatsDelta(-1, -node.Stat.DataLength);
         }
 
         /// <summary>
@@ -413,7 +205,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <param name="size">The size.</param>
         public void RecordDataDelta(int size)
         {
-            RecordStatsDelta(0, size);
+            this.RecordStatsDelta(0, size);
         }
 
         /// <summary>
@@ -423,8 +215,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <param name="dataSize">The data size changed.</param>
         public void RecordStatsDelta(int numNodes, int dataSize)
         {
-            Interlocked.Add(ref this._totalNodes, numNodes);
-            Interlocked.Add(ref this._totalData, dataSize);
+            Interlocked.Add(ref this.totalNodes, numNodes);
+            Interlocked.Add(ref this.totalData, dataSize);
         }
 
         /// <summary>
@@ -438,7 +230,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
                 throw new ArgumentNullException("node");
             }
 
-            RecordStatsDelta(1, node.Stat.DataLength);
+            this.RecordStatsDelta(1, node.Stat.DataLength);
         }
 
         /// <summary>
@@ -481,5 +273,225 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
             return false;
         }
 
+        /// <summary>
+        /// Class PersistedData.
+        /// </summary>
+        public class PersistedData : IPersistedData
+        {
+            private static UIdProvider uid = new UIdProvider();
+
+            /// <summary>
+            /// the count of children.
+            /// </summary>
+            private int childrenCount = 0;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="PersistedData"/> class.
+            /// </summary>
+            public PersistedData()
+            {
+                this.Stat = new MutableStat();
+                this.Id = uid.NextUniqueId();
+            }
+
+            /// <summary>
+            /// Gets a value indicating whether this instance is ephemeral.
+            /// </summary>
+            /// <value><c>true</c> if this instance is ephemeral; otherwise, <c>false</c>.</value>
+            public bool IsEphemeral
+            {
+                get { return true; }
+            }
+
+            /// <summary>
+            /// Gets or sets the node.
+            /// </summary>
+            /// <value>The node.</value>
+            public Node Node { get; set; }
+
+            /// <summary>
+            /// Gets the saved zxid.
+            /// </summary>
+            /// <value>The saved zxid.</value>
+            public long SavedZxid
+            {
+                get { return this.Stat.Mzxid; }
+            }
+
+            /// <summary>
+            /// Gets or sets the identifier.
+            /// </summary>
+            /// <value>The identifier.</value>
+            public ulong Id { get; set; }
+
+            /// <summary>
+            /// Gets or sets the parent. Not to be set directly!
+            /// </summary>
+            public IPersistedData Parent { get; set; }
+
+            /// <summary>
+            /// Gets or sets the stat.
+            /// </summary>
+            /// <value>The stat.</value>
+            public IMutableStat Stat { get; set; }
+
+            /// <summary>
+            /// Gets or sets the data.
+            /// </summary>
+            /// <value>The data.</value>
+            public byte[] Data { get; set; }
+
+            /// <summary>
+            /// Gets or sets the acl.
+            /// </summary>
+            /// <value>The acl.</value>
+            public IReadOnlyList<Acl> Acl { get; set; }
+
+            /// <summary>
+            /// Gets or sets the name.
+            /// </summary>
+            /// <value>The name.</value>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// Ensures the data is fresh before reading it. May block the call until it is fresh
+            /// </summary>
+            /// <param name="chgs">The changelist.</param>
+            public void AppendRead(ref IChangeList chgs)
+            {
+            }
+
+            /// <summary>
+            /// Deletes the specified instance.
+            /// </summary>
+            public void Delete()
+            {
+                this.Parent = null;
+            }
+
+            /// <summary>
+            /// Adds the child.
+            /// </summary>
+            /// <param name="child">The child.</param>
+            public void AddChild(IPersistedData child)
+            {
+                if (child == null)
+                {
+                    throw new ArgumentNullException("child");
+                }
+
+                if (child.Parent != null)
+                {
+                    child.Parent.RemoveChild(child);
+                }
+
+                child.Parent = this;
+                this.childrenCount++;
+            }
+
+            /// <summary>
+            /// Removes the child.
+            /// </summary>
+            /// <param name="child">The child.</param>
+            public void RemoveChild(IPersistedData child)
+            {
+                if (child == null)
+                {
+                    throw new ArgumentNullException("child");
+                }
+
+                if (child.Parent == null)
+                {
+                    return;
+                }
+
+                if (child.Parent != this)
+                {
+                    RmAssert.Fail("cannot remove a node that is not a child.");
+                }
+
+                child.Parent = null;
+                this.childrenCount--;
+            }
+
+            /// <summary>
+            /// Gets the children count.
+            /// </summary>
+            /// <returns>the count of children</returns>
+            public int GetChildrenCount()
+            {
+                return this.childrenCount;
+            }
+
+            /// <summary>
+            /// Appends the create.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            public void AppendCreate(ref IChangeList chgs)
+            {
+            }
+
+            /// <summary>
+            /// Appends the add child.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            /// <param name="child">The child.</param>
+            public void AppendAddChild(ref IChangeList chgs, IPersistedData child)
+            {
+            }
+
+            /// <summary>
+            /// Appends the remove child operation to the changelist.
+            /// </summary>
+            /// <param name="chgs">The changelist object, or null if none exists yet.</param>
+            /// <param name="child">The child being removed.</param>
+            public void AppendRemoveChild(ref IChangeList chgs, IPersistedData child)
+            {
+            }
+
+            /// <summary>
+            /// Appends the remove.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            /// <param name="parent">The parent.</param>
+            /// <param name="isRecursive">if true the deletion is recursive</param>
+            public void AppendRemove(ref IChangeList chgs, IPersistedData parent, bool isRecursive = false)
+            {
+            }
+
+            /// <summary>
+            /// records the parent node
+            /// </summary>
+            /// <param name="parent">the parent, not null</param>
+            public void AppendSetParent(IPersistedData parent)
+            {
+                this.Parent = parent;
+            }
+
+            /// <summary>
+            /// Appends the set acl.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            public void AppendSetAcl(ref IChangeList chgs)
+            {
+            }
+
+            /// <summary>
+            /// Appends the set data.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            public void AppendSetData(ref IChangeList chgs)
+            {
+            }
+
+            /// <summary>
+            /// Appends a poison pill for this node to the changelist.
+            /// </summary>
+            /// <param name="spec">Poison pill specification</param>
+            /// <param name="chgs">The changelist.</param>
+            public void AppendPoison(string spec, ref IChangeList chgs)
+            {
+            }
+        }
     }
 }

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -8,6 +8,8 @@
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Backend.HelperTypes</AssemblyName>
     <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -19,11 +21,14 @@
     <Compile Include="DictionaryOfCollection.cs" />
     <Compile Include="EqualityHelper.cs" />
     <Compile Include="ExecutionQueue.cs" />
-    <Compile Include="FxCopRulesModifications.cs" />
+    <Compile Include="FixedUIdProvider.cs" />
     <Compile Include="ICloneableStream.cs" />
+    <Compile Include="ILockObject.cs" />
+    <Compile Include="IRingMasterThreadPool.cs" />
+    <Compile Include="LockObject.cs" />
     <Compile Include="LRUCache.cs" />
     <Compile Include="ManualResetEventPool.cs" />
-    <Compile Include="MultiLevelLockPool.cs" />
+    <Compile Include="MultiLevelPool.cs" />
     <Compile Include="ObjectTracker.cs" />
     <Compile Include="PlatformHelper.cs" />
     <Compile Include="PoolOf.cs" />

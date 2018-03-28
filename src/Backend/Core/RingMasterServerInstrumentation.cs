@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="RingMasterServerInstrumentation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterServerInstrumentation.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -19,18 +15,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// The storage for the instrumentation singleton
         /// </summary>
-        private static IRingMasterServerInstrumentation _instance = new RingMasterServerInstrumentation();
-
-        /// <summary>
-        /// The singleton instance for the instrumentation
-        /// </summary>
-        public static IRingMasterServerInstrumentation Instance { get { return _instance; } set { _instance = value; } }
+        private static IRingMasterServerInstrumentation thisInstance = new RingMasterServerInstrumentation();
 
         /// <summary>
         /// Prevents a default instance of the <see cref="RingMasterServerInstrumentation"/> class from being created.
         /// </summary>
         private RingMasterServerInstrumentation()
         {
+        }
+
+        /// <summary>
+        /// Gets or sets the singleton instance for the instrumentation
+        /// </summary>
+        public static IRingMasterServerInstrumentation Instance
+        {
+            get { return thisInstance; }
+            set { thisInstance = value; }
         }
 
         /// <summary>
@@ -181,7 +181,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="globalWatchersCount">The global watchers count.</param>
         public void UpdateBulkWatcherCount(int globalWatchersCount)
         {
-
         }
 
         /// <summary>
@@ -195,7 +194,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// called upon authentication failed
         /// </summary>
-        /// <param name="exception"></param>
+        /// <param name="exception">Not in use</param>
         public void OnAuthFailed(InvalidAclException exception)
         {
         }

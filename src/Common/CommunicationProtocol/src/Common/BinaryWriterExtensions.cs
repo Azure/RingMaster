@@ -1,5 +1,5 @@
-﻿// <copyright file="BinaryWriterExtensions.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="BinaryWriterExtensions.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -51,6 +51,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             }
         }
 
+        /// <summary>
+        /// Writes a short integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">Short integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, short thedata)
         {
             if (binaryWriter == null)
@@ -62,6 +67,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes an unsigned short integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">Unsigned short integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, ushort thedata)
         {
             if (binaryWriter == null)
@@ -73,6 +83,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes an integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, int thedata)
         {
             if (binaryWriter == null)
@@ -84,6 +99,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes a unsigned integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">Unsigned integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, uint thedata)
         {
             if (binaryWriter == null)
@@ -95,6 +115,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes a long integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">long integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, long thedata)
         {
             if (binaryWriter == null)
@@ -106,6 +131,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes a unsigned long integer to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="thedata">unsigned long integer to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, ulong thedata)
         {
             if (binaryWriter == null)
@@ -117,6 +147,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             binaryWriter.Write(bArr, 0, bArr.Length);
         }
 
+        /// <summary>
+        /// Writes a byte array to a <see cref="BinaryWriter"/> object in big Endianness
+        /// </summary>
+        /// <param name="binaryWriter">binary writer object</param>
+        /// <param name="dataArray">byte array to be written</param>
         public static void WriteBE(this BinaryWriter binaryWriter, byte[] dataArray)
         {
             if (binaryWriter == null)
@@ -159,6 +194,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             return;
         }
 
+        /// <summary>
+        /// Write a byte array to a <see cref="BinaryWriter"/> object
+        /// </summary>
+        /// <param name="binaryWriter">binary writter object</param>
+        /// <param name="dataBuffer">byte array to be written</param>
         public static void WriteByteArray32BitPrefixLengthBE(this BinaryWriter binaryWriter, byte[] dataBuffer)
         {
             if (binaryWriter == null)

@@ -1,5 +1,5 @@
-﻿// <copyright file="AbstractRingMasterCompoundRequest.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="AbstractRingMasterCompoundRequest.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -60,7 +60,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         }
 
         /// <summary>
-        /// Gets <see cref="IRingMasterRequests"/> that correspond to the given <see cref="Op"/>s.
+        /// Gets <see cref="IRingMasterRequest"/> that correspond to the given <see cref="Op"/>s.
         /// </summary>
         /// <param name="ops">List of operations</param>
         /// <returns>List of <see cref="IRingMasterRequest"/>s</returns>

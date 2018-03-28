@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IPersistedDataFactory.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IPersistedDataFactory.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
@@ -18,11 +14,42 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
     /// Interface IPersistedDataFactory.
     /// A factory of IPersistedData.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">Type name of node class</typeparam>
     public interface IPersistedDataFactory<T>
     {
         /// <summary>
-        /// Loads the initial tree of nodes. 
+        /// Gets a value indicating whether the factory requires calls for each delete object, or the caller can just not call Delete for each,
+        /// and instead invoke RecordDataDelta
+        /// </summary>
+        /// <value><c>true</c> if the factory requires calls for each delete; otherwise, <c>false</c>.</value>
+        bool RequiresCallsForEachDelete { get; }
+
+        /// <summary>
+        /// Gets the name of this factory
+        /// </summary>
+        /// <value>The name.</value>
+        string Name { get; }
+
+        /// <summary>
+        /// Gets the total data hosted by this factory.
+        /// </summary>
+        /// <value>The total data.</value>
+        ulong TotalData { get; }
+
+        /// <summary>
+        /// Gets the total nodes hosted by this factory
+        /// </summary>
+        /// <value>The total nodes.</value>
+        ulong TotalNodes { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether this factory is active.
+        /// </summary>
+        /// <value><c>true</c> if this instance is active; otherwise, <c>false</c>.</value>
+        bool IsActive { get; }
+
+        /// <summary>
+        /// Loads the initial tree of nodes.
         /// </summary>
         /// <param name="lastXId">The highest transaction Id loaded.</param>
         /// <returns>T.</returns>
@@ -31,7 +58,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// <summary>
         /// retrieves the current latest txId.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Last transaction ID</returns>
         long GetLastXId();
 
         /// <summary>
@@ -39,13 +66,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// </summary>
         /// <returns>IPersistedData.</returns>
         IPersistedData CreateNew();
-
-        /// <summary>
-        /// Gets a value indicating whether the factory requires calls for each delete object, or the caller can just not call Delete for each,
-        /// and instead invoke RecordDataDelta
-        /// </summary>
-        /// <value><c>true</c> if the factory requires calls for each delete; otherwise, <c>false</c>.</value>
-        bool RequiresCallsForEachDelete { get; }
 
         /// <summary>
         /// Deletes the specified IPersistedData.
@@ -79,30 +99,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         void Deactivate();
 
         /// <summary>
-        /// Gets the name of this factory
-        /// </summary>
-        /// <value>The name.</value>
-        string Name { get; }
-
-        /// <summary>
-        /// Gets the total data hosted by this factory.
-        /// </summary>
-        /// <value>The total data.</value>
-        ulong TotalData { get; }
-
-        /// <summary>
-        /// Gets the total nodes hosted by this factory
-        /// </summary>
-        /// <value>The total nodes.</value>
-        ulong TotalNodes { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether this factory is active.
-        /// </summary>
-        /// <value><c>true</c> if this instance is active; otherwise, <c>false</c>.</value>
-        bool IsActive { get; }
-
-        /// <summary>
         /// Dumps all nodes for debugging purposes only.
         /// </summary>
         /// <returns>string contained one line per PersistedData object managed by the factory</returns>
@@ -124,6 +120,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// changes the agreed memberset based on the given mapping
         /// </summary>
         /// <param name="changeMapping">the mapping function for the modified members</param>
+        /// <returns>If the operation is succeeded</returns>
         bool ChangeAgreedMembers(Dictionary<string, ClusterMember> changeMapping);
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// <copyright file="ExecutionQueue.cs" company="Microsoft">
+﻿// <copyright file="ExecutionQueue.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -14,214 +14,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     public class ExecutionQueue
     {
         /// <summary>
-        /// Interface IRunnable
-        /// </summary>
-        public interface IRunnable
-        {
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            void Run();
-        }
-
-        /// <summary>
-        /// Class NoArgRunnable.
-        /// </summary>
-        public class NoArgRunnable : IRunnable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="NoArgRunnable"/> class.
-            /// </summary>
-            /// <param name="action">The action.</param>
-            public NoArgRunnable(Action action)
-            {
-                this.action = action;
-            }
-
-            /// <summary>
-            /// The _action
-            /// </summary>
-            private readonly Action action;
-
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            public void Run()
-            {
-                this.action();
-            }
-        }
-
-        public class ArgRunnableWaitCallback : IRunnable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ArgRunnableWaitCallback"/> class.
-            /// </summary>
-            /// <param name="action">The action.</param>
-            /// <param name="obj">The object.</param>
-            public ArgRunnableWaitCallback(WaitCallback action, object obj)
-            {
-                this.action = action;
-                this.obj = obj;
-            }
-
-            /// <summary>
-            /// The _action
-            /// </summary>
-            private readonly WaitCallback action;
-
-            /// <summary>
-            /// The _obj
-            /// </summary>
-            private readonly object obj;
-
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            public void Run()
-            {
-                this.action(this.obj);
-            }
-        }
-
-        /// <summary>
-        /// Class ArgRunnable.
-        /// </summary>
-        /// <typeparam name="T">The parameter type.</typeparam>
-        public class ArgRunnable<T> : IRunnable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ArgRunnable{T}"/> class.
-            /// </summary>
-            /// <param name="action">The action.</param>
-            /// <param name="obj">The object.</param>
-            public ArgRunnable(Action<T> action, T obj)
-            {
-                this.action = action;
-                this.obj = obj;
-            }
-
-            /// <summary>
-            /// The _action
-            /// </summary>
-            private readonly Action<T> action;
-
-            /// <summary>
-            /// The _obj
-            /// </summary>
-            private readonly T obj;
-
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            public void Run()
-            {
-                this.action(this.obj);
-            }
-        }
-
-        /// <summary>
-        /// Class ArgRunnable.
-        /// </summary>
-        /// <typeparam name="T1">The type of the t1.</typeparam>
-        /// <typeparam name="T2">The type of the t2.</typeparam>
-        public class ArgRunnable<T1, T2> : IRunnable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ArgRunnable{T1, T2}"/> class.
-            /// </summary>
-            /// <param name="action">The action.</param>
-            /// <param name="obj">The object.</param>
-            /// <param name="obj2">The obj2.</param>
-            public ArgRunnable(Action<T1, T2> action, T1 obj, T2 obj2)
-            {
-                this.action = action;
-                this.obj = obj;
-                this.obj2 = obj2;
-            }
-
-            /// <summary>
-            /// The _action
-            /// </summary>
-            private readonly Action<T1, T2> action;
-
-            /// <summary>
-            /// The _obj
-            /// </summary>
-            private readonly T1 obj;
-
-            /// <summary>
-            /// The _obj2
-            /// </summary>
-            private readonly T2 obj2;
-
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            public void Run()
-            {
-                this.action(this.obj, this.obj2);
-            }
-        }
-
-        /// <summary>
-        /// Class ArgRunnable.
-        /// </summary>
-        /// <typeparam name="T1">The type of the t1.</typeparam>
-        /// <typeparam name="T2">The type of the t2.</typeparam>
-        /// <typeparam name="T3">The type of the t3.</typeparam>
-        public class ArgRunnable<T1, T2, T3> : IRunnable
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ArgRunnable{T1, T2, T3}"/> class.
-            /// </summary>
-            /// <param name="action">The action.</param>
-            /// <param name="obj">The object.</param>
-            /// <param name="obj2">The obj2.</param>
-            /// <param name="obj3">The obj3.</param>
-            public ArgRunnable(Action<T1, T2, T3> action, T1 obj, T2 obj2, T3 obj3)
-            {
-                this.action = action;
-                this.obj = obj;
-                this.obj2 = obj2;
-                this.obj3 = obj3;
-            }
-
-            /// <summary>
-            /// The _action
-            /// </summary>
-            private readonly Action<T1, T2, T3> action;
-
-            /// <summary>
-            /// The _obj
-            /// </summary>
-            private readonly T1 obj;
-
-            /// <summary>
-            /// The _obj2
-            /// </summary>
-            private readonly T2 obj2;
-
-            /// <summary>
-            /// The _obj3
-            /// </summary>
-            private readonly T3 obj3;
-
-            /// <summary>
-            /// Runs this instance.
-            /// </summary>
-            public void Run()
-            {
-                this.action(this.obj, this.obj2, this.obj3);
-            }
-        }
-
-        /// <summary>
-        /// The MaxCachedElements threads
-        /// </summary>
-        private int maxThreads;
-
-        /// <summary>
         /// The _threads
         /// </summary>
         private readonly List<Thread> threads = new List<Thread>();
@@ -235,6 +27,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// The _empty ev
         /// </summary>
         private readonly SpinEvent emptyEv = new SpinEvent();
+
+        /// <summary>
+        /// The MaxCachedElements threads
+        /// </summary>
+        private int maxThreads;
 
         /// <summary>
         /// The _gate
@@ -258,6 +55,78 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         public ExecutionQueue(int maxThreads)
         {
             this.maxThreads = maxThreads;
+        }
+
+        /// <summary>
+        /// Enum DrainMode
+        /// </summary>
+        public enum DrainMode
+        {
+            /// <summary>
+            /// The disallow all further enqueues
+            /// </summary>
+            DisallowAllFurtherEnqueues,
+
+            /// <summary>
+            /// The disallow all further enqueues, and removes all elements from the queue. Waits for the inflight to finish.
+            /// </summary>
+            DisallowAllFurtherEnqueuesAndRemoveAllElements,
+
+            /// <summary>
+            /// The block enqueues until drained
+            /// </summary>
+            BlockEnqueuesUntilDrained,
+
+            /// <summary>
+            /// The allow enqueues after drain point
+            /// </summary>
+            AllowEnqueuesAfterDrainPoint,
+
+            /// <summary>
+            /// The allow enqueues and wait for full drain
+            /// </summary>
+            AllowEnqueuesAndWaitForFullDrain,
+        }
+
+        /// <summary>
+        /// Interface IRunnable
+        /// </summary>
+        public interface IRunnable
+        {
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            void Run();
+        }
+
+        /// <summary>
+        /// Gets the in flight count.
+        /// </summary>
+        /// <value>The in flight count.</value>
+        public int InFlightCount
+        {
+            get
+            {
+                lock (this.actions)
+                {
+                    return this.inFlight;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the pending count.
+        /// </summary>
+        /// <value>The pending count.</value>
+        public int PendingCount
+        {
+            get
+            {
+                lock (this.actions)
+                {
+                    return this.inFlight + this.actions.Count;
+                }
+            }
         }
 
         /// <summary>
@@ -317,6 +186,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             this.Enqueue(new ArgRunnable<T>(action, obj));
         }
 
+        /// <summary>
+        /// Enqueues the specified action.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="obj">The object.</param>
         public void Enqueue(WaitCallback action, object obj)
         {
             this.Enqueue(new ArgRunnableWaitCallback(action, obj));
@@ -357,64 +231,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         public void Enqueue(Action action)
         {
             this.Enqueue(new NoArgRunnable(action));
-        }
-
-        /// <summary>
-        /// Enqueues the specified runnable.
-        /// </summary>
-        /// <param name="runnable">The runnable.</param>
-        /// <param name="skipgate">If true, the gate will not be executed</param>
-        private void Enqueue(IRunnable runnable, bool skipgate = false)
-        {
-            Func<IRunnable, bool> e = this.gate;
-
-            if (e != null && !skipgate)
-            {
-                if (!e(runnable))
-                {
-                    return;
-                }
-            }
-
-            lock (this.actions)
-            {
-                this.actions.Enqueue(runnable);
-                if (this.actions.Count <= this.maxThreads)
-                {
-                    this.MaybeCreateThread();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Enum DrainMode
-        /// </summary>
-        public enum DrainMode
-        {
-            /// <summary>
-            /// The disallow all further enqueues
-            /// </summary>
-            DisallowAllFurtherEnqueues,
-
-            /// <summary>
-            /// The disallow all further enqueues, and removes all elements from the queue. Waits for the inflight to finish.
-            /// </summary>
-            DisallowAllFurtherEnqueuesAndRemoveAllElements,
-
-            /// <summary>
-            /// The block enqueues until drained
-            /// </summary>
-            BlockEnqueuesUntilDrained,
-
-            /// <summary>
-            /// The allow enqueues after drain point
-            /// </summary>
-            AllowEnqueuesAfterDrainPoint,
-
-            /// <summary>
-            /// The allow enqueues and wait for full drain
-            /// </summary>
-            AllowEnqueuesAndWaitForFullDrain,
         }
 
         /// <summary>
@@ -551,31 +367,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Gets the in flight count.
+        /// Enqueues the specified runnable.
         /// </summary>
-        /// <value>The in flight count.</value>
-        public int InFlightCount
+        /// <param name="runnable">The runnable.</param>
+        /// <param name="skipgate">If true, the gate will not be executed</param>
+        private void Enqueue(IRunnable runnable, bool skipgate = false)
         {
-            get
+            Func<IRunnable, bool> e = this.gate;
+
+            if (e != null && !skipgate)
             {
-                lock (this.actions)
+                if (!e(runnable))
                 {
-                    return this.inFlight;
+                    return;
                 }
             }
-        }
 
-        /// <summary>
-        /// Gets the pending count.
-        /// </summary>
-        /// <value>The pending count.</value>
-        public int PendingCount
-        {
-            get
+            lock (this.actions)
             {
-                lock (this.actions)
+                this.actions.Enqueue(runnable);
+                if (this.actions.Count <= this.maxThreads)
                 {
-                    return this.inFlight + this.actions.Count;
+                    this.MaybeCreateThread();
                 }
             }
         }
@@ -654,6 +467,201 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                         }
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Class NoArgRunnable.
+        /// </summary>
+        public class NoArgRunnable : IRunnable
+        {
+            /// <summary>
+            /// The _action
+            /// </summary>
+            private readonly Action action;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NoArgRunnable"/> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            public NoArgRunnable(Action action)
+            {
+                this.action = action;
+            }
+
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            public void Run()
+            {
+                this.action();
+            }
+        }
+
+        /// <summary>
+        /// Callback runnable with single argument
+        /// </summary>
+        public class ArgRunnableWaitCallback : IRunnable
+        {
+            /// <summary>
+            /// The _action
+            /// </summary>
+            private readonly WaitCallback action;
+
+            /// <summary>
+            /// The _obj
+            /// </summary>
+            private readonly object obj;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ArgRunnableWaitCallback"/> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <param name="obj">The object.</param>
+            public ArgRunnableWaitCallback(WaitCallback action, object obj)
+            {
+                this.action = action;
+                this.obj = obj;
+            }
+
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            public void Run()
+            {
+                this.action(this.obj);
+            }
+        }
+
+        /// <summary>
+        /// Class ArgRunnable.
+        /// </summary>
+        /// <typeparam name="T">The parameter type.</typeparam>
+        public class ArgRunnable<T> : IRunnable
+        {
+            /// <summary>
+            /// The _action
+            /// </summary>
+            private readonly Action<T> action;
+
+            /// <summary>
+            /// The _obj
+            /// </summary>
+            private readonly T obj;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ArgRunnable{T}"/> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <param name="obj">The object.</param>
+            public ArgRunnable(Action<T> action, T obj)
+            {
+                this.action = action;
+                this.obj = obj;
+            }
+
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            public void Run()
+            {
+                this.action(this.obj);
+            }
+        }
+
+        /// <summary>
+        /// Class ArgRunnable.
+        /// </summary>
+        /// <typeparam name="T1">The type of the t1.</typeparam>
+        /// <typeparam name="T2">The type of the t2.</typeparam>
+        public class ArgRunnable<T1, T2> : IRunnable
+        {
+            /// <summary>
+            /// The _action
+            /// </summary>
+            private readonly Action<T1, T2> action;
+
+            /// <summary>
+            /// The _obj
+            /// </summary>
+            private readonly T1 obj;
+
+            /// <summary>
+            /// The _obj2
+            /// </summary>
+            private readonly T2 obj2;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ArgRunnable{T1, T2}"/> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <param name="obj">The object.</param>
+            /// <param name="obj2">The obj2.</param>
+            public ArgRunnable(Action<T1, T2> action, T1 obj, T2 obj2)
+            {
+                this.action = action;
+                this.obj = obj;
+                this.obj2 = obj2;
+            }
+
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            public void Run()
+            {
+                this.action(this.obj, this.obj2);
+            }
+        }
+
+        /// <summary>
+        /// Class ArgRunnable.
+        /// </summary>
+        /// <typeparam name="T1">The type of the t1.</typeparam>
+        /// <typeparam name="T2">The type of the t2.</typeparam>
+        /// <typeparam name="T3">The type of the t3.</typeparam>
+        public class ArgRunnable<T1, T2, T3> : IRunnable
+        {
+            /// <summary>
+            /// The _action
+            /// </summary>
+            private readonly Action<T1, T2, T3> action;
+
+            /// <summary>
+            /// The _obj
+            /// </summary>
+            private readonly T1 obj;
+
+            /// <summary>
+            /// The _obj2
+            /// </summary>
+            private readonly T2 obj2;
+
+            /// <summary>
+            /// The _obj3
+            /// </summary>
+            private readonly T3 obj3;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ArgRunnable{T1, T2, T3}"/> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <param name="obj">The object.</param>
+            /// <param name="obj2">The obj2.</param>
+            /// <param name="obj3">The obj3.</param>
+            public ArgRunnable(Action<T1, T2, T3> action, T1 obj, T2 obj2, T3 obj3)
+            {
+                this.action = action;
+                this.obj = obj;
+                this.obj2 = obj2;
+                this.obj3 = obj3;
+            }
+
+            /// <summary>
+            /// Runs this instance.
+            /// </summary>
+            public void Run()
+            {
+                this.action(this.obj, this.obj2, this.obj3);
             }
         }
     }

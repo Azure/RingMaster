@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Application xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="fabric:/RingMaster" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-  <Parameters>
-    <Parameter Name="EnvironmentName" Value="RingMaster-ServiceFabric-Perf" />
-    <Parameter Name="Tenant" Value="RingMaster.WestCentralUS" />
-    <Parameter Name="MdmAccountName" Value="RingMaster" />
-    <Parameter Name="VIP" Value="52.161.88.225" />
-  </Parameters>
-</Application>

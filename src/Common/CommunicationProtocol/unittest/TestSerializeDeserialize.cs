@@ -592,7 +592,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = null, Stat = RandomStat(), ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = null, Stat = null, ResponsePath = RandomString() },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = RandomRingMasterRequest(), Stat = null, ResponsePath = null },
-                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new WatcherCall() { Watcher = RandomWatcher(), OneUse = true, WatcherId = RandomUlongValue(), WatcherEvt = new WatchedEvent(WatchedEvent.WatchedEventType.None, WatchedEvent.WatchedEventKeeperState.Disconnected, path: RandomString()) }, Stat = null, ResponsePath = null },
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new WatcherCall() { Watcher = RandomWatcher(), Kind = WatcherKind.OneUse, WatcherId = RandomUlongValue(), WatcherEvt = new WatchedEvent(WatchedEvent.WatchedEventType.None, WatchedEvent.WatchedEventKeeperState.Disconnected, path: RandomString()) }, Stat = null, ResponsePath = null },
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new WatcherCall() { Watcher = RandomWatcher(), Kind = default(WatcherKind), WatcherId = RandomUlongValue(), WatcherEvt = new WatchedEvent(WatchedEvent.WatchedEventType.None, WatchedEvent.WatchedEventKeeperState.Disconnected, path: RandomString(),  data : new byte[] { 1, 2, 3 }), }, Stat = null, ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = RandomList(RandomString).ToArray(), Stat = null, ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = RandomList(RandomString), Stat = null, ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = RandomString(), Stat = null, ResponsePath = null },
@@ -767,7 +768,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <returns>A <see cref="IWatcher"/> with random id</returns>
         private static IWatcher RandomWatcher()
         {
-            return new Watcher(id: RandomUlongValue(), oneUse: true);
+            return new Watcher(id: RandomUlongValue(), kind: WatcherKind.OneUse);
         }
 
         /// <summary>
@@ -1188,7 +1189,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(expected.Id, actual.Id);
-                Assert.AreEqual(expected.OneUse, actual.OneUse);
+                Assert.AreEqual(expected.Kind, actual.Kind);
             }
             else
             {
@@ -1273,11 +1274,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             /// Initializes a new instance of the <see cref="Watcher"/> class.
             /// </summary>
             /// <param name="id">Id of the watcher</param>
-            /// <param name="oneUse"><c>true</c> if the watcher is for a single use</param>
-            public Watcher(ulong id, bool oneUse)
+            /// <param name="kind">Kind of the watcher</param>
+            public Watcher(ulong id, WatcherKind kind)
             {
                 this.Id = id;
-                this.OneUse = oneUse;
+                this.Kind = kind;
             }
 
             /// <summary>
@@ -1288,7 +1289,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             /// <summary>
             /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind { get; private set; }
 
             /// <summary>
             /// Processes the specified event.

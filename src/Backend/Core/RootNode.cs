@@ -1,21 +1,10 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="RootNode.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RootNode.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Text;
-    using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Watcher.Event;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// This is a quite complex trick to save state in the case where the vast majority of nodes are leaves (i.e. no children)
@@ -33,18 +22,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     public class RootNode : CompleteNode
     {
         /// <summary>
-        /// Gets a value indicating whether this instance is root.
-        /// </summary>
-        /// <value><c>true</c> if this instance is root; otherwise, <c>false</c>.</value>
-        public override bool IsRoot { get { return true; } }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CompleteNode" /> class.
+        /// Initializes a new instance of the <see cref="RootNode"/> class.
         /// </summary>
         /// <param name="persisted">The persisted data.</param>
         public RootNode(IPersistedData persisted)
             : base(persisted)
         {
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is root.
+        /// </summary>
+        /// <value><c>true</c> if this instance is root; otherwise, <c>false</c>.</value>
+        public override bool IsRoot
+        {
+            get { return true; }
         }
 
         /// <summary>

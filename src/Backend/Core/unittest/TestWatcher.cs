@@ -80,6 +80,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         }
 
         /// <summary>
+        /// Verifies that the watcher is notified when the data of a watched node is changed and the change is delivered
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDataChangedEventWithChangeDelivery()
+        {
+            this.watcherTest.TestDataChangedEvent(true).Wait();
+        }
+
+        /// <summary>
         /// Verify that the bulk watcher is notified when modifications are made under the watched path.
         /// </summary>
         [TestMethod]

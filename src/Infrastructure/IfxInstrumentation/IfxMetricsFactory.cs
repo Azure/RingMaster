@@ -1,5 +1,5 @@
-﻿// <copyright file="IfxMetricsFactory.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="IfxMetricsFactory.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
             this.mdmAccountName = mdmAccountName;
             this.mdmNamespace = mdmNamespace;
 
-            ErrorContext errContext = new ErrorContext();
+            ErrorContext errContext = default(ErrorContext);
 
             DefaultConfiguration.SetDefaultDimensionNamesValues(
                     ref errContext,

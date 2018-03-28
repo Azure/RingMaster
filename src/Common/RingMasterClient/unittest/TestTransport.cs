@@ -26,14 +26,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     public sealed class TestTransport : RingMasterClientUnitTest
     {
         /// <summary>
-        /// Initializes static members of the <see cref="TestTransport"/> class.
-        /// </summary>
-        static TestTransport()
-        {
-            RingMasterClient.TraceLevel = TraceLevel.Verbose;
-        }
-
-        /// <summary>
         /// Verifies that pending requests are completed with <c>Operationtimeout</c> error if the
         /// transport breaks the connection and no new connection is established before timeout.
         /// </summary>
@@ -992,14 +984,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             public TestWatcher(ulong id, int expectedNotificationsCount)
             {
                 this.Id = id;
-                this.OneUse = expectedNotificationsCount == 1;
+                this.Kind = expectedNotificationsCount == 1 ? WatcherKind.OneUse : default(WatcherKind);
                 this.expectedNotifications = new CountdownEvent(expectedNotificationsCount);
                 this.watcherRemovedNotificationReceived = new ManualResetEvent(false);
             }
 
             public ulong Id { get; private set; }
 
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            public WatcherKind Kind { get; private set; }
 
             public void Process(WatchedEvent evt)
             {
@@ -1311,7 +1305,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     clientMessage.Content = new WatcherCall()
                     {
                         WatcherId = watcherId,
-                        OneUse = false,
+                        Kind = default(WatcherKind),
                         WatcherEvt = new WatchedEvent(WatchedEvent.WatchedEventType.None, WatchedEvent.WatchedEventKeeperState.Unknown, string.Empty)
                     };
 

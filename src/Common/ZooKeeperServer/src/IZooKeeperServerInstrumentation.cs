@@ -1,5 +1,5 @@
-﻿// <copyright file="IZooKeeperServerInstrumentation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IZooKeeperServerInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
@@ -9,7 +9,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
-    /// Interface that is used by <see cref="RingMasterServer"/> to report
+    /// Interface that is used by RingMasterServer to report
     /// metrics.
     /// </summary>
     public interface IZooKeeperServerInstrumentation

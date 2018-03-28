@@ -1,4 +1,4 @@
-﻿// <copyright file="AllowSigningCertRule.cs" company="Microsoft">
+﻿// <copyright file="AllowSigningCertRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -72,13 +71,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         {
             if (cert == null || (sslPolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) == SslPolicyErrors.RemoteCertificateNotAvailable)
             {
-                Trace.TraceError("ValidateSslPolicyErrors: AllowSigningCertRule: no remote certificate available. Certificate error: {0}", sslPolicyErrors);
+                CertificateRulesEventSource.Log.AllowSigningCertRule_RemoteCertificateNotAvailable();
                 return Behavior.NotAllowed;
             }
 
             if (CertAccessor.Instance.ChainElementsCount(chain) == 0)
             {
-                Trace.TraceError("ValidateSslPolicyErrors: AllowSigningCertRule: no ChainElements available. Certificate error: {0}", sslPolicyErrors);
+                CertificateRulesEventSource.Log.AllowSigningCertRule_NoChainElementsAvailable();
                 return Behavior.NotAllowed;
             }
 
@@ -87,11 +86,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             {
                 if (this.allowSelf)
                 {
-                    Trace.TraceWarning("ValidateSslPolicyErrors: AllowSigningCertRule: cert seems to be self-signed, which is allowed from config.");
+                    CertificateRulesEventSource.Log.AllowSigningCertRule_SelfSignedCertificateAllowed();
                     return Behavior.Allowed;
                 }
 
-                Trace.TraceError("ValidateSslPolicyErrors: AllowSigningCertRule: cert seems to be self-signed. Certificate error: {0}", sslPolicyErrors);
+                CertificateRulesEventSource.Log.AllowSigningCertRule_SelfSignedCertificateNotAllowed();
                 return Behavior.NotAllowed;
             }
 
@@ -101,11 +100,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (this.allowAny || this.thumbprints.Contains(signing))
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: AllowSigningCertRule: Found signing cert to be one allowed: {0}", signing);
+                CertificateRulesEventSource.Log.AllowSigningCertRule_SigningCertificateAllowed(signing);
                 return Behavior.Allowed;
             }
 
-            Trace.TraceError("ValidateSslPolicyErrors: AllowSigningCertRule: Found no signing cert to be one allowed: {0}", signing);
+            CertificateRulesEventSource.Log.AllowSigningCertRule_SigningCertificateNotAllowed(signing);
             return Behavior.NotAllowed;
         }
     }

@@ -1,5 +1,5 @@
-﻿// <copyright file="ConnectRingMaster.cs" company="Microsoft">
-//     Copyright ©  2018
+﻿// <copyright file="ConnectRingMaster.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
@@ -16,22 +16,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
     public sealed class ConnectRingMaster : Cmdlet
     {
         /// <summary>
+        /// Gets or sets details of the ringmaster server to connect to.
+        /// </summary>
+        [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        public RingMasterClient.ServerSpec ServerSpec { get; set; }
+
+        /// <summary>
         /// Gets or sets the RingMaster connection string.
         /// </summary>
         [Parameter]
         public string ConnectionString { get; set; } = "127.0.0.1:99";
-
-        /// <summary>
-        /// Gets or sets the thumbprint of the client certificate to use to connect to ringmaster.
-        /// </summary>
-        [Parameter]
-        public string ClientCertificateThumbprint { get; set; }
-
-        /// <summary>
-        /// Gets or sets the thumbprints of server certificates that can be accepted.
-        /// </summary>
-        [Parameter]
-        public string[] AcceptedServerCertificateThumbprints { get; set; }
 
         /// <summary>
         /// Gets or sets the default timeout for requests.
@@ -55,31 +49,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "RingMasterSession is created by this cmdlet for use by other cmdlets")]
         protected override void ProcessRecord()
         {
-            bool mustUseSecureConnection = (this.ClientCertificateThumbprint != null)
-                && (this.AcceptedServerCertificateThumbprints != null)
-                && (this.AcceptedServerCertificateThumbprints.Length > 0);
-
-            var serverSpec = new RingMasterClient.ServerSpec
+            if (this.ServerSpec == null)
             {
-                Endpoints = SecureTransport.ParseConnectionString(this.ConnectionString),
-                UseSecureConnection = mustUseSecureConnection
-            };
-
-            if (serverSpec.UseSecureConnection)
-            {
-                string[] clientCerts = new string[] { this.ClientCertificateThumbprint };
-                serverSpec.ClientCertificate = SecureTransport.GetCertificatesFromThumbPrintOrFileName(clientCerts)[0];
-                serverSpec.AcceptedServerCertificates = SecureTransport.GetCertificatesFromThumbPrintOrFileName(this.AcceptedServerCertificateThumbprints);
+                this.ServerSpec = new RingMasterClient.ServerSpec
+                {
+                    Endpoints = SecureTransport.ParseConnectionString(this.ConnectionString),
+                    UseSecureConnection = false,
+                };
             }
 
             var configuration = new RingMasterClient.Configuration
             {
                 DefaultTimeout = this.DefaultTimeout,
                 HeartBeatInterval = this.HeartBeatInterval,
-                RequestQueueLength = this.RequestQueueLength
+                RequestQueueLength = this.RequestQueueLength,
             };
 
-            this.WriteObject(new RingMasterSession(serverSpec, configuration));
+            this.WriteObject(new RingMasterSession(this.ServerSpec, configuration));
         }
     }
 }

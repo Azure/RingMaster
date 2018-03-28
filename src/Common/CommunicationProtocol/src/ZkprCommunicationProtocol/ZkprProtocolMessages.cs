@@ -1,5 +1,5 @@
-﻿// <copyright file="ZkprProtocolMessages.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ZkprProtocolMessages.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -13,8 +13,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using Data;
     using RingMaster.Requests;
 
+    /// <summary>
+    /// Error codes used by ZooKeeper
+    /// </summary>
     public enum ZooKeeperErrorCodes
     {
+#pragma warning disable CS1591, SA1602 // doc each element
         ZOK = 0,
         ZSYSTEMERROR = -1,
         ZRUNTIMEINCONSISTENCY = -2,
@@ -42,10 +46,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         ZNEWCONFIGNOQUORUM = -120,
         ZRECONFIGINPROGRESS = -121,
         ZEPHEMERALONLOCALSESSION = -122,
+#pragma warning restore
     }
 
+    /// <summary>
+    /// Protocol messages used by ZooKeeper
+    /// </summary>
     public class ZkprProtocolMessages
     {
+#pragma warning disable CS1591, SA1602 // doc each element
+        /// <summary>
+        /// Permissions
+        /// </summary>
         [Flags]
         public enum Perms
         {
@@ -54,9 +66,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             Create = 1 << 2,
             Delete = 1 << 3,
             Admin = 1 << 4,
-            All = Read | Write | Create | Delete | Admin
+            All = Read | Write | Create | Delete | Admin,
         }
 
+        /// <summary>
+        /// Node create mode
+        /// </summary>
         public enum CreateMode
         {
             Persistent = 0,
@@ -66,9 +81,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
             // When last child of container is deleted, the container becomes eligible for deletion by server without any notification to client. It may happen at any time in the future.
             // client should be prepared to get NoNodeException when creating children inside this
-            Container = 4
+            Container = 4,
         }
+#pragma warning restore
 
+#pragma warning disable CS1591, SA1600 // doc for each class
         public class CreateSession : IZooKeeperRequest
         {
             private CreateSession(int version, long lastZxidSeen, int timeout, long sessionId, string password, bool isNullPassword)
@@ -602,5 +619,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 return new Auth(xid, authType, scheme, id);
             }
         }
+#pragma warning restore
     }
 }

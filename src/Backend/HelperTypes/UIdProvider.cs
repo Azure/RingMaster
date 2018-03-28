@@ -1,4 +1,4 @@
-﻿// <copyright file="UIdProvider.cs" company="Microsoft">
+﻿// <copyright file="UIdProvider.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -68,26 +68,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         public virtual bool IsIdInPast(long otherId)
         {
             return otherId <= this.lastId;
-        }
-    }
-
-    /// <summary>
-    /// Class FixedUIdProvider will provide a fixed number as "nextUIniqueId"
-    /// </summary>
-    public class FixedUIdProvider : UIdProvider
-    {
-        public FixedUIdProvider(long fixedresult)
-            : base(fixedresult)
-        {
-        }
-
-        /// <summary>
-        /// Gets the next unique identifier.
-        /// </summary>
-        /// <returns>UInt64.</returns>
-        public override ulong NextUniqueId()
-        {
-            return this.GetLastUniqueId();
         }
     }
 }

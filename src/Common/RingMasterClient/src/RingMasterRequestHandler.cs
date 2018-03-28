@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterRequestHandler.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterRequestHandler.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -144,6 +144,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.manageResponsesTask = Task.Run(this.ManageResponses);
         }
 
+#pragma warning disable SA1600 // TODO: add document later
         public interface IInstrumentation
         {
             void ConnectionCreated(ulong connectionId, EndPoint remoteEndPoint, string remoteIdentity);
@@ -178,6 +179,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
             void InvalidClientMessageReceived();
         }
+#pragma warning restore
 
         /// <summary>
         /// Gets or sets the number of milliseconds to wait before a request is timed out.
@@ -345,7 +347,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             RequestCall call = new RequestCall
             {
                 CallId = request.CallId,
-                Request = request.WrappedRequest
+                Request = request.WrappedRequest,
             };
 
             try
@@ -404,7 +406,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 this.incomingResponses.Add(new ResponseWrapper
                 {
                     ProtocolVersion = connection.ProtocolVersion,
-                    SerializedResponse = responsePacket
+                    SerializedResponse = responsePacket,
                 });
 
                 this.responsesAvailable.Release();
@@ -483,7 +485,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                             // Queue the request for send, no need to wait for the transport to actually
                             // send the request. If the transport fails to send the request, the error will be logged
                             // and the request will timeout.
-                            Task _ = this.SendRequest(connection, request);
+                            Task unused = this.SendRequest(connection, request);
                         }
                     }
                     else
@@ -616,7 +618,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     // If it is a one use watcher, it must be removed from the watcher map as it won't receive any further
                     // notifications.   Similarly, if it is a multi use watcher and the current notification is a WatcherRemoved
                     // notification, it will not receive any further notifications.
-                    if (watcher.OneUse || watcherCall.WatcherEvt.EventType == WatchedEvent.WatchedEventType.WatcherRemoved)
+                    if (watcher.Kind.HasFlag(WatcherKind.OneUse) ||
+                        watcherCall.WatcherEvt.EventType == WatchedEvent.WatchedEventType.WatcherRemoved)
                     {
                         RingMasterClientEventSource.Log.UnregisterWatcher(watcher.Id);
                         this.watcherMap.Remove(watcher.Id);
@@ -752,7 +755,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         {
             var response = new RequestResponse()
             {
-                ResultCode = (int)code
+                ResultCode = (int)code,
             };
 
             this.ProcessRequestResponse(request.CallId, request, response);
@@ -775,7 +778,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
-        /// Adds the <paramref name="request"/> to <see cref="requestMap"/> with the given <paramref name="callId"/>
+        /// Adds the <paramref name="request"/> to <see cref="requestMap"/> with the given request ID
         /// </summary>
         /// <param name="request">Request to add</param>
         /// <returns>Wrapper for the request</returns>
@@ -887,21 +890,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private async Task<bool> SendHeartbeat(IConnection connection)
         {
             ulong beatId = ++this.heartBeatCount;
-            try
-            {
-                RingMasterClientEventSource.Log.SendHeartbeat(beatId);
-                this.instrumentation.HeartBeatSent(beatId);
-                var requestWrapper = this.RegisterRequest(new RequestExists("<Fail>", watcher: null, uid: beatId));
-                await this.SendRequest(connection, requestWrapper);
-                RequestResponse response = await requestWrapper.TaskCompletionSource.Task;
-                return response.ResultCode == (int)RingMasterException.Code.Nonode;
-            }
-            catch (Exception ex)
-            {
-                RingMasterClientEventSource.Log.SendHeartbeatFailed(beatId, ex.ToString());
-            }
 
-            return false;
+            RingMasterClientEventSource.Log.SendHeartbeat(beatId);
+            this.instrumentation.HeartBeatSent(beatId);
+            var requestWrapper = this.RegisterRequest(new RequestExists("<Fail>", watcher: null, uid: beatId));
+
+            // Send the heartbeat request and wait for the response to be received
+            Func<Task<RequestResponse>> sendReceive = async () =>
+            {
+                await this.SendRequest(connection, requestWrapper);
+                return await requestWrapper.TaskCompletionSource.Task;
+            };
+
+            var responseTask = sendReceive();
+
+            // Wait until the response is received OR timeout
+            await Task.WhenAny(responseTask, Task.Delay(this.Timeout));
+            if (!responseTask.IsCompleted)
+            {
+                RingMasterClientEventSource.Log.SendHeartbeatFailed(
+                    beatId,
+                    $"Timeout waiting for heartbeat response from remote {connection.RemoteEndPoint} ConnectionId={connection.Id}");
+                return false;
+            }
+            else
+            {
+                return responseTask.Result.ResultCode == (int)RingMasterException.Code.Nonode;
+            }
         }
 
         private void Dispose(bool isDisposing)
@@ -933,6 +948,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             public uint ProtocolVersion;
         }
 
+        /// <summary>
+        /// Configuration of the request handling
+        /// </summary>
         public class Configuration
         {
             /// <summary>
@@ -1085,12 +1103,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// <summary>
             /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            /// <value><c>true</c> if this is a single-use watcher; otherwise, <c>false</c>.</value>
-            public bool OneUse
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind
             {
                 get
                 {
-                    return this.watcher.OneUse;
+                    return this.watcher.Kind;
                 }
             }
 

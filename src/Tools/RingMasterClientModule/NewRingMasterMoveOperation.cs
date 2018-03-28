@@ -1,5 +1,5 @@
-﻿// <copyright file="NewRingMasterMoveOperation.cs" company="Microsoft">
-//     Copyright ©  2018
+﻿// <copyright file="NewRingMasterMoveOperation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
@@ -44,7 +44,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
         /// </summary>
         [Parameter]
         public SwitchParameter OnlyIfSourcePathIsEmpty { get; set; }
-
 
         /// <inheritdoc />
         protected override void ProcessRecord()

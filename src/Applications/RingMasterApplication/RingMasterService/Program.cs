@@ -1,15 +1,19 @@
-﻿// <copyright file="Program.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="Program.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 {
     using System;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics.Tracing;
     using System.Fabric;
+    using System.Reflection;
     using System.Threading;
+
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.ServiceFabric.Services.Runtime;
     using RingMasterApplication.Utilities;
@@ -22,12 +26,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// <summary>
         /// Entry point
         /// </summary>
-        /// <param name="args">Arguments provided to the program</param>
-        public static void Main(string[] args)
+        [SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
+            Scope = "method",
+            Target = "Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService.Program.Main()",
+            Justification = "Object will be disposed when the service is unloaded")]
+        public static void Main()
         {
             RingMasterApplicationHelper.AttachDebugger();
 
             LogFileEventTracing.Start(@"c:\Resources\Directory\RingMasterService.LogPath");
+            Trace.Listeners.Add(new LogFileTraceListener());
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             AppDomain.CurrentDomain.ProcessExit +=
@@ -51,14 +61,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                         monitoringConfiguration.IfxSession,
                         monitoringConfiguration.MdmAccount);
 
+                    // Ensure the event source is loaded
+                    Assembly.GetAssembly(typeof(AbstractPersistedDataFactory))
+                        .GetType("Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.PersistenceEventSource")
+                        ?.GetProperty("Log")
+                        ?.GetValue(null);
+
                     var level = EventLevel.Informational;
                     LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Fabric-RingMasterService", level, "RingMasterService");
                     LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Backend-RingMasterEvents", level, "RingMasterBackendCore");
-                    LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence", level, "Persistence");
+                    LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence", EventLevel.Warning, "Persistence");
                     LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence-ServiceFabric", level, "ServiceFabricPersistence");
                     LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-SecureTransport", level, "SecureTransport");
                     LogFileEventTracing.AddEventSource("Microsoft-ServiceFabric-Services", level, "ServiceFabricServices");
-                    Trace.Listeners.Add(new LogFileTraceListener());
 
                     var ringMasterMetricsFactory = IfxInstrumentation.CreateMetricsFactory(
                         monitoringConfiguration.MdmAccount,

@@ -1,4 +1,4 @@
-﻿// <copyright file="CertificateRulesFlags.cs" company="Microsoft">
+﻿// <copyright file="CertificateRulesFlags.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 

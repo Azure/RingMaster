@@ -1,5 +1,5 @@
-﻿// <copyright file="InMemoryPersistenceEventSource.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="InMemoryPersistenceEventSource.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory
@@ -11,10 +11,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class InMemoryPersistenceEventSource : EventSource
     {
-        public InMemoryPersistenceEventSource()
-        {
-        }
-
         public static InMemoryPersistenceEventSource Log { get; } = new InMemoryPersistenceEventSource();
 
         [Event(2, Level = EventLevel.Verbose, Version = 1)]

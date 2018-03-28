@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterWatchdogEventSource.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterWatchdogEventSource.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdog
@@ -14,16 +14,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class RingMasterWatchdogEventSource : EventSource
     {
-        public RingMasterWatchdogEventSource()
-        {
-            this.TraceLevel = TraceLevel.Info;
-        }
-
         public static RingMasterWatchdogEventSource Log { get; } = new RingMasterWatchdogEventSource();
-
-        // Note: TraceLevel has EventId=1 as compiler will auto-generate a method for the property so we
-        // must start at 2. Pay attention to fix the event ids if more properties are added in future.
-        public TraceLevel TraceLevel { get; set; }
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]
         public void UnhandledException(string exception, bool isTerminating)

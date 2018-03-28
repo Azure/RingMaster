@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterCachedRequestHandler.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterCachedRequestHandler.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -400,7 +400,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                                 ResponsePath = req.Path,
                                 ResultCode = (int)RingMasterException.Code.Ok,
                                 Content = data.Data,
-                                Stat = data.Stat
+                                Stat = data.Stat,
                             };
 
                             return response;
@@ -426,7 +426,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                                 ResponsePath = req.Path,
                                 ResultCode = (int)RingMasterException.Code.Ok,
                                 Content = data.Children,
-                                Stat = data.Stat
+                                Stat = data.Stat,
                             };
 
                             return response;
@@ -447,7 +447,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                                 ResponsePath = req.Path,
                                 ResultCode = (int)RingMasterException.Code.Ok,
                                 Content = data.Acls,
-                                Stat = data.Stat
+                                Stat = data.Stat,
                             };
 
                             return response;
@@ -468,7 +468,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                                 ResponsePath = req.Path,
                                 ResultCode = (int)RingMasterException.Code.Ok,
                                 Content = data.Stat,
-                                Stat = data.Stat
+                                Stat = data.Stat,
                             };
 
                             return response;

@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="RingMaster.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMaster.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -22,11 +18,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using RedirectionPolicy = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit.RedirectionPolicy;
     using RingMasterRequestType = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RingMasterRequestType;
 
+    /// <summary>
+    /// Operation code used by set data operation
+    /// </summary>
     internal enum SetDataOperationCode : ushort
     {
+#pragma warning disable SA1602
         None = 0,
         InterlockedAddIfVersion = 1,
         InterlockedXORIfVersion = 2,
+#pragma warning restore
     }
 
     /// <summary>
@@ -45,8 +46,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private int sessionTimeout;
         private int requestTimeout;
         private RingMasterClient client;
+        private SecureTransport secureTransport;
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="RingMaster"/> class.
         /// To create a RingMaster client object, the application needs to pass a connection string containing a comma separated list of host:port pairs, each corresponding to a ZooKeeper server
         /// </summary>
         /// <param name="connectString">The connect string.</param>
@@ -54,6 +57,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="watcher">The watcher.</param>
         /// <param name="sessionId">The session identifier.</param>
         /// <param name="sessionPasswd">The session passwd.</param>
+        /// <param name="requestTimeout">Request timeout in millisecond</param>
         public RingMaster(string connectString, int sessionTimeout, IWatcher watcher, long sessionId = 0, byte[] sessionPasswd = null, int requestTimeout = 15000)
             : base(connectString, sessionTimeout, watcher, sessionId, sessionPasswd, requestTimeout)
         {
@@ -77,6 +81,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Set the SSL configuration.
         /// </summary>
+        /// <param name="ssl">SslWrapping object</param>
         public void SetSsl(SslWrapping ssl)
         {
             if (ssl != null)
@@ -117,12 +122,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     var endpoints = SecureTransport.ParseConnectionString(this.ConnectString);
                     transport = new SecureTransport(this.transportConfiguration);
                     this.client = new RingMasterClient(this.protocol, transport);
-                    SecureTransport temp = transport;
+                    this.secureTransport = transport;
 
                     // The lifetime of transport is now owned by RingMasterClient
                     transport = null;
 
-                    temp.StartClient(endpoints);
+                    this.secureTransport.StartClient(endpoints);
                 }
                 finally
                 {
@@ -130,7 +135,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
             }
 
-            this.client.Request(req.WrappedRequest).ContinueWith(responseTask => 
+            this.client.Request(req.WrappedRequest).ContinueWith(responseTask =>
             {
                 try
                 {
@@ -145,14 +150,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        protected override void OnComplete(IRingMasterBackendRequest req, int resultcode, double timeInMillis)
-        {
-            // No additional work
-        }
-
         public override ISetDataOperationHelper GetSetDataOperationHelper()
         {
             return SetDataOperationHelper.Instance;
+        }
+
+        /// <inheritdoc />
+        protected override void OnComplete(IRingMasterBackendRequest req, int resultcode, double timeInMillis)
+        {
+            // No additional work
         }
     }
 }

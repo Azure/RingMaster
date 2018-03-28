@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -9,12 +9,14 @@
     <AssemblyName>Microsoft.RingMaster.IfxInstrumentation</AssemblyName>
     <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Events">
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Events" Condition="'$(OSSBUILD)' == ''">
       <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework)\lib\net40\Microsoft.Cloud.InstrumentationFramework.Events.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Metrics">
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Metrics" Condition="'$(OSSBUILD)' == ''">
       <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework_Metrics)\lib\net35\Microsoft.Cloud.InstrumentationFramework.Metrics.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -23,6 +25,7 @@
     <Compile Include="IfxInstrumentation.cs" />
     <Compile Include="IfxMetricsFactory.cs" />
     <Compile Include="IfxTraceListener.cs" />
+    <Compile Include="MockIfx.cs" Condition="'$(OSSBUILD)' != ''"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj">
@@ -30,8 +33,13 @@
       <Name>Instrumentation</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <NativeIfxContent Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\native\lib\**" />
+    <Content Include="@(NativeIfxContent)" Condition="'@(NativeIfxContent)'!=''">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <Import Project="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\Microsoft.Cloud.InstrumentationFramework.targets" />
-  <Import Project="$(PkgMicrosoft_Cloud_InstrumentationFramework_Metrics)\build\Microsoft.Cloud.InstrumentationFramework.Metrics.targets" />
 </Project>

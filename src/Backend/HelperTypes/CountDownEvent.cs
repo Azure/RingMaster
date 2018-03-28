@@ -1,4 +1,4 @@
-﻿// <copyright file="CountDownEvent.cs" company="Microsoft">
+﻿// <copyright file="CountDownEvent.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -7,11 +7,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     using System;
     using System.Threading;
 
+    /// <summary>
+    /// Count down event
+    /// </summary>
     public sealed class CountdownEvent : IDisposable
     {
-        private int pending;
         private readonly ManualResetEvent e;
+        private int pending;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CountdownEvent"/> class.
+        /// </summary>
+        /// <param name="initialCount">Initial count of the event</param>
         public CountdownEvent(int initialCount)
         {
             this.pending = initialCount;
@@ -35,6 +42,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             return false;
         }
 
+        /// <summary>
+        /// Decrements and sets the event if reach to zero
+        /// </summary>
+        /// <returns>If pending count is greater than 0</returns>
         public bool DecrementAndSetIfZero()
         {
             if (this.e != null && Interlocked.Decrement(ref this.pending) == 0)
@@ -46,6 +57,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             return this.e == null;
         }
 
+        /// <summary>
+        /// Sets the pending count to zero and sets the event
+        /// </summary>
         public void SetToZeroAndSignal()
         {
             if (this.e != null)
@@ -55,11 +69,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
+        /// <summary>
+        /// Gets the wait handle of the event
+        /// </summary>
+        /// <returns>wait handle</returns>
         public WaitHandle GetWaitHandle()
         {
             return this.e;
         }
 
+        /// <summary>
+        /// Waits if the event exists and keeps it (not returning to the pool)
+        /// </summary>
         public void WaitOne()
         {
             if (this.e != null)
@@ -68,6 +89,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
+        /// <summary>
+        /// Waits if the event exists and keeps it (not returning to the pool)
+        /// </summary>
+        /// <param name="timeout">Timeout in millisecond</param>
+        /// <returns>true if no pending</returns>
         public bool WaitOne(int timeout)
         {
             if (this.e != null)
@@ -78,6 +104,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             return true;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             if (this.e != null)

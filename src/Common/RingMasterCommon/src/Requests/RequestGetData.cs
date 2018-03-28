@@ -1,5 +1,5 @@
-﻿// <copyright file="RequestGetData.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestGetData.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             /// <summary>
             /// If the node for the path does not contain data, return the data of the closest ancestor that has data.
             /// </summary>
-            FaultbackOnParentData = 1, 
+            FaultbackOnParentData = 1,
 
             /// <summary>
             /// Do not include <see cref="IStat"/> in the result.
@@ -184,12 +184,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
                 /// <summary>
                 /// The given argument must be the same as the data in the node.
                 /// </summary>
-                Equals = 0, 
+                Equals = 0,
 
                 /// <summary>
                 /// The given argument must be different from the data in the node.
                 /// </summary>
-                Different = 1, 
+                Different = 1,
 
                 /// <summary>
                 /// The given argument must be greater than the value of the data in the node.
@@ -199,7 +199,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
                 /// <summary>
                 /// The given argument must be smaller than the value of the data in the node.
                 /// </summary>
-                Smaller = 3
+                Smaller = 3,
             }
 
             /// <summary>

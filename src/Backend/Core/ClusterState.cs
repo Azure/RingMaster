@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="ClusterState.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ClusterState.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
@@ -14,12 +10,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
+    /// <summary>
+    /// State of the cluster
+    /// </summary>
     public class ClusterState
     {
-        public readonly string ThisMemberId;
-        public ClusterMember[] MemberSet { get; private set; }
-        public IDictionary<string, HealthDefinition> MembersHealth { get; private set; }
+        private readonly string thisMemberId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterState"/> class.
+        /// </summary>
+        /// <param name="factory">Persisted data factory object</param>
         public ClusterState(IPersistedDataFactory<Node> factory)
         {
             if (factory == null)
@@ -27,9 +28,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
                 throw new ArgumentNullException("factory");
             }
 
-            this.ThisMemberId = factory.Name;
+            this.thisMemberId = factory.Name;
             this.MemberSet = factory.GetAgreedMembers();
             this.MembersHealth = factory.GetHealth();
         }
+
+        /// <summary>
+        /// Gets the cluster members
+        /// </summary>
+        public ClusterMember[] MemberSet { get; private set; }
+
+        /// <summary>
+        /// Gets the cluster member health
+        /// </summary>
+        public IDictionary<string, HealthDefinition> MembersHealth { get; private set; }
     }
 }

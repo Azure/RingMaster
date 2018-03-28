@@ -1,5 +1,5 @@
-﻿// <copyright file="ServiceFabricPersistenceEventSource.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ServiceFabricPersistenceEventSource.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric
@@ -14,10 +14,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class ServiceFabricPersistenceEventSource : EventSource
     {
-        public ServiceFabricPersistenceEventSource()
-        {
-        }
-
         public static ServiceFabricPersistenceEventSource Log { get; } = new ServiceFabricPersistenceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 4)]

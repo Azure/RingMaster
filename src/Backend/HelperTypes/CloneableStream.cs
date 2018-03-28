@@ -1,4 +1,4 @@
-﻿// <copyright file="CloneableStream.cs" company="Microsoft">
+﻿// <copyright file="CloneableStream.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -54,31 +54,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports reading.
+        /// Gets a value indicating whether the current stream supports reading when overridden in a derived class
         /// </summary>
         /// <value><c>true</c> if this instance can read; otherwise, <c>false</c>.</value>
         public override bool CanRead => this.stream.CanRead;
 
         /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports seeking.
+        /// Gets a value indicating whether the current stream supports seeking when overridden in a derived class
         /// </summary>
         /// <value><c>true</c> if this instance can seek; otherwise, <c>false</c>.</value>
         public override bool CanSeek => this.stream.CanSeek;
 
         /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports writing.
+        /// Gets a value indicating whether the current stream supports writing when overridden in a derived class
         /// </summary>
         /// <value><c>true</c> if this instance can write; otherwise, <c>false</c>.</value>
         public override bool CanWrite => this.stream.CanWrite;
 
         /// <summary>
-        /// When overridden in a derived class, gets the length in bytes of the stream.
+        /// Gets the length in bytes of the stream when overridden in a derived class
         /// </summary>
         /// <value>The length.</value>
         public override long Length => this.stream.Length;
 
         /// <summary>
-        /// When overridden in a derived class, gets or sets the position within the current stream.
+        /// Gets or sets the position within the current stream when overridden in a derived class
         /// </summary>
         /// <value>The position.</value>
         public override long Position

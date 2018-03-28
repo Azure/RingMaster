@@ -1,5 +1,5 @@
-﻿// <copyright file="IMetricsFactory.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="IMetricsFactory.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation

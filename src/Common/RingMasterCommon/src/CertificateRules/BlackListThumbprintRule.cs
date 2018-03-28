@@ -1,4 +1,4 @@
-﻿// <copyright file="BlackListThumbprintRule.cs" company="Microsoft">
+﻿// <copyright file="BlackListThumbprintRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -56,7 +55,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (this.thumbprints.Contains(CertAccessor.Instance.GetThumbprint(cert)))
             {
-                Trace.TraceError("ValidateSslPolicyErrors: BlackListThumbprint: Found blacklisted thumbprint: {0}", CertAccessor.Instance.GetThumbprint(cert));
+                CertificateRulesEventSource.Log.BlackListThumbprintRule_NotAllowed(CertAccessor.Instance.GetThumbprint(cert));
                 return Behavior.BlackListed;
             }
 

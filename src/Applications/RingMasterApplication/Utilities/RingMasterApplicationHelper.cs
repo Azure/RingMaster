@@ -1,10 +1,6 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RingMasterApplicationHelper.cs" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
+﻿// <copyright file="RingMasterApplicationHelper.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary>
-// </summary>
-//-----------------------------------------------------------------------
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities
 {
@@ -12,8 +8,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplica
     using System.Configuration;
     using System.Threading;
 
+    /// <summary>
+    /// Collection of helper methods
+    /// </summary>
     public static class RingMasterApplicationHelper
     {
+        /// <summary>
+        /// Waits to attach the debugger
+        /// </summary>
         public static void AttachDebugger()
         {
             try

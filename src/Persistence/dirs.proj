@@ -1,4 +1,5 @@
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" />
   <ItemGroup>
     <ProjectReference Include="Common\dirs.proj" />
@@ -10,4 +11,5 @@
     <BuildDependsOn>ResolveReferences</BuildDependsOn>
   </PropertyGroup>
   <Target Name="VerifyAlteredTargetsUsed" />
+  <Target Name="CleanupEmptyRefsFolder" />
 </Project>

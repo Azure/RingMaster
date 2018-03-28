@@ -1,5 +1,5 @@
-﻿// <copyright file="RequestSetAcl.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestSetAcl.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -16,7 +16,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// Initializes a new instance of the <see cref="RequestSetAcl"/> class.
         /// </summary>
         /// <param name="path">Path to the node</param>
-        /// <param name="acl">List of <see cref="Acls"/> that must be set on the node</param>
+        /// <param name="acl">List of ACL that must be set on the node</param>
         /// <param name="version">The expected value of the <c>Aversion</c> on the node</param>
         /// <param name="uid">Unique Id of the request</param>
         public RequestSetAcl(string path, IReadOnlyList<Acl> acl, int version, ulong uid = 0)

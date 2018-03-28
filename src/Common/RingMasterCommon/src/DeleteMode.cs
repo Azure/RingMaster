@@ -1,5 +1,5 @@
-// <copyright file="DeleteMode.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="DeleteMode.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         SuccessEvenIfNodeDoesntExist = 2,
 
         /// <summary>
-        /// If set, this flag allows the cascade delete to be accelerated by not locking anything under the root, 
+        /// If set, this flag allows the cascade delete to be accelerated by not locking anything under the root,
         /// and by sending a single replicated meta-command
         /// </summary>
         FastDelete = 4,

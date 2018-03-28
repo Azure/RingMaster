@@ -8,7 +8,9 @@ namespace Microsoft.Vega.Performance
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Fabric;
+    using System.Fabric.Query;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Web.Script.Serialization;
     using Azure.Networking.Infrastructure.RingMaster;
@@ -26,10 +28,11 @@ namespace Microsoft.Vega.Performance
         /// <summary>
         /// Gets the backend Service endpoint
         /// </summary>
-        /// <returns>The endpoint</returns>
-        public static async Task<string> GetVegaServiceEndpoint()
+        /// <returns>The vega service endpoint and primary node name.</returns>
+        public static async Task<Tuple<string, string>> GetVegaServiceInfo()
         {
             var fabricClient = new FabricClient();
+
             var appList = await fabricClient.QueryManager.GetApplicationListAsync();
             foreach (var app in appList)
             {
@@ -51,11 +54,13 @@ namespace Microsoft.Vega.Performance
                         as IEnumerable<KeyValuePair<string, object>>;
                     var serviceEndpoint = endpoints.First(kvp => kvp.Key == "ServiceEndpoint").Value as string;
 
-                    return new Uri(serviceEndpoint).Authority;
+                    var replicas = await fabricClient.QueryManager.GetReplicaListAsync(resolvedPartition.Info.Id);
+                    var primaryNodeName = replicas.FirstOrDefault(r => ((StatefulServiceReplica)r).ReplicaRole == ReplicaRole.Primary).NodeName;
+                    return new Tuple<string, string>(new Uri(serviceEndpoint).Authority, primaryNodeName);
                 }
             }
 
-            return string.Empty;
+            return new Tuple<string, string>(string.Empty, string.Empty);
         }
 
         /// <summary>
@@ -84,6 +89,28 @@ namespace Microsoft.Vega.Performance
         public static byte[] MakeSequentialData(int dataLength)
         {
             return Enumerable.Range(0, dataLength).Select(n => (byte)n).ToArray();
+        }
+
+        /// <summary>
+        /// Starts multiple threads for the given action
+        /// </summary>
+        /// <param name="threadCount">Number of threads to be started</param>
+        /// <param name="action">Thread body</param>
+        /// <returns>List of threads</returns>
+        public static Thread[] StartMultipleThreads(int threadCount, ParameterizedThreadStart action)
+        {
+            var threads = new List<Thread>();
+            for (int i = 0; i < threadCount; i++)
+            {
+                threads.Add(new Thread(action));
+            }
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                threads[i].Start(i);
+            }
+
+            return threads.ToArray();
         }
 
         /// <summary>
@@ -121,27 +148,23 @@ namespace Microsoft.Vega.Performance
         internal class CallbackWatcher : IWatcher
         {
             /// <summary>
-            /// Gets the unique id of this watcher.
+            /// Gets or sets the unique id of this watcher.
             /// </summary>
-            public ulong Id
-            {
-                get
-                {
-                    return 0;
-                }
-            }
+            public ulong Id { get; set; }
 
             /// <summary>
             /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            /// <value>
-            /// <c>true</c> if this is a single-use watcher; otherwise, <c>false</c>.
-            /// </value>
-            public bool OneUse
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind
             {
                 get
                 {
-                    return false;
+                    return WatcherKind.IncludeData;
                 }
             }
 

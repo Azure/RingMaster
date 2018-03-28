@@ -1,5 +1,5 @@
-﻿// <copyright file="LogStream.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="LogStream.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.LogStream
@@ -121,22 +121,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.LogStream
             /// </summary>
             /// <param name="sequenceNumber">Sequence number of the last entry that was written to the completed file</param>
             void OnFileCompleted(ulong sequenceNumber);
-        }
-
-        /// <summary>
-        /// Gets or sets the verbosity level of trace messages produced by this class.
-        /// </summary>
-        public static TraceLevel TraceLevel
-        {
-            get
-            {
-                return LogStreamEventSource.Log.TraceLevel;
-            }
-
-            set
-            {
-                LogStreamEventSource.Log.TraceLevel = value;
-            }
         }
 
         /// <summary>

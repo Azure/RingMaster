@@ -1,4 +1,4 @@
-﻿// <copyright file="SslWrapping.cs" company="Microsoft">
+﻿// <copyright file="SslWrapping.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -117,6 +117,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="SslWrapping"/> class.
+        /// </summary>
+        protected SslWrapping()
+        {
+        }
+
+        /// <summary>
         /// Gets the identities.
         /// </summary>
         public CertificateRules.CertIdentities Identities => this.identities;
@@ -132,334 +139,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public bool MustCheckCertificateTrustChain => this.mustCheckCertificateTrustChain;
 
         /// <summary>
-        /// Initializes this instance.
-        /// </summary>
-        /// <param name="identities">The identities object to use.</param>
-        /// <param name="rules">any additional rules to validate certificates</param>
-        /// <param name="flags">wrapper validation flags</param>
-        /// <exception cref="System.ArgumentException">serverCerts</exception>
-        private void Initialize(CertificateRules.CertIdentities identities, IEnumerable<CertificateRules.AbstractCertificateRule> rules, CertificateRules.CertificateRulesFlags flags)
-        {
-            if (identities == null)
-            {
-                throw new ArgumentNullException(nameof(identities));
-            }
-
-            if (identities.ServerIdentity == null)
-            {
-                throw new ArgumentException("serverCerts cannot be null or empty");
-            }
-
-            // record and validate the identities provided
-            this.identities = identities;
-
-            if (!CertificateRules.IsCertificateTimeValidRule.IsValidCertificate(identities.ServerIdentity))
-            {
-                throw new ArgumentException("bad servercertificate");
-            }
-
-            foreach (X509Certificate cert in identities.ClientIdentities)
-            {
-                if (!CertificateRules.IsCertificateTimeValidRule.IsValidCertificate(cert))
-                {
-                    throw new ArgumentException("bad client certificate");
-                }
-            }
-
-            this.mustCheckCertificateRevocation = (flags & CertificateRules.CertificateRulesFlags.MustCheckCertificateRevocation) == CertificateRules.CertificateRulesFlags.MustCheckCertificateRevocation;
-            this.mustCheckCertificateTrustChain = (flags & CertificateRules.CertificateRulesFlags.MustCheckCertificateTrustChain) == CertificateRules.CertificateRulesFlags.MustCheckCertificateTrustChain;
-
-            if (rules != null)
-            {
-                this.rules = new CertificateValidator(rules);
-            }
-            else
-            {
-                this.rules = new CertificateValidator(identities, flags);
-            }
-        }
-
-        /// <summary>
-        /// Initializes this instance.
-        /// </summary>
-        /// <param name="clientCerts">The client certs.</param>
-        /// <param name="serverCerts">The server certs.</param>
-        /// <param name="rules">any additional rules to validate certificates</param>
-        /// <param name="flags">wrapper validation flags</param>
-        /// <exception cref="System.ArgumentException">serverCerts</exception>
-        private void Initialize(X509Certificate[] clientCerts, X509Certificate[] serverCerts, IEnumerable<CertificateRules.AbstractCertificateRule> rules, CertificateRules.CertificateRulesFlags flags)
-        {
-            CertificateRules.CertIdentities ident = new CertificateRules.CertIdentities();
-            ident.SetClientIdentities(clientCerts);
-            ident.SetServerIdentities(serverCerts);
-
-            this.Initialize(ident, rules, flags);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SslWrapping"/> class.
-        /// </summary>
-        protected SslWrapping()
-        {
-        }
-
-        /// <summary>
-        /// The supported protocols
+        /// Gets or sets the supported protocols
         /// </summary>
         protected SslProtocols SupportedProtocols { get; set; } = SslProtocols.Tls12;
 
         /// <summary>
-        /// The supported protocols as client
+        /// Gets or sets the supported protocols as client
         /// </summary>
         protected SslProtocols SupportedProtocolsAsClient { get; set; } = SslProtocols.Tls12;
-
-        /// <summary>
-        /// returns the cert subject used by the client
-        /// </summary>
-        /// <param name="str">The stream</param>
-        /// <returns>The client cert subject</returns>
-        public virtual string GetClientCertSubjectFromStream(Stream str)
-        {
-            SslStream sslstr = str as SslStream;
-
-            X509Certificate remoteCertificate = sslstr?.RemoteCertificate;
-
-            if (remoteCertificate == null)
-            {
-                return string.Empty;
-            }
-
-            return CertificateRules.CertAccessor.Instance.GetSubject(remoteCertificate);
-        }
-
-        /// <summary>
-        /// Gets the validated stream on server.
-        /// </summary>
-        /// <param name="client">The client.</param>
-        /// <returns>Stream.</returns>
-        public virtual Stream GetValidatedStreamOnServer(TcpClient client)
-        {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            SslStream sslStream = null;
-
-            // locate a cert that passes the tests, but do not use it yet
-            Stream ns = client.GetStream();
-
-            string clientEndPoint = string.Empty;
-            try
-            {
-                clientEndPoint = client.Client.RemoteEndPoint.ToString();
-
-                X509Certificate serverIdentityCert = this.identities.ServerIdentity;
-
-                if (serverIdentityCert == null)
-                {
-                    // if no good cert found, throw
-                    throw new InvalidOperationException("no authentication attempted");
-                }
-
-                // otherwise, validate with the cert for real
-                sslStream = this.CreateSslStream(
-                                ns,
-                                false,
-                                this.rules.ValidateClientCertificate,
-                                null);
-
-                Trace.TraceInformation("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Started clientEndpoint={0}", clientEndPoint);
-                sslStream.AuthenticateAsServer(serverIdentityCert, true, this.SupportedProtocols, this.mustCheckCertificateRevocation);
-                Trace.TraceInformation("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Completed clientEndpoint={0}", clientEndPoint);
-
-                // Display the properties and settings for the authenticated stream.
-                // DisplaySecurityLevel(sslStream);
-                // DisplaySecurityServices(sslStream);
-                // DisplayStreamProperties(sslStream);
-                DisplayCertificateInformation(sslStream);
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Failed clientEndpoint={0}, exception={1}", clientEndPoint, ex);
-                if (sslStream != null)
-                {
-                    sslStream.Dispose();
-                }
-                else
-                {
-                    // ns cannot be null here
-                    ns.Dispose();
-                    client.Close();
-                }
-
-                throw;
-            }
-
-            return sslStream;
-        }
-
-        /// <summary>
-        /// Creates new instance of the System.Net.Security.SslStream class using the
-        /// specified System.IO.Stream, stream closure behavior, certificate validation delegate
-        /// and certificate selection delegate.
-        /// </summary>
-        /// <param name="innerStream">A System.IO.Stream object used by the System.Net.Security.SslStream for sending and receiving data.</param>
-        /// <param name="leaveInnerStreamOpen">A Boolean value that indicates the closure behavior of the System.IO.Stream object used by the System.Net.Security.SslStream for sending and receiving data. This parameter indicates if the inner stream is left open.</param>
-        /// <param name="userCertificateValidationCallback">A System.Net.Security.RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party.</param>
-        /// <param name="userCertificateSelectionCallback">A System.Net.Security.LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication.</param>
-        /// <returns>the SslStream created</returns>
-        protected virtual SslStream CreateSslStream(Stream innerStream, bool leaveInnerStreamOpen, RemoteCertificateValidationCallback userCertificateValidationCallback, LocalCertificateSelectionCallback userCertificateSelectionCallback)
-        {
-            return new SslStream(
-                                innerStream,
-                                leaveInnerStreamOpen,
-                                userCertificateValidationCallback,
-                                userCertificateSelectionCallback);
-        }
-
-        /// <summary>
-        /// Gets the SSL stream after validation on the server
-        /// </summary>
-        /// <param name="client">tcp client</param>
-        /// <param name="timeout">validation timeout</param>
-        /// <returns>the sslstream after validation on the server.</returns>
-        public Stream GetValidatedStreamOnServer(TcpClient client, TimeSpan timeout)
-        {
-            return this.ExecuteValidateStreamFunc(client, timeout, () => this.GetValidatedStreamOnServer(client));
-        }
-
-        /// <summary>
-        /// Gets the validated stream on client.
-        /// </summary>
-        /// <param name="serverName">Name of the server.</param>
-        /// <param name="client">The client.</param>
-        /// <returns>The SSlStream, after validation on the client</returns>
-        public virtual Stream GetValidatedStreamOnClient(string serverName, TcpClient client)
-        {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            Stream ns = null;
-            SslStream sslStream = null;
-
-            try
-            {
-                ns = client.GetStream();
-
-                sslStream = this.CreateSslStream(
-                    ns,
-                    false,
-                    this.rules.ValidateServerCertificate,
-                    null);
-
-                // The server name must match the name on the server certificate.
-                sslStream.AuthenticateAsClient(serverName, new X509CertificateCollection(this.identities.ClientIdentities), this.SupportedProtocolsAsClient, this.mustCheckCertificateRevocation);
-
-                // Display the properties and settings for the authenticated stream.
-                // DisplaySecurityLevel(sslStream);
-                // DisplaySecurityServices(sslStream);
-                // DisplayStreamProperties(sslStream);
-                DisplayCertificateInformation(sslStream);
-
-                return sslStream;
-            }
-            catch (Exception)
-            {
-                if (sslStream != null)
-                {
-                    sslStream.Dispose();
-                }
-                else
-                {
-                    ns?.Dispose();
-                }
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Gets the validated stream on client.
-        /// </summary>
-        /// <param name="serverName">server name</param>
-        /// <param name="client">tcl client</param>
-        /// <param name="timeout">validation timeout</param>
-        /// <returns>The SSlStream, after validation on the client</returns>
-        public Stream GetValidatedStreamOnClient(string serverName, TcpClient client, TimeSpan timeout)
-        {
-            return this.ExecuteValidateStreamFunc(client, timeout, () => this.GetValidatedStreamOnClient(serverName, client));
-        }
-
-        /// <summary>
-        /// Executes the validation function with a timeout
-        /// </summary>
-        /// <param name="client">tcl client</param>
-        /// <param name="timeout">validation timeout</param>
-        /// <param name="validateStreamFunc">validation function</param>
-        /// <returns>validated ssl stream</returns>
-        private Stream ExecuteValidateStreamFunc(TcpClient client, TimeSpan timeout, Func<Stream> validateStreamFunc)
-        {
-            Timer expTimer = null;
-            bool triggered = false;
-            object triggerObj = new object();
-
-            if (timeout != Timeout.InfiniteTimeSpan)
-            {
-                expTimer = new Timer(
-                    o =>
-                    {
-                        lock (triggerObj)
-                        {
-                            if (expTimer == null)
-                            {
-                                return;
-                            }
-
-                            triggered = true;
-                            client.Client.Close();
-                        }
-                    }, null, timeout, Timeout.InfiniteTimeSpan);
-            }
-
-            try
-            {
-                return validateStreamFunc();
-            }
-            catch (Exception)
-            {
-                lock (triggerObj)
-                {
-                    // if the timeout was not triggered, cancel it and throw the exception now.
-                    // however, if the timeout triggered, this exception is the channel being closed, and we need to throw the timeout exception below.
-                    if (!triggered)
-                    {
-                        if (expTimer != null)
-                        {
-                            expTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                            expTimer = null;
-                        }
-
-                        throw;
-                    }
-                }
-            }
-            finally
-            {
-                lock (triggerObj)
-                {
-                    if (expTimer != null)
-                    {
-                        expTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                        expTimer = null;
-                    }
-                }
-            }
-
-            throw new TimeoutException("validation didn't happen in " + timeout.TotalMilliseconds + " ms");
-        }
 
         /// <summary>
         /// Gets the name of the certs from thumb print or file.
@@ -534,26 +221,102 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 Trace.TraceWarning("Remote certificate is null.");
             }
         }
-    }
 
-    /// <summary>
-    /// Class NoSslWrapping.
-    /// </summary>
-    public class NoSslWrapping : SslWrapping
-    {
+        /// <summary>
+        /// returns the cert subject used by the client
+        /// </summary>
+        /// <param name="str">The stream</param>
+        /// <returns>The client cert subject</returns>
+        public virtual string GetClientCertSubjectFromStream(Stream str)
+        {
+            SslStream sslstr = str as SslStream;
+
+            X509Certificate remoteCertificate = sslstr?.RemoteCertificate;
+
+            if (remoteCertificate == null)
+            {
+                return string.Empty;
+            }
+
+            return CertificateRules.CertAccessor.Instance.GetSubject(remoteCertificate);
+        }
+
         /// <summary>
         /// Gets the validated stream on server.
         /// </summary>
         /// <param name="client">The client.</param>
         /// <returns>Stream.</returns>
-        public override Stream GetValidatedStreamOnServer(TcpClient client)
+        public virtual Stream GetValidatedStreamOnServer(TcpClient client)
         {
             if (client == null)
             {
                 throw new ArgumentNullException(nameof(client));
             }
 
-            return client.GetStream();
+            SslStream sslStream = null;
+
+            // locate a cert that passes the tests, but do not use it yet
+            Stream ns = client.GetStream();
+
+            string clientEndPoint = string.Empty;
+            try
+            {
+                clientEndPoint = client.Client.RemoteEndPoint.ToString();
+
+                X509Certificate serverIdentityCert = this.identities.ServerIdentity;
+
+                if (serverIdentityCert == null)
+                {
+                    // if no good cert found, throw
+                    throw new InvalidOperationException("server certification not provided, no authentication attempted");
+                }
+
+                // otherwise, validate with the cert for real
+                sslStream = this.CreateSslStream(
+                                ns,
+                                false,
+                                this.rules.ValidateClientCertificate,
+                                null);
+
+                Trace.TraceInformation("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Started clientEndpoint={0}", clientEndPoint);
+                sslStream.AuthenticateAsServer(serverIdentityCert, true, this.SupportedProtocols, this.mustCheckCertificateRevocation);
+                Trace.TraceInformation("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Completed clientEndpoint={0}", clientEndPoint);
+
+                // Display the properties and settings for the authenticated stream.
+                // DisplaySecurityLevel(sslStream);
+                // DisplaySecurityServices(sslStream);
+                // DisplayStreamProperties(sslStream);
+                DisplayCertificateInformation(sslStream);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("SslWrapping.GetValidatedStreamOnServer AuthenticateAsServer-Failed clientEndpoint={0}, exception={1}", clientEndPoint, ex);
+                if (sslStream != null)
+                {
+                    sslStream.Dispose();
+                }
+                else
+                {
+                    // ns cannot be null here
+                    ns.Dispose();
+                    client.Close();
+                }
+
+                throw;
+            }
+
+            return sslStream;
+        }
+
+        /// <summary>
+        /// Gets the SSL stream after validation on the server
+        /// </summary>
+        /// <param name="client">tcp client</param>
+        /// <param name="timeout">validation timeout</param>
+        /// <returns>the sslstream after validation on the server.</returns>
+        public Stream GetValidatedStreamOnServer(TcpClient client, TimeSpan timeout)
+        {
+            return this.ExecuteValidateStreamFunc(client, timeout, () => this.GetValidatedStreamOnServer(client));
         }
 
         /// <summary>
@@ -561,15 +324,219 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="serverName">Name of the server.</param>
         /// <param name="client">The client.</param>
-        /// <returns>Stream.</returns>
-        public override Stream GetValidatedStreamOnClient(string serverName, TcpClient client)
+        /// <returns>The SSlStream, after validation on the client</returns>
+        public virtual Stream GetValidatedStreamOnClient(string serverName, TcpClient client)
         {
             if (client == null)
             {
                 throw new ArgumentNullException(nameof(client));
             }
 
-            return client.GetStream();
+            Stream ns = null;
+            SslStream sslStream = null;
+
+            if (this.identities.ClientIdentities == null || this.identities.ClientIdentities.Length == 0)
+            {
+                // if no good cert found, throw
+                throw new InvalidOperationException("client certification not provided, no authentication attempted");
+            }
+
+            try
+            {
+                ns = client.GetStream();
+
+                sslStream = this.CreateSslStream(
+                    ns,
+                    false,
+                    this.rules.ValidateServerCertificate,
+                    null);
+
+                // The server name must match the name on the server certificate.
+                sslStream.AuthenticateAsClient(serverName, new X509CertificateCollection(this.identities.ClientIdentities), this.SupportedProtocolsAsClient, this.mustCheckCertificateRevocation);
+
+                // Display the properties and settings for the authenticated stream.
+                // DisplaySecurityLevel(sslStream);
+                // DisplaySecurityServices(sslStream);
+                // DisplayStreamProperties(sslStream);
+                DisplayCertificateInformation(sslStream);
+
+                return sslStream;
+            }
+            catch (Exception)
+            {
+                if (sslStream != null)
+                {
+                    sslStream.Dispose();
+                }
+                else
+                {
+                    ns?.Dispose();
+                }
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the validated stream on client.
+        /// </summary>
+        /// <param name="serverName">server name</param>
+        /// <param name="client">tcl client</param>
+        /// <param name="timeout">validation timeout</param>
+        /// <returns>The SSlStream, after validation on the client</returns>
+        public Stream GetValidatedStreamOnClient(string serverName, TcpClient client, TimeSpan timeout)
+        {
+            return this.ExecuteValidateStreamFunc(client, timeout, () => this.GetValidatedStreamOnClient(serverName, client));
+        }
+
+        /// <summary>
+        /// Creates new instance of the System.Net.Security.SslStream class using the
+        /// specified System.IO.Stream, stream closure behavior, certificate validation delegate
+        /// and certificate selection delegate.
+        /// </summary>
+        /// <param name="innerStream">A System.IO.Stream object used by the System.Net.Security.SslStream for sending and receiving data.</param>
+        /// <param name="leaveInnerStreamOpen">A Boolean value that indicates the closure behavior of the System.IO.Stream object used by the System.Net.Security.SslStream for sending and receiving data. This parameter indicates if the inner stream is left open.</param>
+        /// <param name="userCertificateValidationCallback">A System.Net.Security.RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party.</param>
+        /// <param name="userCertificateSelectionCallback">A System.Net.Security.LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication.</param>
+        /// <returns>the SslStream created</returns>
+        protected virtual SslStream CreateSslStream(Stream innerStream, bool leaveInnerStreamOpen, RemoteCertificateValidationCallback userCertificateValidationCallback, LocalCertificateSelectionCallback userCertificateSelectionCallback)
+        {
+            return new SslStream(
+                                innerStream,
+                                leaveInnerStreamOpen,
+                                userCertificateValidationCallback,
+                                userCertificateSelectionCallback);
+        }
+
+        /// <summary>
+        /// Executes the validation function with a timeout
+        /// </summary>
+        /// <param name="client">tcl client</param>
+        /// <param name="timeout">validation timeout</param>
+        /// <param name="validateStreamFunc">validation function</param>
+        /// <returns>validated ssl stream</returns>
+        private Stream ExecuteValidateStreamFunc(TcpClient client, TimeSpan timeout, Func<Stream> validateStreamFunc)
+        {
+            Timer expTimer = null;
+            bool triggered = false;
+            object triggerObj = new object();
+
+            if (timeout != Timeout.InfiniteTimeSpan)
+            {
+                expTimer = new Timer(
+                    o =>
+                    {
+                        lock (triggerObj)
+                        {
+                            if (expTimer == null)
+                            {
+                                return;
+                            }
+
+                            triggered = true;
+                            client.Client.Close();
+                        }
+                    },
+                    null,
+                    timeout,
+                    Timeout.InfiniteTimeSpan);
+            }
+
+            try
+            {
+                return validateStreamFunc();
+            }
+            catch (Exception)
+            {
+                lock (triggerObj)
+                {
+                    // if the timeout was not triggered, cancel it and throw the exception now.
+                    // however, if the timeout triggered, this exception is the channel being closed, and we need to throw the timeout exception below.
+                    if (!triggered)
+                    {
+                        if (expTimer != null)
+                        {
+                            expTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                            expTimer = null;
+                        }
+
+                        throw;
+                    }
+                }
+            }
+            finally
+            {
+                lock (triggerObj)
+                {
+                    if (expTimer != null)
+                    {
+                        expTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                        expTimer = null;
+                    }
+                }
+            }
+
+            throw new TimeoutException("validation didn't happen in " + timeout.TotalMilliseconds + " ms");
+        }
+
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        /// <param name="identities">The identities object to use.</param>
+        /// <param name="rules">any additional rules to validate certificates</param>
+        /// <param name="flags">wrapper validation flags</param>
+        /// <exception cref="System.ArgumentException">serverCerts</exception>
+        private void Initialize(CertificateRules.CertIdentities identities, IEnumerable<CertificateRules.AbstractCertificateRule> rules, CertificateRules.CertificateRulesFlags flags)
+        {
+            if (identities == null)
+            {
+                throw new ArgumentNullException(nameof(identities));
+            }
+
+            // record and validate the identities provided
+            this.identities = identities;
+
+            if (identities.ServerIdentity != null && !CertificateRules.IsCertificateTimeValidRule.IsValidCertificate(identities.ServerIdentity))
+            {
+                throw new ArgumentException("bad servercertificate");
+            }
+
+            foreach (X509Certificate cert in identities.ClientIdentities)
+            {
+                if (!CertificateRules.IsCertificateTimeValidRule.IsValidCertificate(cert))
+                {
+                    throw new ArgumentException("bad client certificate");
+                }
+            }
+
+            this.mustCheckCertificateRevocation = (flags & CertificateRules.CertificateRulesFlags.MustCheckCertificateRevocation) == CertificateRules.CertificateRulesFlags.MustCheckCertificateRevocation;
+            this.mustCheckCertificateTrustChain = (flags & CertificateRules.CertificateRulesFlags.MustCheckCertificateTrustChain) == CertificateRules.CertificateRulesFlags.MustCheckCertificateTrustChain;
+
+            if (rules != null)
+            {
+                this.rules = new CertificateValidator(rules);
+            }
+            else
+            {
+                this.rules = new CertificateValidator(identities, flags);
+            }
+        }
+
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        /// <param name="clientCerts">The client certs.</param>
+        /// <param name="serverCerts">The server certs.</param>
+        /// <param name="rules">any additional rules to validate certificates</param>
+        /// <param name="flags">wrapper validation flags</param>
+        /// <exception cref="System.ArgumentException">serverCerts</exception>
+        private void Initialize(X509Certificate[] clientCerts, X509Certificate[] serverCerts, IEnumerable<CertificateRules.AbstractCertificateRule> rules, CertificateRules.CertificateRulesFlags flags)
+        {
+            CertificateRules.CertIdentities ident = new CertificateRules.CertIdentities();
+            ident.SetClientIdentities(clientCerts);
+            ident.SetServerIdentities(serverCerts);
+
+            this.Initialize(ident, rules, flags);
         }
     }
 }

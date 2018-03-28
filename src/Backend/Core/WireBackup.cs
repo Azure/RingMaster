@@ -1,24 +1,45 @@
-﻿namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
+﻿// <copyright file="WireBackup.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
+// </copyright>
+
+namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
-    using System.Text;
     using System.IO;
-    using System.Threading;
     using System.Runtime.InteropServices;
+    using System.Text;
+    using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
+    /// <summary>
+    /// Wire backup implementation
+    /// </summary>
     public class WireBackup
     {
+        /// <summary>
+        /// File name extension for the ongoing ones
+        /// </summary>
+        public const string OngoingExtension = ".wbtmp";
+
+        /// <summary>
+        /// File name extension for the completed ones
+        /// </summary>
+        public const string ReadyExtension = ".wb";
+
+        private static readonly Random Rand = new Random((int)(DateTime.UtcNow.Ticks % int.MaxValue));
+
         private readonly int maxEvents;
         private readonly int maxTimeInMillis;
         private readonly int maxEventsBetweenSnapshots;
         private readonly int maxTimeInMillisBetweenSnapshots;
-        private readonly Func<bool> TakeSnapshot;
+        private readonly Func<bool> takeSnapshot;
 
         private readonly string path;
+        private readonly int keepBackupForSec;
+
         private ExecutionQueue toUpload = null;
 
         private DateTime nextSnapshotTime;
@@ -29,32 +50,10 @@
         private int grandCount = 0;
         private Timer resetTimer;
         private bool takingSnapshot = false;
-
         private object fileLockObj = new object();
 
-        public int MaxPending = 1000; // 1k pending files is really running behind.
-        public ulong MinAvailableBytes = 10 * (ulong)(1024 * 1024 * 1024); // 10GB of free space minimum
-
-        private readonly static Random rand = new Random((int)(DateTime.UtcNow.Ticks % int.MaxValue));
-        private readonly int keepBackupForSec;
-
         /// <summary>
-        /// returns a number close to the given one, but multiplied by a random number between 0.8 and 1.2
-        /// the above is true as long as the given number is not int.MaxValue, in which case the same int.MaxValue is returned
-        /// </summary>
-        /// <returns>a randomized value, or int.MaxValue</returns>
-        private static int Randomize(int number)
-        {
-            if (number != int.MaxValue)
-            {
-                number = (int)(0.1 * rand.Next(8, 12) * number);
-            }
-
-            return number;
-        }
-
-        /// <summary>
-        /// creates a wirebackup object.
+        /// Initializes a new instance of the <see cref="WireBackup"/> class.
         /// </summary>
         /// <param name="path">the markPath where to drop the files</param>
         /// <param name="takeSnapshot">the function to be used when a snapshot is needed</param>
@@ -65,7 +64,7 @@
         /// <param name="keepBackupForSec">Number of seconds to keep the wireback before deleting it</param>
         public WireBackup(string path, Func<bool> takeSnapshot, int maxEvents, int maxTimeInMillis, int maxEventsBetweenSnapshots, int maxTimeInMillisBetweenSnapshots, int keepBackupForSec)
         {
-            this.TakeSnapshot = takeSnapshot;
+            this.takeSnapshot = takeSnapshot;
 
             this.maxEvents = maxEvents;
             this.maxTimeInMillis = maxTimeInMillis;
@@ -98,53 +97,336 @@
             this.path = path;
             this.lastTxId = -1;
 
-            CreateUploaderMark(path);
+            this.CreateUploaderMark(/*path*/);
         }
 
-        private void CreateUploaderMark(string markPath)
+        /// <summary>
+        /// Gets or sets the pending files is really running behind, 1000 by default
+        /// </summary>
+        public int MaxPending { get; set; } = 1000;
+
+        /// <summary>
+        /// Gets or sets the free space minimum, 10GB by default
+        /// </summary>
+        public ulong MinAvailableBytes { get; set; } = 10 * (ulong)(1024 * 1024 * 1024);
+
+        /// <summary>
+        /// Converts a string to UTF-8 encoded byte array
+        /// </summary>
+        /// <param name="base64String">String to convert</param>
+        /// <param name="output">byte array output</param>
+        public static void FromString(string base64String, out byte[] output)
         {
-            /*UploaderSourceFolderConfiguration wireBackupFolderConfig = new UploaderSourceFolderConfiguration();
-            wireBackupFolderConfig.ContainerName = "WireBackup";
-            wireBackupFolderConfig.CompressFiles = true;
-            wireBackupFolderConfig.DeleteAfterUpload = true;
-            wireBackupFolderConfig.FilePattern = "*" + ReadyExtension;
-
-            //cfg.DeleteFilesOlderThanSeconds = this.keepBackupForSec.ToString();
-
-            /// just create a marker file that will indicate uploader to go fetch all these files and push them somewhere
-            string markfilename = Path.Combine(markPath, UploaderSourceFolderConfiguration.ConfigFileName);
-            if (!Directory.Exists(markPath))
+            if (string.Equals(base64String, "<null>"))
             {
-                Directory.CreateDirectory(markPath);
+                output = null;
+                return;
             }
 
-            wireBackupFolderConfig.Serialize(markfilename, true);*/
+            output = Encoding.UTF8.GetBytes(base64String);
         }
 
-        #region archive logics
+        /// <summary>
+        /// Converts byte array to the equivalent string representation that is encoded with base-64 digits
+        /// </summary>
+        /// <param name="data">byte array to convert</param>
+        /// <returns>Converted string</returns>
+        public static string ToString(byte[] data)
+        {
+            if (data == null)
+            {
+                return "<null>";
+            }
 
+            return Convert.ToBase64String(data);
+        }
+
+        /// <summary>
+        /// converts the specified string to list of ACLs
+        /// </summary>
+        /// <param name="stringAcls">List of ACLs in string</param>
+        /// <param name="acls">Converted ACLs</param>
+        public static void FromString(string stringAcls, out IList<Acl> acls)
+        {
+            if (stringAcls == null)
+            {
+                throw new ArgumentNullException("stringAcls");
+            }
+
+            if (stringAcls.Equals("<null>"))
+            {
+                acls = null;
+                return;
+            }
+
+            string[] aclpieces = stringAcls.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            List<Acl> r = new List<Acl>();
+
+            for (int i = 0; i < aclpieces.Length; i++)
+            {
+                Acl a;
+                FromString(aclpieces[i], out a);
+                r.Add(a);
+            }
+
+            acls = r;
+        }
+
+        /// <summary>
+        /// Converts a list of ACLs to string
+        /// </summary>
+        /// <param name="acls">ACLs to convert</param>
+        /// <returns>string representation of ACLs</returns>
+        public static string ToString(IReadOnlyList<Acl> acls)
+        {
+            if (acls == null)
+            {
+                return "<null>";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < acls.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(";");
+                }
+
+                ToString(acls[i], sb);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Converts the specified string to ACL
+        /// </summary>
+        /// <param name="aclStr">ACL in string</param>
+        /// <param name="acl">Converted ACL</param>
+        public static void FromString(string aclStr, out Acl acl)
+        {
+            if (aclStr == null)
+            {
+                throw new ArgumentNullException("aclStr");
+            }
+
+            string[] aclpieces = aclStr.Split(',');
+
+            if (aclpieces.Length < 3)
+            {
+                throw new ArgumentException("Acl string is not in expected format", "aclStr");
+            }
+
+            acl = new Acl(int.Parse(aclpieces[0]), new Id(aclpieces[1], aclpieces[2]));
+        }
+
+        /// <summary>
+        /// Starts the wire backup
+        /// </summary>
         public void Start()
         {
             this.toUpload = new ExecutionQueue(1);
-            FindFilesToArchived();
+            this.FindFilesToArchived();
         }
 
+        /// <summary>
+        ///  Stops the wire backup
+        /// </summary>
         public void Stop()
         {
-            OnTimer(null);
+            this.OnTimer(null);
             this.toUpload.Drain(ExecutionQueue.DrainMode.DisallowAllFurtherEnqueuesAndRemoveAllElements);
             this.toUpload = null;
         }
 
-        private void FindFilesToArchived()
+        /// <summary>
+        /// Appends SetAcl to file
+        /// </summary>
+        /// <param name="id">Node ID</param>
+        /// <param name="list">List of ACL</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendSetAcl(ulong id, IReadOnlyList<Acl> list, long txtime, long xid)
         {
-            string searchpattern = "*" + OngoingExtension;
-            foreach (string file in Directory.GetFiles(path, searchpattern))
+            if (this.toUpload == null)
             {
-                ArchiveFile(file);
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "SA", txtime, xid, id, ToString(list));
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendSetAcl: " + e.Message);
             }
         }
 
+        /// <summary>
+        /// Appends AddChild to file
+        /// </summary>
+        /// <param name="parentId">Parent node ID</param>
+        /// <param name="childId">Child node ID</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendAddChild(ulong parentId, ulong childId, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "AC", txtime, xid, parentId, childId);
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendChild: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Appends Delete to file
+        /// </summary>
+        /// <param name="parentId">Parent node ID</param>
+        /// <param name="childId">Child node ID</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendDelete(ulong parentId, ulong childId, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "DN", txtime, xid, parentId, childId);
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendRemove: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Appends RemoveChild to file
+        /// </summary>
+        /// <param name="parentId">Parent node ID</param>
+        /// <param name="childId">Child node ID</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendRemoveChild(ulong parentId, ulong childId, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "RC", txtime, xid, parentId, childId);
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendRemove: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Appends SetData to file
+        /// </summary>
+        /// <param name="id">Node ID</param>
+        /// <param name="data">Node Data</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendSetData(ulong id, byte[] data, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "SD", txtime, xid, id, ToString(data));
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendSetData: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Appends Create to file
+        /// </summary>
+        /// <param name="node">Node object</param>
+        /// <param name="txtime">Transaction time</param>
+        /// <param name="xid">Transaction ID</param>
+        public void AppendCreate(IPersistedData node, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            if (node == null)
+            {
+                throw new ArgumentNullException("node");
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Join("|", "CN", txtime, xid, node.Id, node.Name, ToString(node.Acl), ToString(node.Data));
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendCreate: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Appends Transaction Manager transaction
+        /// </summary>
+        /// <param name="xid">Transaction ID</param>
+        /// <param name="data">data byte array</param>
+        public void AppendTMTransaction(long xid, byte[] data)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                string line = string.Format("TM||{0}||{1}", xid, ToString(data));
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendSetData: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Achieves the specified file
+        /// </summary>
+        /// <param name="file">File to achieve</param>
         internal void ArchiveFile(string file)
         {
             if (this.toUpload == null)
@@ -153,7 +435,7 @@
             }
 
             // else, append the upload task for this file to the queue. BUT only if there is no more than X elements in the queue. otherwise, disable this.
-            if (this.toUpload.PendingCount > MaxPending)
+            if (this.toUpload.PendingCount > this.MaxPending)
             {
                 Console.WriteLine("WIREBACKUP: had to delete a file: " + file);
                 File.Delete(file);
@@ -161,10 +443,14 @@
             else
             {
                 Console.WriteLine("WIREBACKUP: scheduling file: " + file);
-                this.toUpload.Enqueue<string>(ArchiveAsync, file);
+                this.toUpload.Enqueue<string>(this.ArchiveAsync, file);
             }
         }
 
+        /// <summary>
+        /// Achieves the specified file in async
+        /// </summary>
+        /// <param name="file">File to achieve</param>
         internal void ArchiveAsync(string file)
         {
             if (file == null)
@@ -182,7 +468,7 @@
 
                 ulong freeAvail = GetAvailableDiskSpace(filepath);
 
-                if (freeAvail < MinAvailableBytes)
+                if (freeAvail < this.MinAvailableBytes)
                 {
                     Console.WriteLine("WIREBACKUP: had to delete file due to space: " + file);
                     File.Delete(file);
@@ -201,6 +487,7 @@
                     {
                         break;
                     }
+
                     extension = string.Format("{0}{1}", n, ReadyExtension);
                     n++;
                 }
@@ -213,213 +500,6 @@
                 Console.WriteLine("Ignorable exception on Wirebackup ArchiveAsync: " + e.Message);
             }
         }
-        #endregion
-
-        #region RM specific business logics
-        public void AppendSetAcl(ulong id, IReadOnlyList<Acl> list, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("SA|{0}|{1}|{2}|{3}", txtime, xid, id, ToString(list));
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendSetAcl: " + e.Message);
-            }
-        }
-
-        private void SetTx(long xid)
-        {
-            if (!takingSnapshot)
-            {
-                lastTxId = xid;
-            }
-        }
-
-        public void AppendAddChild(ulong parentId, ulong childId, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("AC|{0}|{1}|{2}|{3}", txtime, xid, parentId, childId);
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendChild: " + e.Message);
-            }
-        }
-
-        public void AppendDelete(ulong parentId, ulong childId, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("DN|{0}|{1}|{2}|{3}", txtime, xid, parentId, childId);
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendRemove: " + e.Message);
-            }
-        }
-
-        public void AppendRemoveChild(ulong parentId, ulong childId, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("RC|{0}|{1}|{2}|{3}", txtime, xid, parentId, childId);
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendRemove: " + e.Message);
-            }
-        }
-
-        public void AppendSetData(ulong id, byte[] data, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("SD|{0}|{1}|{2}|{3}", txtime, xid, id, ToString(data));
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendSetData: " + e.Message);
-            }
-        }
-
-        public void AppendCreate(IPersistedData node, long txtime, long xid)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-
-            if (node == null)
-            {
-                throw new ArgumentNullException("node");
-            }
-
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("CN|{0}|{1}|{2}|{3}|{4}|{5}", txtime, xid, node.Id, node.Name, ToString(node.Acl), ToString(node.Data));
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendCreate: " + e.Message);
-            }
-        }
-
-        public void AppendTMTransaction(long xid, byte[] data)
-        {
-            if (this.toUpload == null)
-            {
-                return;
-            }
-            try
-            {
-                SetTx(xid);
-                string line = string.Format("TM||{0}||{1}", xid, ToString(data));
-                AppendLine(line);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Ignorable exception on Wirebackup AppendSetData: " + e.Message);
-            }
-        }
-        #endregion
-
-        #region serialization
-        public static void FromString(string base64String, out byte[] output)
-        {
-            if (String.Equals(base64String, "<null>"))
-            {
-                output = null;
-                return;
-            }
-            output = Encoding.UTF8.GetBytes(base64String);
-        }
-
-        public static string ToString(byte[] data)
-        {
-            if (data == null)
-            {
-                return "<null>";
-            }
-            return Convert.ToBase64String(data);
-        }
-
-        public static void FromString(string stringAcls, out IList<Acl> acls)
-        {
-            if (stringAcls == null)
-            {
-                throw new ArgumentNullException("stringAcls");
-            }
-
-            if (stringAcls.Equals("<null>"))
-            {
-                acls = null;
-                return;
-            }
-            string[] aclpieces = stringAcls.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-            List<Acl> r = new List<Acl>();
-
-            for (int i = 0; i < aclpieces.Length; i++)
-            {
-                Acl a;
-                FromString(aclpieces[i], out a);
-                r.Add(a);
-            }
-            acls = r;
-        }
-
-        public static string ToString(IReadOnlyList<Acl> acls)
-        {
-            if (acls == null)
-            {
-                return "<null>";
-            }
-
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < acls.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(";");
-                }
-                ToString(acls[i], sb);
-            }
-            return sb.ToString();
-        }
 
         /// <summary>
         /// Gets the disk free space ex.
@@ -430,7 +510,8 @@
         /// <param name="lpTotalNumberOfFreeBytes">The lp total number of free bytes.</param>
         /// <returns><c>true</c> if the operation succeeded, <c>false</c> otherwise.</returns>
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
+        private static extern bool GetDiskFreeSpaceEx(
+            string lpDirectoryName,
             out ulong lpFreeBytesAvailable,
             out ulong lpTotalNumberOfBytes,
             out ulong lpTotalNumberOfFreeBytes);
@@ -459,126 +540,186 @@
             sb.AppendFormat("{0},{1},{2}", acl.Perms, acl.Id.Scheme, acl.Id.Identifier);
         }
 
-        public static void FromString(string aclStr, out Acl acl)
+        /// <summary>
+        /// returns a number close to the given one, but multiplied by a random number between 0.8 and 1.2
+        /// the above is true as long as the given number is not int.MaxValue, in which case the same int.MaxValue is returned
+        /// </summary>
+        /// <returns>a randomized value, or int.MaxValue</returns>
+        private static int Randomize(int number)
         {
-            if (aclStr == null)
+            if (number != int.MaxValue)
             {
-                throw new ArgumentNullException("aclStr");
+                number = (int)(0.1 * Rand.Next(8, 12) * number);
             }
 
-            string[] aclpieces = aclStr.Split(',');
-
-            if (aclpieces.Length < 3)
-            {
-                throw new ArgumentException("Acl string is not in expected format", "aclStr");
-            }
-
-            acl = new Acl(int.Parse(aclpieces[0]), new Id(aclpieces[1], aclpieces[2]));
+            return number;
         }
-#endregion
+
+        private void CreateUploaderMark(/* string markPath */)
+        {
+            /*UploaderSourceFolderConfiguration wireBackupFolderConfig = new UploaderSourceFolderConfiguration();
+            wireBackupFolderConfig.ContainerName = "WireBackup";
+            wireBackupFolderConfig.CompressFiles = true;
+            wireBackupFolderConfig.DeleteAfterUpload = true;
+            wireBackupFolderConfig.FilePattern = "*" + ReadyExtension;
+
+            //cfg.DeleteFilesOlderThanSeconds = this.keepBackupForSec.ToString();
+
+            /// just create a marker file that will indicate uploader to go fetch all these files and push them somewhere
+            string markfilename = Path.Combine(markPath, UploaderSourceFolderConfiguration.ConfigFileName);
+            if (!Directory.Exists(markPath))
+            {
+                Directory.CreateDirectory(markPath);
+            }
+
+            wireBackupFolderConfig.Serialize(markfilename, true);*/
+        }
+
+        private void FindFilesToArchived()
+        {
+            string searchpattern = "*" + OngoingExtension;
+            foreach (string file in Directory.GetFiles(this.path, searchpattern))
+            {
+                this.ArchiveFile(file);
+            }
+        }
+
+        private void SetTx(long xid)
+        {
+            if (!this.takingSnapshot)
+            {
+                this.lastTxId = xid;
+            }
+        }
 
         private void AppendLine(string line)
         {
-            lock (fileLockObj)
+            lock (this.fileLockObj)
             {
-                if (!takingSnapshot)
+                if (!this.takingSnapshot)
                 {
-                    if (currentCount > this.maxEvents)
+                    if (this.currentCount > this.maxEvents)
                     {
-                        OnTimer(null);
+                        this.OnTimer(null);
                     }
 
-                    if (currentFile == null)
+                    if (this.currentFile == null)
                     {
-                        currentFile = CreateFile(out currentFileName);
-                        if (resetTimer == null)
+                        this.currentFile = this.CreateFile(out this.currentFileName);
+                        if (this.resetTimer == null)
                         {
-                            resetTimer = new Timer(OnTimer, null, this.maxTimeInMillis, Timeout.Infinite);
+                            this.resetTimer = new Timer(this.OnTimer, null, this.maxTimeInMillis, Timeout.Infinite);
                         }
                         else
                         {
-                            resetTimer.Change(this.maxTimeInMillis, Timeout.Infinite);
+                            this.resetTimer.Change(this.maxTimeInMillis, Timeout.Infinite);
                         }
                     }
-                    currentCount++;
+
+                    this.currentCount++;
                 }
-                currentFile.WriteLine(line);
+
+                this.currentFile.WriteLine(line);
             }
         }
 
         private StreamWriter CreateFile(out string currentfilename)
         {
-            currentfilename = GetFileName();
-            return new StreamWriter(new BufferedStream(new FileStream(currentfilename, FileMode.CreateNew), 64 * 1024));
+            currentfilename = this.GetFileName();
+
+            FileStream fs = null;
+            BufferedStream bs = null;
+            StreamWriter sw = null;
+            try
+            {
+                fs = new FileStream(currentfilename, FileMode.CreateNew);
+                bs = new BufferedStream(fs, 64 * 1024);
+                fs = null;
+                sw = new StreamWriter(bs);
+                bs = null;
+                return sw;
+            }
+            finally
+            {
+                if (bs != null)
+                {
+                    bs.Dispose();
+                }
+
+                if (fs != null)
+                {
+                    fs.Dispose();
+                }
+            }
         }
 
         private string GetFileName()
         {
-            return Path.Combine(this.path, string.Format("wirebackup-{0}{1}{2}", lastTxId, takingSnapshot ? "-snap" : "", OngoingExtension));
+            return Path.Combine(
+                this.path,
+                string.Format("wirebackup-{0}{1}{2}", this.lastTxId, this.takingSnapshot ? "-snap" : string.Empty, OngoingExtension));
         }
-
-        public const string OngoingExtension = ".wbtmp";
-        public const string ReadyExtension = ".wb";
 
         private void OnTimer(object ign)
         {
             try
             {
-                lock (fileLockObj)
+                lock (this.fileLockObj)
                 {
-                    if (resetTimer == null || currentFile == null)
+                    if (this.resetTimer == null || this.currentFile == null)
                     {
                         return;
                     }
 
-                    if (currentCount > 0)
+                    if (this.currentCount > 0)
                     {
-                        currentFile.Close();
-                        ArchiveFile(currentFileName);
-                        currentFile = null;
-                        currentFileName = null;
-                        grandCount += currentCount;
+                        this.currentFile.Close();
+                        this.ArchiveFile(this.currentFileName);
+                        this.currentFile = null;
+                        this.currentFileName = null;
+                        this.grandCount += this.currentCount;
 
                         if (this.grandCount > this.maxEventsBetweenSnapshots || DateTime.UtcNow >= this.nextSnapshotTime)
                         {
-                            takingSnapshot = true;
-                            currentFile = CreateFile(out currentFileName);
+                            this.takingSnapshot = true;
+                            this.currentFile = this.CreateFile(out this.currentFileName);
                             try
                             {
-                                bool taken = TakeSnapshot();
-                                currentFile.Close();
+                                bool taken = this.takeSnapshot();
+                                this.currentFile.Close();
                                 if (taken)
                                 {
-                                    ArchiveFile(currentFileName);
+                                    this.ArchiveFile(this.currentFileName);
                                 }
                                 else
                                 {
-                                    File.Delete(currentFileName);
+                                    File.Delete(this.currentFileName);
                                 }
                             }
                             catch (Exception)
                             {
-                                if (currentFile != null)
+                                if (this.currentFile != null)
                                 {
-                                    currentFile.Close();
-                                    File.Delete(currentFileName);
+                                    this.currentFile.Close();
+                                    File.Delete(this.currentFileName);
                                 }
+
                                 throw;
                             }
                             finally
                             {
-                                takingSnapshot = false;
-                                currentFile = null;
-                                currentFileName = null;
+                                this.takingSnapshot = false;
+                                this.currentFile = null;
+                                this.currentFileName = null;
                                 this.grandCount = 0;
-                                this.nextSnapshotTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(maxTimeInMillisBetweenSnapshots);
+                                this.nextSnapshotTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(this.maxTimeInMillisBetweenSnapshots);
                             }
                         }
 
-                        currentCount = 0;
+                        this.currentCount = 0;
                     }
 
-                    resetTimer.Change(this.maxTimeInMillis, Timeout.Infinite);
+                    this.resetTimer.Change(this.maxTimeInMillis, Timeout.Infinite);
                 }
             }
             catch (Exception e)

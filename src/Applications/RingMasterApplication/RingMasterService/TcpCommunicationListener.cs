@@ -1,5 +1,5 @@
-﻿// <copyright file="TcpCommunicationListener.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="TcpCommunicationListener.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
@@ -17,12 +17,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using IRingMasterServerInstrumentation = Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.IRingMasterServerInstrumentation;
     using RequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit;
 
+    /// <summary>
+    /// TCP listener for native RM endpoint
+    /// </summary>
     internal sealed class TcpCommunicationListener : ICommunicationListener, IDisposable
     {
         private readonly IRingMasterServerInstrumentation instrumentation;
         private readonly ICommunicationProtocol protocol;
         private readonly SecureTransport transport;
-        private readonly RingMasterRequestExecutor executor;
+        private readonly IRingMasterRequestExecutor executor;
         private readonly int port;
         private readonly string uriPublished;
         private RingMasterServer server;
@@ -30,6 +33,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpCommunicationListener" /> class.
         /// </summary>
+        /// <param name="server">RingMaster server</param>
         /// <param name="port">Port where this listener will listen</param>
         /// <param name="uriPublished">The specific uri to listen on</param>
         /// <param name="executor">RingMaster request executor</param>
@@ -37,13 +41,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// <param name="protocol">The Marshalling protocol</param>
         /// <param name="maximumSupportedProtocolVersion">Maximum supported version</param>
         public TcpCommunicationListener(
+            RingMasterServer server,
             int port,
             string uriPublished,
-            RingMasterRequestExecutor executor,
+            IRingMasterRequestExecutor executor,
             IRingMasterServerInstrumentation instrumentation,
             ICommunicationProtocol protocol,
             uint maximumSupportedProtocolVersion)
         {
+            this.server = server;
             this.port = port;
             this.uriPublished = uriPublished;
             this.instrumentation = instrumentation;
@@ -53,7 +59,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             {
                 UseSecureConnection = false,
                 IsClientCertificateRequired = false,
-                CommunicationProtocolVersion = maximumSupportedProtocolVersion
+                CommunicationProtocolVersion = maximumSupportedProtocolVersion,
             };
 
             this.transport = new SecureTransport(transportConfig);
@@ -68,7 +74,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         public Task<string> OpenAsync(CancellationToken cancellationToken)
         {
             RingMasterServiceEventSource.Log.ListenerOpenAsync(this.uriPublished);
-            this.server = new RingMasterServer(this.protocol, this.instrumentation, cancellationToken: CancellationToken.None);
             this.server.RegisterTransport(this.transport);
             this.server.OnInitSession = this.OnInitSession;
             this.transport.StartServer(this.port);
@@ -95,13 +100,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             RingMasterServiceEventSource.Log.ListenerAbort(this.uriPublished);
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.transport.Dispose();
             this.server.Dispose();
         }
 
-        private IRingMasterRequestHandler OnInitSession(RequestInit initRequest)
+        private IRingMasterRequestHandlerOverlapped OnInitSession(RequestInit initRequest)
         {
             RingMasterServiceEventSource.Log.ListenerInitSession(this.uriPublished, initRequest.Auth?.ClientIP, initRequest.Auth?.ClientDigest);
             return new CoreRequestHandler(this.executor, initRequest);

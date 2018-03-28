@@ -1,9 +1,12 @@
-﻿// <copyright file="ContentType.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ContentType.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
 {
+    using Data;
+    using Requests;
+
     /// <summary>
     /// Type of content stored in a serialized Request or response.
     /// </summary>

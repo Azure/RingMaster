@@ -1,5 +1,5 @@
-﻿// <copyright file="NewRingMasterAcl.cs" company="Microsoft">
-//     Copyright ©  2018
+﻿// <copyright file="NewRingMasterAcl.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
@@ -34,12 +34,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
         /// </summary>
         [Parameter(Mandatory = true)]
         public string Identifier { get; set; }
-        
-        /// <inheritdoc />
-        protected override void ProcessRecord()
-        {
-            this.WriteObject(new Acl((int)ParsePermission(this.Permission), new Id(this.Scheme, this.Identifier)));
-        }
 
         /// <summary>
         /// Parse the given permission string.
@@ -65,6 +59,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
                 default:
                     return Acl.Perm.NONE;
             }
+        }
+
+        /// <inheritdoc />
+        protected override void ProcessRecord()
+        {
+            this.WriteObject(new Acl((int)ParsePermission(this.Permission), new Id(this.Scheme, this.Identifier)));
         }
     }
 }

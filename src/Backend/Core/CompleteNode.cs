@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="CompleteNode.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="CompleteNode.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -32,7 +28,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private IDictionary<string, IPersistedData> childrenMapping = Strategies.CreateChildrenDictionary();
 
         /// <summary>
-        /// returns the children mapping in raw
+        /// Initializes a new instance of the <see cref="CompleteNode" /> class.
+        /// </summary>
+        /// <param name="pd">The pd.</param>
+        public CompleteNode(IPersistedData pd)
+            : base(pd)
+        {
+        }
+
+        /// <summary>
+        /// Gets the children mapping in raw
         /// </summary>
         /// <value>the children</value>
         public override IDictionary<string, IPersistedData> ChildrenMapping
@@ -59,6 +64,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public IEnumerable<IPersistedData> ChildrenNodes
         {
             get { return this.childrenMapping.Values; }
+        }
+
+        /// <summary>
+        /// Gets or sets the watchers.
+        /// </summary>
+        /// <value>The watchers.</value>
+        protected override ICollection<IWatcher> Watchers { get; set; }
+
+        /// <summary>
+        /// Creates the node.
+        /// </summary>
+        /// <param name="pd">The persisted data object</param>
+        /// <returns>Node object being created</returns>
+        public static Node CreateNode(IPersistedData pd)
+        {
+            if (pd == null)
+            {
+                throw new ArgumentNullException(nameof(pd));
+            }
+
+            if (pd.Name.Length == 1 && pd.Name[0] == '/')
+            {
+                return new RootNode(pd);
+            }
+
+            if (pd.GetChildrenCount() == 0)
+            {
+                return new Node(pd);
+            }
+            else
+            {
+                return new CompleteNode(pd);
+            }
         }
 
         /// <summary>
@@ -102,35 +140,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Gets or sets the watchers.
+        /// Adds children to this node
         /// </summary>
-        /// <value>The watchers.</value>
-        protected override ICollection<IWatcher> Watchers { get; set; }
-
-        /// <summary>
-        /// Revisits the type of the node based on its need for children and watchers.
-        /// </summary>
-        /// <param name="makeComplete">if set to <c>true</c> the caller demands a 'complete' node.</param>
-        /// <returns>new Node to use</returns>
-        protected override Node RevisitNodeType(bool makeComplete = false)
+        /// <param name="children">List of children</param>
+        /// <remarks>In use in codex loading - do not remove</remarks>
+        public override void AddChildren(IList<IPersistedData> children)
         {
-            // complete nodes may be demoted to plain nodes
-            if (!makeComplete && this.childrenMapping.Count == 0 && this.Watchers == null)
+            if (children == null)
             {
-                // and the following line will link _persisted properly
-                return new Node(this.Persisted);
+                throw new ArgumentNullException(nameof(children));
             }
 
-            return this.Persisted.Node;
-        }
+            if (this.Persisted.Node != this)
+            {
+                this.Persisted.Node.AddChildren(children);
+                return;
+            }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CompleteNode" /> class.
-        /// </summary>
-        /// <param name="pd">The pd.</param>
-        public CompleteNode(IPersistedData pd)
-            : base(pd)
-        {
+            Strategies.MaybeUpscaleDictionary(ref this.childrenMapping, newCount: this.ChildrenCount + children.Count);
+
+            foreach (IPersistedData p in children)
+            {
+                if (p == null || p.Name == null)
+                {
+                    throw new ArgumentException("Children being added must provide a persisted data name", nameof(children));
+                }
+
+                this.childrenMapping.Add(p.Name, p);
+
+                if (!p.IsEphemeral)
+                {
+                    this.Persisted.AddChild(p);
+                }
+            }
         }
 
         /// <summary>
@@ -164,21 +206,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Ensures the complete stat.
-        /// </summary>
-        /// <param name="persisted">The persisted.</param>
-        /// <returns>IStat.</returns>
-        internal static IMutableStat EnsureCompleteStat(IPersistedData persisted)
-        {
-            if (persisted.Stat is FirstStat)
-            {
-                return new MutableStat(persisted.Stat);
-            }
-
-            return persisted.Stat;
-        }
-
-        /// <summary>
         /// Removes the child.
         /// </summary>
         /// <param name="name">The name.</param>
@@ -204,6 +231,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.RevisitNodeType();
         }
 
+        /// <summary>
+        /// Get the list of watchers in string
+        /// </summary>
+        /// <returns>Watch string array</returns>
         public override string[] GetWatcherList()
         {
             lock (this.Persisted)
@@ -233,7 +264,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Adds the watcher.
         /// </summary>
         /// <param name="watcher">The watcher.</param>
-        public override void AddWatcher(IWatcher watcher, string context=null)
+        /// <param name="context">context string?</param>
+        public override void AddWatcher(IWatcher watcher, string context = null)
         {
             lock (this.Persisted)
             {
@@ -282,7 +314,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     }
                 }
 
-                RevisitNodeType();
+                this.RevisitNodeType();
             }
         }
 
@@ -305,35 +337,42 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Creates the node.
+        /// Ensures the complete stat.
         /// </summary>
-        /// <param name="pd">The pd.</param>
-        /// <returns>Node.</returns>
-        public static Node CreateNode(IPersistedData pd)
+        /// <param name="persisted">The persisted.</param>
+        /// <returns>IStat.</returns>
+        internal static IMutableStat EnsureCompleteStat(IPersistedData persisted)
         {
-            if (pd == null)
+            if (persisted.Stat is FirstStat)
             {
-                throw new ArgumentNullException("pd");
+                return new MutableStat(persisted.Stat);
             }
 
-            if (pd.Name.Length == 1 && pd.Name[0] == '/')
+            return persisted.Stat;
+        }
+
+        /// <summary>
+        /// Revisits the type of the node based on its need for children and watchers.
+        /// </summary>
+        /// <param name="makeComplete">if set to <c>true</c> the caller demands a 'complete' node.</param>
+        /// <returns>new Node to use</returns>
+        protected override Node RevisitNodeType(bool makeComplete = false)
+        {
+            // complete nodes may be demoted to plain nodes
+            if (!makeComplete && this.childrenMapping.Count == 0 && this.Watchers == null)
             {
-                return new RootNode(pd);
+                // and the following line will link _persisted properly
+                return new Node(this.Persisted);
             }
-            if (pd.GetChildrenCount() == 0)
-            {
-                return new Node(pd);
-            }
-            else
-            {
-                return new CompleteNode(pd);
-            }
+
+            return this.Persisted.Node;
         }
 
         /// <summary>
         /// Gets the children in sorted order.
         /// </summary>
-        /// <returns>List of names of children of this node in sorted order</value>
+        /// <param name="startingChildName">Starting child name to get the children</param>
+        /// <returns>List of names of children of this node in sorted order</returns>
         protected override IEnumerable<string> GetSortedChildren(string startingChildName)
         {
             AtomicDictionaryFacade<string, IPersistedData> atomicDictionaryFacade = this.childrenMapping as AtomicDictionaryFacade<string, IPersistedData>;
@@ -346,15 +385,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             return sortedDictionary.GetKeysGreaterThan(startingChildName);
         }
 
-        public static IEnumerable<string> GetSortedChildrenWithCondition(ICollection<string> names, string startingChildName)
+        /// <summary>
+        /// Gets the sorted list of children names starting from the given name
+        /// </summary>
+        /// <param name="names">Collection of children names</param>
+        /// <param name="startingChildName">starting child name</param>
+        /// <returns>Collection of children names starting from the given name</returns>
+        private static IEnumerable<string> GetSortedChildrenWithCondition(ICollection<string> names, string startingChildName)
         {
-            if (names== null)
+            if (names == null)
             {
-                throw new ArgumentNullException("names");
+                throw new ArgumentNullException(nameof(names));
             }
 
             List<string> children;
-            if (String.IsNullOrEmpty(startingChildName))
+            if (string.IsNullOrEmpty(startingChildName))
             {
                 children = new List<string>(names);
             }

@@ -1,5 +1,5 @@
-﻿// <copyright file="ZooKeeperTcpListener.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="ZooKeeperTcpListener.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
@@ -18,12 +18,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using IZooKeeperServerInstrumentation = Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper.IZooKeeperServerInstrumentation;
     using RequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit;
 
+    /// <summary>
+    /// TCP listener for ZooKeeper endpoint
+    /// </summary>
     internal sealed class ZooKeeperTcpListener : ICommunicationListener, IDisposable
     {
         private readonly IZooKeeperServerInstrumentation instrumentation;
         private readonly IZooKeeperCommunicationProtocol protocol;
         private readonly SecureTransport transport;
-        private readonly RingMasterRequestExecutor executor;
+        private readonly IRingMasterRequestExecutor executor;
         private readonly int port;
         private readonly string uriPublished;
         private ZooKeeperServer server;
@@ -40,7 +43,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         public ZooKeeperTcpListener(
             int port,
             string uriPublished,
-            RingMasterRequestExecutor executor,
+            IRingMasterRequestExecutor executor,
             IZooKeeperServerInstrumentation instrumentation,
             IZooKeeperCommunicationProtocol protocol,
             uint maximumSupportedProtocolVersion)
@@ -54,7 +57,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             {
                 UseSecureConnection = false,
                 IsClientCertificateRequired = false,
-                CommunicationProtocolVersion = maximumSupportedProtocolVersion
+                CommunicationProtocolVersion = maximumSupportedProtocolVersion,
             };
 
             this.transport = new SecureTransport(transportConfig);
@@ -70,8 +73,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         {
             RingMasterServiceEventSource.Log.ListenerOpenAsync(this.uriPublished);
             this.server = new ZooKeeperServer(this.protocol, this.instrumentation, cancellationToken: cancellationToken);
-
-            ZooKeeperServer.TraceLevel = TraceLevel.Info; // Change this to Verbose for debugging
 
             this.server.RegisterTransport(this.transport);
             this.server.OnInitSession = this.OnInitSession;
@@ -99,13 +100,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             RingMasterServiceEventSource.Log.ListenerAbort(this.uriPublished);
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.transport.Dispose();
             this.server.Dispose();
         }
 
-        private IRingMasterRequestHandler OnInitSession(RequestInit initRequest)
+        private IRingMasterRequestHandlerOverlapped OnInitSession(RequestInit initRequest)
         {
             RingMasterServiceEventSource.Log.ListenerInitSession(this.uriPublished, initRequest.Auth?.ClientIP, initRequest.Auth?.ClientDigest);
             return new CoreRequestHandler(this.executor, initRequest);

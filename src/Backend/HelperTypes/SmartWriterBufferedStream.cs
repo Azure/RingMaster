@@ -1,4 +1,4 @@
-﻿// <copyright file="SmartWriterBufferedStream.cs" company="Microsoft">
+﻿// <copyright file="SmartWriterBufferedStream.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -14,6 +14,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// <seealso cref="Stream" />
     public class SmartWriterBufferedStream : Stream
     {
+        /// <summary>
+        /// counter to provide names to the mapping
+        /// </summary>
+        private static int mapNameCounter = 0;
+
+        /// <summary>
+        /// if true, a call to Flush() will have no effect.
+        /// </summary>
+        private readonly bool makeFlushNull;
+
+        /// <summary>
+        /// the amount of bytes to increase the underlying mapfile size when we need to grow the file.
+        /// </summary>
+        private readonly long fileSizeJumps;
+
         /// <summary>
         /// The memmappedfile object backing the mapping
         /// </summary>
@@ -34,20 +49,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// </summary>
         private long length;
 
-        /// <summary>
-        /// the amount of bytes to increase the underlying mapfile size when we need to grow the file.
-        /// </summary>
-        private readonly long fileSizeJumps;
-
-        /// <summary>
-        /// if true, a call to Flush() will have no effect.
-        /// </summary>
-        private readonly bool makeFlushNull;
-
-        /// <summary>
-        /// counter to provide names to the mapping
-        /// </summary>
-        private static int mapNameCounter = 0;
+        private int refCount = 0;
+        private int closed = 0;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SmartWriterBufferedStream"/> class.
@@ -66,7 +69,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
 
             if (fileSizeJumps == 0)
             {
-                fileSizeJumps = ((long)1) * 1024 * 1024 * 1024; // 1G
+                fileSizeJumps = 1L * 1024L * 1024L * 1024L; // 1G
             }
 
             if ((this.fileSizeJumps % (4 * 1024)) != 0)
@@ -84,57 +87,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Resizes the underlying stream, closing the map object and re-opening it with the new size.
-        /// It can grow or srink the file, depending on the factor.
+        /// Gets the number of references
         /// </summary>
-        /// <param name="factor">the new size will change by factor*FileSizeJumps, so factor=1 --> make the file FileSizeJump larger; factor=-2 --> make the file 2*FileSizeJump shorter.</param>
-        private void ComputeStream(int factor)
-        {
-            long pos = 0;
-
-            if (this.file != null)
-            {
-                pos = this.stream.Position;
-
-                this.stream.Flush();
-                this.stream.Close();
-                this.stream.Dispose();
-                this.file.Dispose();
-                this.file = null;
-                this.stream = null;
-                this.underlyingFileStream.Flush();
-            }
-
-            this.underlyingFileStream.SetLength(Math.Max(0, this.underlyingFileStream.Length + (this.fileSizeJumps * factor)));
-
-            int mapcount = Interlocked.Increment(ref mapNameCounter);
-
-            string mapName = $"map-{Path.GetFileName(this.underlyingFileStream.Name)}-{mapcount}";
-
-            try
-            {
-                this.file = System.IO.MemoryMappedFiles.MemoryMappedFile.CreateFromFile(
-                    this.underlyingFileStream,
-                    mapName,
-                    this.underlyingFileStream.Length,
-                    System.IO.MemoryMappedFiles.MemoryMappedFileAccess.ReadWrite,
-                    null,
-                    HandleInheritability.None,
-                    true);
-
-                this.stream = this.file.CreateViewStream();
-                this.stream.Position = pos;
-            }
-            catch (Exception)
-            {
-                this.stream?.Dispose();
-                this.file?.Dispose();
-                throw;
-            }
-        }
+        public int NumRefs => this.refCount;
 
         /// <summary>
-        /// Gets the value indicating if we can read from the stream
+        /// Gets a value indicating whether we can read from the stream
         /// </summary>
         public override bool CanRead
         {
@@ -150,7 +108,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Gets the value indicating if we can seek on the stream
+        /// Gets a value indicating whether we can seek on the stream
         /// </summary>
         public override bool CanSeek
         {
@@ -166,7 +124,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Gets the value indicating if we can write on the stream.
+        /// Gets a value indicating whether we can write on the stream.
         /// </summary>
         public override bool CanWrite
         {
@@ -224,15 +182,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             this.underlyingFileStream.Flush();
         }
 
-        private int refCount = 0;
-        private int closed = 0;
-
+        /// <summary>
+        /// Increments the reference count
+        /// </summary>
         public void AddRef()
         {
             Interlocked.Increment(ref this.refCount);
         }
-
-        public int NumRefs => this.refCount;
 
         /// <summary>
         /// Closes this instance, freeing up all resources.
@@ -382,6 +338,56 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             if (newpos > this.length)
             {
                 this.length = newpos;
+            }
+        }
+
+        /// <summary>
+        /// Resizes the underlying stream, closing the map object and re-opening it with the new size.
+        /// It can grow or srink the file, depending on the factor.
+        /// </summary>
+        /// <param name="factor">the new size will change by factor*FileSizeJumps, so factor=1 --> make the file FileSizeJump larger; factor=-2 --> make the file 2*FileSizeJump shorter.</param>
+        private void ComputeStream(int factor)
+        {
+            long pos = 0;
+
+            if (this.file != null)
+            {
+                pos = this.stream.Position;
+
+                this.stream.Flush();
+                this.stream.Close();
+                this.stream.Dispose();
+                this.file.Dispose();
+                this.file = null;
+                this.stream = null;
+                this.underlyingFileStream.Flush();
+            }
+
+            this.underlyingFileStream.SetLength(Math.Max(0, this.underlyingFileStream.Length + (this.fileSizeJumps * factor)));
+
+            int mapcount = Interlocked.Increment(ref mapNameCounter);
+
+            string mapName = $"map-{Path.GetFileName(this.underlyingFileStream.Name)}-{mapcount}";
+
+            try
+            {
+                this.file = System.IO.MemoryMappedFiles.MemoryMappedFile.CreateFromFile(
+                    this.underlyingFileStream,
+                    mapName,
+                    this.underlyingFileStream.Length,
+                    System.IO.MemoryMappedFiles.MemoryMappedFileAccess.ReadWrite,
+                    null,
+                    HandleInheritability.None,
+                    true);
+
+                this.stream = this.file.CreateViewStream();
+                this.stream.Position = pos;
+            }
+            catch (Exception)
+            {
+                this.stream?.Dispose();
+                this.file?.Dispose();
+                throw;
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// <copyright file="AllowIfAnyAllowedRule.cs" company="Microsoft">
+﻿// <copyright file="AllowIfAnyAllowedRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,8 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -64,7 +62,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
                 }
             }
 
-            Trace.TraceInformation("ValidateSslPolicyErrors: AllowIfAnyAllowed: no rule returned Allowed: {0}", CertAccessor.Instance.GetThumbprint(cert));
+            CertificateRulesEventSource.Log.AllowIfAnyAllowed_NotAllowed(CertAccessor.Instance.GetThumbprint(cert));
             return Behavior.NotAllowed;
         }
     }

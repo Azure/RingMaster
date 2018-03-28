@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterWatchdog.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterWatchdog.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdog
@@ -28,12 +28,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
 
         private readonly IMetric1D ringMasterWatchdogTestSucceeded;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RingMasterWatchdog"/> class.
+        /// </summary>
+        /// <param name="context">Service context</param>
+        /// <param name="metricsFactory">Metric factory for MDM</param>
         public RingMasterWatchdog(StatelessServiceContext context, IMetricsFactory metricsFactory)
             : base(context)
         {
+            if (metricsFactory == null)
+            {
+                throw new ArgumentNullException(nameof(metricsFactory));
+            }
+
+            System.Diagnostics.Contracts.Contract.EndContractBlock();
+
             this.ringMasterWatchdogTestSucceeded = metricsFactory.Create1D(nameof(this.ringMasterWatchdogTestSucceeded), "testName");
         }
 
+        /// <inheritdoc />
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             var uptime = Stopwatch.StartNew();

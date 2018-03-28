@@ -31,7 +31,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportSe
 
             int port = int.Parse(args[0]);
 
-            SecureTransport.TraceLevel = (TraceLevel)Enum.Parse(typeof(TraceLevel), ConfigurationManager.AppSettings["TraceLevel"]);
             var configuration = new SecureTransport.Configuration();
 
             int maxConcurrentRequests = int.Parse(ConfigurationManager.AppSettings["MaxConcurrentRequests"]);

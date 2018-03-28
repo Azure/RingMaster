@@ -1,5 +1,5 @@
-// <copyright file="OpResult.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="OpResult.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
@@ -136,22 +136,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             switch (requestType)
             {
                 case RingMasterRequestType.Check:
-                return new OpResult.CheckResult();
+                    return new OpResult.CheckResult();
                 case RingMasterRequestType.Create:
-                return new OpResult.CreateResult(response.Stat, (string)response.Content);
+                    return new OpResult.CreateResult(response.Stat, (string)response.Content);
                 case RingMasterRequestType.GetData:
-                return new OpResult.GetDataResult(response.Stat, (byte[])response.Content, response.ResponsePath);
+                    return new OpResult.GetDataResult(response.Stat, (byte[])response.Content, response.ResponsePath);
                 case RingMasterRequestType.Delete:
-                return new OpResult.DeleteResult();
+                    return new OpResult.DeleteResult();
                 case RingMasterRequestType.SetData:
                     return new OpResult.SetDataResult(response.Stat);
                 case RingMasterRequestType.Move:
                     return new OpResult.MoveResult(response.Stat, (string)response.Content);
                 case RingMasterRequestType.SetAcl:
-                return new OpResult.SetAclResult(response.Stat);
+                    return new OpResult.SetAclResult(response.Stat);
                 case RingMasterRequestType.Multi:
                 case RingMasterRequestType.Batch:
-                return new OpResult.RunResult((List<OpResult>)response.Content);
+                    return new OpResult.RunResult((List<OpResult>)response.Content);
             }
 
             return new OpResult.ErrorResult((int)RingMasterException.Code.Unimplemented);

@@ -1,18 +1,10 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IPersistedDataFactoryClient.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IPersistedDataFactoryClient.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
-    using System;
     using System.Collections.Generic;
-    using System.Net;
-    using System.Threading;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Interface IPersistedDataFactoryClient.
@@ -24,10 +16,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// Called when this client just became primary.
         /// </summary>
         void OnBecomePrimary();
+
         /// <summary>
         /// Called when this client just lost primary status.
         /// </summary>
         void OnPrimaryStatusLost();
+
         /// <summary>
         /// Indicates whether this client can become primary at this time.
         /// </summary>

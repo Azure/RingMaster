@@ -1,5 +1,5 @@
-﻿// <copyright file="WatcherCollection.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="WatcherCollection.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
@@ -127,7 +127,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     existingWatchers.Remove(sessionId);
                     this.watcherCount--;
                 }
-                
+
                 if (watcher != null)
                 {
                     WatcherRecord newWatcher = new WatcherRecord(watcher);

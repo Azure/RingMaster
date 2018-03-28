@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -8,6 +8,8 @@
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Backend.Common</AssemblyName>
     <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -17,11 +19,52 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AbstractRingMaster.cs" />
-    <Compile Include="DataEncoderHelper.cs" />
-    <Compile Include="FxCopRulesModifications.cs" />
+    <Compile Include="AsyncCallback\Callbacks.cs" />
+    <Compile Include="AuthNotSetException.cs" />
+    <Compile Include="BackendCompoundRequest.cs" />
+    <Compile Include="BackendRequest.cs" />
+    <Compile Include="BackendRequestNoResult.cs" />
+    <Compile Include="BackendRequestWithContext.cs" />
+    <Compile Include="BehaviorAction.cs" />
+    <Compile Include="IoSession.cs" />
+    <Compile Include="DataEncodingHelper.cs" />
+    <Compile Include="Data\FirstStat.cs" />
+    <Compile Include="Data\IMutableStat.cs" />
+    <Compile Include="Data\MutableStat.cs" />
+    <Compile Include="Data\Scheme.cs" />
+    <Compile Include="HealthDefinition.cs" />
+    <Compile Include="IByteArrayMarshaller.cs" />
+    <Compile Include="IClientConnectionInstrumentation.cs" />
+    <Compile Include="ILoadBehavior.cs" />
+    <Compile Include="InvalidAclException.cs" />
+    <Compile Include="IRingMasterBackendCompondRequest.cs" />
+    <Compile Include="IRingMasterBackendRequest.cs" />
+    <Compile Include="KeeperException\ExceptionHelper.cs" />
     <Compile Include="MarshallerChannel.cs" />
-    <Compile Include="RingMasterBackendRequests.cs" />
+    <Compile Include="NoSslWrapping.cs" />
+    <Compile Include="NoType.cs" />
+    <Compile Include="RepositoryOperation.cs" />
+    <Compile Include="RequestBatch.cs" />
+    <Compile Include="RequestCall.cs" />
+    <Compile Include="RequestCheck.cs" />
+    <Compile Include="RequestCreate.cs" />
+    <Compile Include="RequestDelegates.cs" />
+    <Compile Include="RequestDelete.cs" />
+    <Compile Include="RequestExists.cs" />
+    <Compile Include="RequestGetAcl.cs" />
+    <Compile Include="RequestGetChildren.cs" />
+    <Compile Include="RequestGetData.cs" />
+    <Compile Include="RequestInit.cs" />
+    <Compile Include="RequestMove.cs" />
+    <Compile Include="RequestMulti.cs" />
+    <Compile Include="RequestSetAcl.cs" />
+    <Compile Include="RequestSetAuth.cs" />
+    <Compile Include="RequestSetData.cs" />
+    <Compile Include="RequestSync.cs" />
     <Compile Include="SslWrapping.cs" />
+    <Compile Include="States.cs" />
+    <Compile Include="Watcher\Event\EventType.cs" />
+    <Compile Include="Watcher\Event\KeeperState.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj">

@@ -1,10 +1,11 @@
-﻿// <copyright file="RequestCheck.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestCheck.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Request to check if the Version, CVersion and AVersion on the node are equal to the values
@@ -61,7 +62,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             /// <summary>
             /// Unique incarnation id that takes into account the child version in addition to the data version.
             /// </summary>
-            Extended = 2
+            Extended = 2,
         }
 
         /// <summary>

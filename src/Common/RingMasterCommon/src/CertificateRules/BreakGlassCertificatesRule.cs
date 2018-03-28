@@ -1,4 +1,4 @@
-﻿// <copyright file="BreakGlassCertificatesRule.cs" company="Microsoft">
+﻿// <copyright file="BreakGlassCertificatesRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -68,7 +67,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             // here, cert == null may be contained in the certs list (meaning, it is okay for the other party to present no certificate).
             if (this.certs.Contains(cert))
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: BreakGlassCertificates: Found breakglass thumbprint: {0}", CertAccessor.Instance.GetThumbprint(cert));
+                CertificateRulesEventSource.Log.BreakGlassCertificatesRule_BreakGlassUnlessBlackListed(CertAccessor.Instance.GetThumbprint(cert));
                 return Behavior.BreakGlassUnlessBlackListed;
             }
 

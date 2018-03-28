@@ -1,19 +1,9 @@
-﻿// <copyright file="IClientSession.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IClientSession.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Net;
-    using System.Net.Sockets;
-    using System.Threading;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.KeeperException;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
-
     using ISessionAuth = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.ISessionAuth;
 
     /// <summary>
@@ -34,7 +24,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         string FriendlyName { get; set; }
 
         /// <summary>
-        /// session authentication data
+        /// Gets session authentication data
         /// </summary>
         ISessionAuth Auth { get; }
     }

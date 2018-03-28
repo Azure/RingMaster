@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterSession.cs" company="Microsoft">
-//     Copyright ©  2018
+﻿// <copyright file="RingMasterSession.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
@@ -19,6 +19,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule
         /// <summary>
         /// Initializes a new instance of the <see cref="RingMasterSession" /> class.
         /// </summary>
+        /// <param name="serverSpec">Server spec</param>
+        /// <param name="configuration">Client configuration</param>
         internal RingMasterSession(
             RingMasterClient.ServerSpec serverSpec,
             RingMasterClient.Configuration configuration)

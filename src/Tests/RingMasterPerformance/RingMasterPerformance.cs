@@ -1,17 +1,15 @@
-﻿// <copyright file="RingMasterPerformance.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterPerformance.cs" company="Microsoft Corporation">
+//    Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 {
     using System;
-    using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
     using System.Linq;
     using System.Net;
     using System.Security.Cryptography.X509Certificates;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
@@ -28,22 +26,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
         /// </summary>
         private readonly Random random = new Random();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RingMasterPerformance"/> class.
+        /// </summary>
         public RingMasterPerformance()
         {
         }
 
         /// <summary>
-        /// The path to use for the test.
+        /// Gets or sets the path to use for the test.
         /// </summary>
         public string TestPath { get; set; } = "/Performance";
 
         /// <summary>
-        /// Get or sets the timestream id that will be used by requests sent by this test.
+        /// Gets or sets the timestream id that will be used by requests sent by this test.
         /// </summary>
         public ulong TimeStreamId { get; set; } = 0;
 
         /// <summary>
-        /// Maximum number of concurrent requests.
+        /// Gets or sets maximum number of concurrent requests.
         /// </summary>
         public int MaxConcurrency { get; set; } = 50;
 
@@ -86,6 +87,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
         /// Gets or sets the maximum allowed codepoint in generated random names.
         /// </summary>
         public int MaxAllowedCodePoint { get; set; } = 128;
+
+        /// <summary>
+        /// Gets or sets the maximum set operations.
+        /// </summary>
+        public int MaxSetOperations { get; set; } = 50000;
+
+        /// <summary>
+        /// Gets or sets the test maximum run time in seconds.
+        /// </summary>
+        public int TestMaxRunTimeInSeconds { get; set; } = 60;
 
         /// <summary>
         /// Entry point
@@ -150,6 +161,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             performanceTest.BatchLength = int.Parse(ConfigurationManager.AppSettings["BatchLength"]);
             performanceTest.MaxAllowedCodePoint = int.Parse(ConfigurationManager.AppSettings["MaxAllowedCodePoint"]);
             performanceTest.MaxGetChildrenEnumerationCount = int.Parse(ConfigurationManager.AppSettings["MaxGetChildrenEnumerationCount"]);
+            performanceTest.MaxSetOperations = int.Parse(ConfigurationManager.AppSettings["MaxSetOperations"]);
+            performanceTest.MaxNodes = int.Parse(ConfigurationManager.AppSettings["MaxNodes"]);
+            performanceTest.TestMaxRunTimeInSeconds = int.Parse(ConfigurationManager.AppSettings["TestMaxRunTimeInSeconds"]);
 
             int requestTimeout = int.Parse(ConfigurationManager.AppSettings["RequestTimeout"]);
 
@@ -158,7 +172,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             var serverSpec = new RingMasterClient.ServerSpec
             {
                 Endpoints = SecureTransport.ParseConnectionString(ringMasterAddress),
-                UseSecureConnection = useSecureConnection
+                UseSecureConnection = useSecureConnection,
             };
 
             if (useSecureConnection)
@@ -171,95 +185,111 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 
             var clientConfiguration = new RingMasterClient.Configuration
             {
-                DefaultTimeout = TimeSpan.FromMilliseconds(requestTimeout)
+                DefaultTimeout = TimeSpan.FromMilliseconds(requestTimeout),
             };
 
-            using (var client = new RingMasterClient(serverSpec, clientConfiguration, instrumentation: null, watcher: null, cancellationToken: CancellationToken.None))
-            using (var ringMaster = client.OpenTimeStream(performanceTest.TimeStreamId))
+            var cancellation = new CancellationTokenSource();
+            cancellation.CancelAfter(TimeSpan.FromSeconds(performanceTest.TestMaxRunTimeInSeconds));
+
+            try
             {
-                if (testType == "setdata")
+                using (var client = new RingMasterClient(serverSpec, clientConfiguration, instrumentation: null, watcher: null, cancellationToken: CancellationToken.None))
+                using (var ringMaster = client.OpenTimeStream(performanceTest.TimeStreamId))
                 {
-                    performanceTest.SetDataPerformanceTest(ringMaster).Wait();
-                }
-                else if (testType == "create")
-                {
-                    int numNodes = 1000000;
-
-                    if (args.Length > 3)
+                    if (testType == "setdata")
                     {
-                        numNodes = int.Parse(args[3]);
+                        performanceTest.SetDataPerformanceTest(ringMaster).Wait();
                     }
-
-                    performanceTest.CreatePerformanceTest(ringMaster, numNodes);
-                }
-                else if (testType == "createflat")
-                {
-                    int numNodes = 1000000;
-
-                    if (args.Length > 3)
+                    else if (testType == "create")
                     {
-                        numNodes = int.Parse(args[3]);
+                        int numNodes = 500000;
+
+                        if (args.Length > 3)
+                        {
+                            numNodes = int.Parse(args[3]);
+                        }
+
+                        performanceTest.CreatePerformanceTest(ringMaster, numNodes);
                     }
-
-                    performanceTest.CreateFlatPerformanceTest(ringMaster, numNodes);
-                }
-                else if (testType == "getchildren")
-                {
-                    int maxChildren = 1000;
-
-                    if (args.Length > 3)
+                    else if (testType == "createflat")
                     {
-                        maxChildren = int.Parse(args[3]);
+                        int numNodes = 1000000;
+
+                        if (args.Length > 3)
+                        {
+                            numNodes = int.Parse(args[3]);
+                        }
+
+                        performanceTest.CreateFlatPerformanceTest(ringMaster, numNodes);
                     }
-
-                    performanceTest.GetChildrenPerformanceTest(ringMaster, maxChildren);
-                }
-                else if (testType == "delete")
-                {
-                    performanceTest.DeletePerformanceTest(ringMaster).Wait();
-                }
-                else if (testType == "scheduleddelete")
-                {
-                    performanceTest.ScheduledDeletePerformanceTest(ringMaster);
-                }
-                else if (testType == "connect")
-                {
-                    int numConnections = 100;
-
-                    if (args.Length > 3)
+                    else if (testType == "getchildren")
                     {
-                        numConnections = int.Parse(args[3]);
+                        int maxChildren = 1000;
+
+                        if (args.Length > 3)
+                        {
+                            maxChildren = int.Parse(args[3]);
+                        }
+
+                        performanceTest.GetChildrenPerformanceTest(ringMaster, maxChildren);
                     }
-
-                    var configuration = new SecureTransport.Configuration
+                    else if (testType == "delete")
                     {
-                        UseSecureConnection = useSecureConnection,
-                        ClientCertificates = clientCertificates,
-                        ServerCertificates = acceptedServerCertificates,
-                        CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion
-                    };
-
-                    IPEndPoint[] endpoints = SecureTransport.ParseConnectionString(ringMasterAddress);
-
-                    performanceTest.ConnectPerformanceTest(configuration, endpoints, numConnections);
-                }
-                else if (testType == "exists")
-                {
-                    performanceTest.ExistsPerformanceTest(ringMaster).Wait();
-                }
-                else if (testType == "watchers")
-                {
-                    int maxWatchers = 1000;
-                    if (args.Length > 3)
-                    {
-                        maxWatchers = int.Parse(args[3]);
+                        performanceTest.DeletePerformanceTest(ringMaster).Wait();
                     }
+                    else if (testType == "scheduleddelete")
+                    {
+                        performanceTest.ScheduledDeletePerformanceTest(ringMaster);
+                    }
+                    else if (testType == "connect")
+                    {
+                        int numConnections = 100;
 
-                    performanceTest.WatcherPerformanceTest(ringMaster, maxWatchers).Wait();
+                        if (args.Length > 3)
+                        {
+                            numConnections = int.Parse(args[3]);
+                        }
+
+                        var configuration = new SecureTransport.Configuration
+                        {
+                            UseSecureConnection = useSecureConnection,
+                            ClientCertificates = clientCertificates,
+                            ServerCertificates = acceptedServerCertificates,
+                            CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion,
+                        };
+
+                        IPEndPoint[] endpoints = SecureTransport.ParseConnectionString(ringMasterAddress);
+
+                        performanceTest.ConnectPerformanceTest(configuration, endpoints, numConnections);
+                    }
+                    else if (testType == "exists")
+                    {
+                        performanceTest.ExistsPerformanceTest(ringMaster).Wait();
+                    }
+                    else if (testType == "watchers")
+                    {
+                        int maxWatchers = 1000;
+                        if (args.Length > 3)
+                        {
+                            maxWatchers = int.Parse(args[3]);
+                        }
+
+                        performanceTest.WatcherPerformanceTest(ringMaster, maxWatchers, cancellation).Wait();
+                    }
+                    else
+                    {
+                        performanceTest.GetDataPerformanceTest(ringMaster, cancellation).Wait();
+                    }
                 }
-                else
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (AggregateException ex)
+            {
+                if (!ex.Flatten().InnerExceptions.Any(e => e is OperationCanceledException))
                 {
-                    performanceTest.GetDataPerformanceTest(ringMaster).Wait();
+                    throw ex;
                 }
             }
         }
@@ -268,14 +298,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
         /// Measures the performance of GetData requests.
         /// </summary>
         /// <param name="ringMaster">RingMaster client</param>
-        /// <returns>Task that tracks execution of this test</returns>
-        private async Task GetDataPerformanceTest(IRingMasterRequestHandler ringMaster)
+        /// <param name="cancellation">The cancellation.</param>
+        /// <returns>
+        /// Task that tracks execution of this test
+        /// </returns>
+        private async Task GetDataPerformanceTest(IRingMasterRequestHandler ringMaster, CancellationTokenSource cancellation)
         {
             Trace.TraceInformation($"GetData performance test path={this.TestPath} batchLength={this.BatchLength}");
 
-            var cancellationToken = CancellationToken.None;
+            var cancellationToken = cancellation.Token;
             var instrumentation = new GetDataPerformanceInstrumentation();
-            var getDataPerformanceTest = new GetDataPerformance(instrumentation, this.MaxConcurrency, CancellationToken.None);
+            var getDataPerformanceTest = new GetDataPerformance(instrumentation, this.MaxConcurrency, cancellationToken);
 
             await getDataPerformanceTest.LoadNodes(ringMaster, this.TestPath, this.MaxNodes, this.MaxGetChildrenEnumerationCount);
 
@@ -327,14 +360,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
         /// </summary>
         /// <param name="ringMaster">RingMaster client</param>
         /// <param name="maxConcurrentWatchers">Maximum number of concurrent watchers</param>
-        /// <returns>Task that tracks execution of this test</returns>
-        private async Task WatcherPerformanceTest(IRingMasterRequestHandler ringMaster, int maxConcurrentWatchers)
+        /// <param name="cancellation">The cancellation.</param>
+        /// <returns>
+        /// Task that tracks execution of this test
+        /// </returns>
+        private async Task WatcherPerformanceTest(IRingMasterRequestHandler ringMaster, int maxConcurrentWatchers, CancellationTokenSource cancellation)
         {
             Trace.TraceInformation($"Watcher performance test path={this.TestPath} batchLength={this.BatchLength}");
 
-            var cancellationToken = CancellationToken.None;
+            var cancellationToken = cancellation.Token;
             var instrumentation = new WatcherPerformanceInstrumentation();
-            var watcherPerformanceTest = new WatcherPerformance(instrumentation, CancellationToken.None);
+            var watcherPerformanceTest = new WatcherPerformance(instrumentation, cancellationToken);
 
             await watcherPerformanceTest.LoadNodes(ringMaster, this.TestPath, this.MaxNodes, this.MaxGetChildrenEnumerationCount);
 
@@ -367,7 +403,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 
             await setDataPerformanceTest.LoadNodes(ringMaster, this.TestPath, this.MaxNodes, this.MaxGetChildrenEnumerationCount);
 
-            var task = Task.Run(() => setDataPerformanceTest.QueueRequests(ringMaster, this.BatchLength));
+            var task = Task.Run(() => setDataPerformanceTest.QueueRequests(ringMaster, this.BatchLength, this.MaxSetOperations));
 
             long lastSuccessCount = 0;
             var timer = Stopwatch.StartNew();
@@ -525,7 +561,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
                     ClientCertificates = configuration.ClientCertificates,
                     ServerCertificates = configuration.ServerCertificates,
                     CommunicationProtocolVersion = configuration.CommunicationProtocolVersion,
-                    MaxConnectionLifespan = TimeSpan.FromSeconds(random.Next(minConnectionLifetimeSeconds, maxConnectionLifetimeSeconds))
+                    MaxConnectionLifespan = TimeSpan.FromSeconds(random.Next(minConnectionLifetimeSeconds, maxConnectionLifetimeSeconds)),
                 };
 
                 var protocol = new RingMasterCommunicationProtocol();
@@ -608,11 +644,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 
         private class WatcherPerformanceInstrumentation : WatcherPerformance.IInstrumentation
         {
-            public long Success { get; private set; }
+            private long succeeded = 0;
+            private long failed = 0;
+            private long notified = 0;
 
-            public long Failure { get; private set; }
+            public long Success => this.succeeded;
 
-            public long Notifications { get; private set; }
+            public long Failure => this.failed;
+
+            public long Notifications => this.notified;
 
             public void NodeLoaded(int nodeCount)
             {
@@ -620,26 +660,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 
             public void SetWatcherSucceeded(TimeSpan latency)
             {
-                lock (this)
-                {
-                    this.Success++;
-                }
+                Interlocked.Increment(ref this.succeeded);
             }
 
             public void SetWatcherFailed()
             {
-                lock (this)
-                {
-                    this.Failure++;
-                }
+                Interlocked.Increment(ref this.failed);
             }
 
             public void WatcherNotified(TimeSpan watchDuration)
             {
-                lock (this)
-                {
-                    this.Notifications++;
-                }
+                Interlocked.Increment(ref this.notified);
             }
         }
 

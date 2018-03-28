@@ -1,4 +1,4 @@
-﻿// <copyright file="SemaphoreRepository.cs" company="Microsoft">
+﻿// <copyright file="SemaphoreRepository.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -15,11 +15,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     public sealed class SemaphoreRepository : IDisposable
     {
         /// <summary>
-        /// The singleton for the class
-        /// </summary>
-        public static SemaphoreRepository Instance { get; } = new SemaphoreRepository();
-
-        /// <summary>
         /// The dictionary of locktokens per Guid
         /// </summary>
         private readonly Dictionary<Guid, LockToken> tokens = new Dictionary<Guid, LockToken>();
@@ -34,6 +29,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// </summary>
         private SemaphoreRepository()
         {
+        }
+
+        /// <summary>
+        /// Interface ILockToken defines externally a token to a semaphore managed by SemaphoreRepository
+        /// </summary>
+        public interface ILockToken
+        {
+            /// <summary>
+            /// Gets the identifier of the semaphore
+            /// </summary>
+            Guid Id { get; }
+        }
+
+        /// <summary>
+        /// Gets the singleton for the class
+        /// </summary>
+        public static SemaphoreRepository Instance { get; } = new SemaphoreRepository();
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            if (this.rw != null)
+            {
+                this.rw.Dispose();
+            }
+
+            this.rw = null;
         }
 
         /// <summary>
@@ -93,46 +115,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Interface ILockToken defines externally a token to a semaphore managed by SemaphoreRepository
-        /// </summary>
-        public interface ILockToken
-        {
-            /// <summary>
-            /// The identifier of the semaphore
-            /// </summary>
-            Guid Id { get; }
-        }
-
-        public void Dispose()
-        {
-            if (null != this.rw)
-            {
-                this.rw.Dispose();
-            }
-
-            this.rw = null;
-        }
-
-        /// <summary>
         /// Class LockToken that is used to release the semaphore after acquisition
         /// </summary>
         private class LockToken : ILockToken
         {
+            /// <summary>
+            /// The number of other threads waiting for this semaphore
+            /// </summary>
+            [SuppressMessage("Microsoft.StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Scope = "Member", Justification = "Atomic increment/decrement required")]
+            public int NumWaiting;
+
             /// <summary>
             /// Gets or Sets the identifier of the semaphore
             /// </summary>
             public Guid Id { get; set; }
 
             /// <summary>
-            /// The semaphore to be acquired
+            /// Gets or sets the semaphore to be acquired
             /// </summary>
             public Semaphore Sem { get; set; }
-
-            /// <summary>
-            /// The number of other threads waiting for this semaphore
-            /// </summary>
-            [SuppressMessage("Microsoft.StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Scope="Member", Justification = "Atomic increment/decrement required")]
-            public int NumWaiting;
         }
     }
 }

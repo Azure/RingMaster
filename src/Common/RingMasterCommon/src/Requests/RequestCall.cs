@@ -1,5 +1,5 @@
-// <copyright file="RequestCall.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="RequestCall.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests

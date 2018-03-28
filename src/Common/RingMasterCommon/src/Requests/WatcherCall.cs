@@ -1,5 +1,5 @@
-// <copyright file="WatcherCall.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="WatcherCall.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -18,9 +18,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public ulong WatcherId { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this watcher is single use only.
+        /// Gets or sets the kind of the watcher, if it is for single use or includes data.
         /// </summary>
-        public bool OneUse { get; set; }
+        public WatcherKind Kind { get; set; }
 
         /// <summary>
         /// Gets or sets the watcher.

@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMasterCommon
-// <copyright file="IRingMasterClientCache.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="IRingMasterClientCache.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {

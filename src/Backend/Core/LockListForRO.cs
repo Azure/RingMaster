@@ -1,15 +1,12 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="LockListForRO.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="LockListForRO.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data;
@@ -26,21 +23,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     public class LockListForRO : ILockListTransaction
     {
         private ISessionAuth auth;
+        private bool isMarked = false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LockListForRO"/> class.
+        /// </summary>
         public LockListForRO()
         {
         }
 
-        /// <summary>
-        /// initializes the object
-        /// </summary>
-        /// <param name="auth"></param>
-        /// <param name="over"></param>
-        public void Initialize(ISessionAuth auth, IOperationOverrides over)
-        {
-            this.auth = auth;
-        }
-
+        /// <inheritdoc />
         public long TxTime
         {
             get
@@ -49,6 +41,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
         }
 
+        /// <inheritdoc />
         public long TxId
         {
             get
@@ -57,6 +50,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
         }
 
+        /// <inheritdoc />
         public bool FinishSynchronous
         {
             get
@@ -69,42 +63,51 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
         }
 
-        private bool isMarked = false;
+        /// <summary>
+        /// initializes the object
+        /// </summary>
+        /// <param name="auth">Session auth</param>
+        /// <param name="over">Not in use</param>
+        public void Initialize(ISessionAuth auth, IOperationOverrides over)
+        {
+            this.auth = auth;
+        }
 
         /// <summary>
         /// marks this locklist to be aborted.
         /// </summary>
         public void MarkForAbort()
         {
-            isMarked = true;
+            this.isMarked = true;
         }
 
-        /// <summary>
-        /// indicates if this locklist is marked aborted
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public bool IsMarkedForAbort()
         {
-            return isMarked;
+            return this.isMarked;
         }
 
+        /// <inheritdoc />
         public bool Complete(out Task task)
         {
             task = Task.FromResult(0);
             return true;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             GC.SuppressFinalize(this);
         }
 
-        public bool AddAndLockRw(Node parent, Perm cREATE, int parentLevel, bool isChildEphemeral)
+        /// <inheritdoc />
+        public bool AddLockRw(Node parent, Perm cREATE, int parentLevel, bool isChildEphemeral)
         {
             throw new NotSupportedException();
         }
 
-        public bool AddAndLockRo(Node n, int level)
+        /// <inheritdoc />
+        public bool AddLockRo(Node n, int level)
         {
             if (n == null)
             {
@@ -115,62 +118,81 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 n.AclAllows(this.auth, Perm.READ);
             }
+
             return false;
         }
 
+        /// <inheritdoc />
+        public void LockAll(ref bool cancelled)
+        {
+        }
+
+        /// <inheritdoc />
         public IMutableStat SnapStatIfNeeded(IPersistedData persisted)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void ValidateLockList(IPersistedData parent, Perm permParent, IPersistedData child, Perm permChild)
         {
         }
 
+        /// <inheritdoc />
         public void AppendCreate(IPersistedDataFactory<Node> persFact, IPersistedData childData, long txTime)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendAddChild(IPersistedData persisted, IPersistedData childData, long txTime, IMutableStat prevStat)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendRemove(IPersistedData parent, IPersistedData child, long txTime, IMutableStat prevChildStat, IMutableStat prevParentStat, Action recordUndeleteAction)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendRemoveNodeAndAllChildren(IPersistedData child, long txTime, Action recordUndeleteAction)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendMove(IPersistedData parentSrc, IPersistedData parentDst, IPersistedData child, long txTime, IMutableStat prevChildStat, IMutableStat prevStatParentSrc, IMutableStat prevStatParentDst)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendSetAcl(IPersistedData persisted, long txTime, IReadOnlyList<Acl> prevAcl, IMutableStat prevStat)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendSetData(IPersistedData persisted, long txTime, byte[] prevData, IMutableStat prevStat)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void AppendPoison(IPersistedData data, string spec, long txTime)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
         public void RunOnCommit(Action p)
         {
             throw new NotSupportedException();
         }
+
+        /// <inheritdoc />
         public void RunOnAbort(Action p)
         {
             throw new NotSupportedException();

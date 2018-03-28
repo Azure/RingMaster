@@ -1,5 +1,5 @@
-﻿// <copyright file="ZooKeeperServer.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="ZooKeeperServer.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
@@ -44,25 +44,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
         }
 
         /// <summary>
-        /// Gets or sets the <see cref="TraceLevel"/> that controls which trace messages are logged by the <see cref="RingMasterServer"/>.
-        /// </summary>
-        public static TraceLevel TraceLevel
-        {
-            get
-            {
-                return ZooKeeperServerEventSource.Log.TraceLevel;
-            }
-
-            set
-            {
-                ZooKeeperServerEventSource.Log.TraceLevel = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the function to invoke when a new session is to be initialized.
         /// </summary>
-        public Func<RequestInit, IRingMasterRequestHandler> OnInitSession { get; set; }
+        public Func<RequestInit, IRingMasterRequestHandlerOverlapped> OnInitSession { get; set; }
 
         /// <summary>
         /// Gets or sets the function that will be invoked to determine if a request must be redirected.

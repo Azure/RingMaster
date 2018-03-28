@@ -1,4 +1,4 @@
-﻿// <copyright file="AllowCertSubjectRule.cs" company="Microsoft">
+﻿// <copyright file="AllowCertSubjectRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -63,18 +62,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         {
             if (cert == null)
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: AllowCertSubject: cert was null:");
+                CertificateRulesEventSource.Log.AllowCertSubjectRuleCertificatesRules_CertWasNull();
                 return Behavior.NotAllowed;
             }
 
             if (this.allowAny || this.subjects.Contains(CertAccessor.Instance.GetSubject(cert)))
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: AllowCertSubject: Found allowed subject: {0}", CertAccessor.Instance.GetSubject(cert));
+                CertificateRulesEventSource.Log.AllowCertSubjectRule_CertAllowed(CertAccessor.Instance.GetSubject(cert));
                 return Behavior.Allowed;
             }
 
-            Trace.TraceError("ValidateSslPolicyErrors: AllowCertSubject: Found no allowed subject: {0}", CertAccessor.Instance.GetSubject(cert));
-
+            CertificateRulesEventSource.Log.AllowCertSubjectRule_CertNotAllowed(CertAccessor.Instance.GetSubject(cert));
             return Behavior.NotAllowed;
         }
     }

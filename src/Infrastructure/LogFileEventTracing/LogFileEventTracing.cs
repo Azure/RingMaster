@@ -5,9 +5,9 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.Contracts;
     using System.Diagnostics.Tracing;
     using System.IO;
     using System.Linq;
@@ -18,7 +18,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     /// Listens ETW events and redirects them to log files in the specified, quota-controlled, directory.
     /// </summary>
     /// <remarks>
-    /// Performance under multi-thread environment (hundreds or thousands calling Trace concurrently) is yet to be tuned.
+    /// If events or traces are produced more quickly than they can be written to files, the internal circular buffer
+    /// will be full, and some oldest events will be dropped.
     /// </remarks>
     public sealed class LogFileEventTracing : EventListener
     {
@@ -30,7 +31,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <summary>
         /// Bounded capacity of the trace queue before writing to disk
         /// </summary>
-        private const int MaxTracesInQueue = 1000 * 1000;
+        /// <remarks>
+        /// Note that potentially there will be this number of strings retained in the memory if the file writting is
+        /// slow. Increasing this number will increase the total memory consumption proportionally.
+        /// </remarks>
+        private const int MaxTracesInBuffer = 1000 * 1000;
 
         /// <summary>
         /// Interval to flush the current log file
@@ -63,11 +68,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private readonly DateTime startTime;
 
         /// <summary>
-        /// Queue of traces to be written to disk
-        /// </summary>
-        private readonly BlockingCollection<string> traceQueue;
-
-        /// <summary>
         /// Header of every log file
         /// </summary>
         private readonly string traceHeader;
@@ -98,6 +98,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private readonly Dictionary<string, EventSourceInfo> listenedEventSources;
 
         /// <summary>
+        /// Queue of traces to be written to disk in the form of the circular buffer
+        /// </summary>
+        private readonly string[] traceBuffer = new string[MaxTracesInBuffer];
+
+        /// <summary>
+        /// The current head in the buffer, or the number of the traces received, the next element is empty.
+        /// </summary>
+        private long receivedTraces = 0L;
+
+        /// <summary>
+        /// The current tail in the buffer, or the number of the traces written to files
+        /// </summary>
+        private long writtenTraces = -1L;
+
+        /// <summary>
+        /// Number of events being dropped because of slow file writting
+        /// </summary>
+        private long droppedTraces = 0L;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LogFileEventTracing" /> class
         /// </summary>
         /// <param name="logDirectory">Directory where log files should be stored</param>
@@ -119,8 +139,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
             this.listenedEventSources = new Dictionary<string, EventSourceInfo>();
 
-            this.traceQueue = new BlockingCollection<string>(MaxTracesInQueue);
-
             var proc = Process.GetCurrentProcess();
             this.traceHeader = Assembly.GetCallingAssembly().GetCustomAttributes(false)
                 .OfType<AssemblyInformationalVersionAttribute>()
@@ -128,15 +146,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 ?.InformationalVersion
                 ?? "UnknownInformationalVersion";
             this.traceHeader = string.Format("### Process {0}, ID {1}, Machine {2}. {3}", proc.ProcessName, proc.Id, Environment.MachineName, this.traceHeader);
+            this.traceBuffer[0] = $"### Trace started at {this.startTime}";
 
             this.createLogFileName = () => string.Concat(proc.ProcessName, DateTime.UtcNow.ToString("--yyMMdd-HHmmss.fff--"), proc.Id, ".log");
 
             // Start the consumer thread which will never be stopped
             new Thread(this.WriteTraceToFile)
             {
-                Priority = ThreadPriority.Highest,
+                Priority = ThreadPriority.AboveNormal,
             }
             .Start(this.cancellation.Token);
+        }
+
+        /// <summary>
+        /// Gets the number traces received so far
+        /// </summary>
+        public static long ReceivedTraceCount
+        {
+            get { return instance == null ? 0L : instance.receivedTraces; }
+        }
+
+        /// <summary>
+        /// Gets the number of traces dropped because of slow file writting
+        /// </summary>
+        public static long DroppedTraceCount
+        {
+            get { return instance == null ? 0L : instance.droppedTraces; }
         }
 
         /// <summary>
@@ -170,7 +205,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         {
             if (instance != null && !instance.cancellation.IsCancellationRequested)
             {
-                instance.traceQueue.CompleteAdding();
                 instance.cancellation.Cancel();
             }
         }
@@ -181,7 +215,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="eventSourceName">Full name of the event source to be listened</param>
         /// <param name="level">Event level</param>
         /// <param name="shortName">Short and friendly name of the event source</param>
-        /// <returns>If the event source is listened</returns>
+        /// <returns>True if the event source is listened successfully, false if otherwise</returns>
         public static bool AddEventSource(string eventSourceName, EventLevel level = EventLevel.Verbose, string shortName = null)
         {
             if (instance == null)
@@ -189,11 +223,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 throw new InvalidOperationException();
             }
 
+            Contract.EndContractBlock();
+
             var eventSource = EventSource.GetSources().FirstOrDefault(s => s.Name == eventSourceName);
             if (eventSource != null)
             {
                 instance.listenedEventSources.Add(eventSource.Name, EventSourceInfo.Parse(eventSource, shortName));
                 instance.EnableEvents(eventSource, level);
+                Trace($"Event source {eventSourceName} enabled.");
 
                 return true;
             }
@@ -214,16 +251,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 throw new InvalidOperationException();
             }
 
-            var timestamp = instance.startTime.Add(instance.clock.Elapsed).ToString("O");
+            Contract.EndContractBlock();
 
-            try
-            {
-                instance.traceQueue.Add(string.Join(" ", timestamp, line));
-            }
-            catch (InvalidOperationException)
-            {
-                // The queue is completed adding, no more logs are accepted.
-            }
+            var timestamp = instance.startTime.Add(instance.clock.Elapsed).ToString("O");
+            instance.Enqueue(string.Concat(timestamp, " ", line));
         }
 
         /// <summary>
@@ -251,14 +282,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 message = string.Join(", ", Enumerable.Range(0, parameters.Length).Select(n => string.Concat(parameters[n], "=", eventData.Payload[n])));
             }
 
-            try
-            {
-                this.traceQueue.Add(string.Join(" ", timestamp, info.FriendlyName, eventData.Level, info.GetNameFromEventId(eventId), message));
-            }
-            catch (InvalidOperationException)
-            {
-                // The queue is completed adding, no more logs are accepted.
-            }
+            this.Enqueue(string.Join(" ", timestamp, info.FriendlyName, eventData.Level, info.GetNameFromEventId(eventId), message));
         }
 
         /// <summary>
@@ -298,6 +322,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
+        /// Adds the specified string to the queue for later writing to file
+        /// </summary>
+        /// <param name="s">string to be added to the queue</param>
+        private void Enqueue(string s)
+        {
+            var head = Interlocked.Increment(ref this.receivedTraces);
+            this.traceBuffer[unchecked((int)(head % MaxTracesInBuffer))] = string.Concat(head, " ", s);
+
+            // Producer is too fast, let the consumer skip a trace.
+            if (head - this.writtenTraces >= MaxTracesInBuffer - 1)
+            {
+                Interlocked.Increment(ref this.writtenTraces);
+                Interlocked.Increment(ref this.droppedTraces);
+            }
+        }
+
+        /// <summary>
         /// Thread to write traces to the log file
         /// </summary>
         /// <param name="param">cancellation token</param>
@@ -332,40 +373,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
                     try
                     {
-                        string line;
+                        if (this.writtenTraces < this.receivedTraces)
+                        {
+                            var nPos = unchecked((int)(Interlocked.Increment(ref this.writtenTraces) % MaxTracesInBuffer));
+                            var line = Interlocked.Exchange(ref this.traceBuffer[nPos], null);
 
-                        if (!this.traceQueue.TryTake(out line, LogFileFlushInterval, cancellationToken))
+                            // Race condition between producer and consumer when they write to the same location.
+                            // Some traces are lost, however the producer is not blocked.
+                            if (line == null)
+                            {
+                                continue;
+                            }
+
+                            file.WriteLine(line);
+                            fileSize += line.Length + linefeedLength;
+                        }
+                        else
                         {
                             file.Flush();
+                            Thread.Sleep(125);
                             continue;
                         }
-
-                        file.WriteLine(line);
-                        fileSize += line.Length + linefeedLength;
                     }
                     catch (IOException)
                     {
                         // I/O error occurred during write. Close the file and start cleanup, hopefully the problem can be recovered.
                         fileSize = int.MaxValue;
-                    }
-                    catch (Exception ex) when (ex is OperationCanceledException || ex is ObjectDisposedException)
-                    {
-                        // Process is terminating, write whatever left as soon as possible and get out of this thread.
-                        file.AutoFlush = true;
-                        file.WriteLine("### Logging flushing...");
-
-                        string line;
-                        while (this.traceQueue.TryTake(out line, 0))
-                        {
-                            file.WriteLine(line);
-                        }
-
-                        file.WriteLine("### Logging stopped.");
-
-                        file.Close();
-                        file = null;
-
-                        break;
                     }
 
                     if (fileSize > this.logFileSize)
@@ -382,6 +415,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                         }
                     }
                 }
+
+                // Process is terminating, write whatever left as soon as possible and get out of this thread.
+                file.AutoFlush = true;
+                file.WriteLine("### Logging flushing...");
+
+                while (this.writtenTraces < this.receivedTraces)
+                {
+                    var nPos = unchecked((int)(Interlocked.Increment(ref this.writtenTraces) % MaxTracesInBuffer));
+                    file.WriteLine(Interlocked.Exchange(ref this.traceBuffer[nPos], null));
+                }
+
+                file.WriteLine($"### Logging stopped. Dropped {this.droppedTraces}");
+
+                file.Close();
+                file = null;
             }
             finally
             {

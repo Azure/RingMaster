@@ -1,5 +1,5 @@
-﻿// <copyright file="Connection.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="Connection.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
@@ -86,6 +86,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// This is <c>true</c> once connection is disconnected.
         /// </summary>
         private bool isDisconnected = false;
+
+        /// <summary>
+        /// If this object has been disposed
+        /// </summary>
+        private bool disposed = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
@@ -185,7 +190,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public ProtocolNegotiatorDelegate DoProtocolNegotiation { get; set; }
 
         /// <summary>
-        /// Tells connection to use Network byte order to send data.
+        /// Gets or sets a value indicating whether tells connection to use Network byte order to send data.
         /// </summary>
         public bool UseNetworkByteOrder { get; set; } = false;
 
@@ -211,7 +216,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <param name="data">Data to send</param>
         public void Send(byte[] data)
         {
-            Task _ = this.SendAsync(data);
+            Task notInUse = this.SendAsync(data);
         }
 
         /// <summary>
@@ -228,12 +233,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 
             // Do not send the packet if the outgoing packets queue
             // is marked complete for adding.
-            if (this.outgoingPackets.IsAddingCompleted)
+            if (this.disposed || this.outgoingPackets.IsAddingCompleted)
             {
                 return Task.FromResult<object>(null);
             }
 
-            var packet = new Packet();
+            var packet = default(Packet);
             packet.Id = Interlocked.Increment(ref this.nextPacketId);
             packet.Data = data;
             packet.CompletionSource = new TaskCompletionSource<object>();
@@ -289,10 +294,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// </summary>
         public void Dispose()
         {
-            this.Close();
-            this.outgoingPackets.Dispose();
-            this.outgoingPacketsAvailable.Dispose();
-            this.pushPacketsTask?.Dispose();
+            if (!this.disposed)
+            {
+                this.disposed = true;
+
+                this.Close();
+                this.outgoingPackets.Dispose();
+                this.outgoingPacketsAvailable.Dispose();
+                this.pushPacketsTask?.Dispose();
+            }
         }
 
         /// <summary>
@@ -515,15 +525,49 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             return null;
         }
 
-        public struct Configuration
+        /// <summary>
+        /// Configuration of secure transport connection
+        /// </summary>
+        internal struct Configuration
         {
+            /// <summary>
+            /// Transport ID
+            /// </summary>
             public long TransportId;
+
+            /// <summary>
+            /// Remote identity
+            /// </summary>
             public string RemoteIdentity;
+
+            /// <summary>
+            /// Max life span of the connection
+            /// </summary>
             public TimeSpan MaxLifeSpan;
+
+            /// <summary>
+            /// Max connection idle time
+            /// </summary>
             public TimeSpan MaxConnectionIdleTime;
+
+            /// <summary>
+            /// Size of the send buffer
+            /// </summary>
             public int SendBufferSize;
+
+            /// <summary>
+            /// Size of the receive buffer
+            /// </summary>
             public int ReceiveBufferSize;
+
+            /// <summary>
+            /// Length of the send queue
+            /// </summary>
             public int SendQueueLength;
+
+            /// <summary>
+            /// Count of max unflushed packets
+            /// </summary>
             public int MaxUnflushedPacketsCount;
         }
 

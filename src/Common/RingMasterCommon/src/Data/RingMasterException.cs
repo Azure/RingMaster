@@ -1,5 +1,5 @@
-// <copyright file="RingMasterException.cs" company="Microsoft">
-//     Copyright �  2015
+// <copyright file="RingMasterException.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             Invalidacl,
 
             /// <summary>
-            /// Invalid callback specified 
+            /// Invalid callback specified
             /// </summary>
             Invalidcallback,
 
@@ -170,7 +170,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// <summary>
             /// Operation timeout in backend
             /// </summary>
-            ServerOperationTimeout
+            ServerOperationTimeout,
         }
 
         /// <summary>
@@ -219,106 +219,194 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             return (Code)resultCode;
         }
 
+        /// <summary>
+        /// Creates an exception with Unimplemented code
+        /// </summary>
+        /// <param name="message">Exception message</param>
+        /// <returns>Exception created</returns>
         public static Exception Unimplemented(string message)
         {
             return new RingMasterException(Code.Unimplemented, message);
         }
-        
+
+        /// <summary>
+        /// Creates an exception with BadArguments code
+        /// </summary>
+        /// <param name="argumentName">Argument name</param>
+        /// <returns>Exception created</returns>
         public static Exception BadArguments(string argumentName)
         {
             return new RingMasterException(Code.Badarguments, argumentName);
         }
 
+        /// <summary>
+        /// Creates an exception with AuthFailed code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception AuthFailed()
         {
             return new RingMasterException(Code.Authfailed, "Authentication failed");
         }
 
+        /// <summary>
+        /// Creates an exception with NoAuth code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception NoAuth()
         {
             return new RingMasterException(Code.Noauth, "No Authentication");
         }
 
+        /// <summary>
+        /// Creates an exception with ConnectionLoss code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception ConnectionLoss()
         {
             return new RingMasterException(Code.Connectionloss, "Connection lost");
         }
 
+        /// <summary>
+        /// Creates an exception with OperationTimeout code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception OperationTimeout()
         {
             return new RingMasterException(Code.Operationtimeout, "Operation timed out");
         }
 
+        /// <summary>
+        /// Creates an exception with SessionExpired code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception SessionExpired()
         {
             return new RingMasterException(Code.Sessionexpired, "Session expired");
         }
 
+        /// <summary>
+        /// Creates an exception with MarshallingError code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception MarshallingError()
         {
             return new RingMasterException(Code.Marshallingerror, "Serialization error");
         }
 
+        /// <summary>
+        /// Creates an exception with BadVersion code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception BadVersion()
         {
             return new RingMasterException(Code.Badversion, "Bad version");
         }
 
+        /// <summary>
+        /// Creates an exception with InvalidAcl code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception InvalidAcl()
         {
             return new RingMasterException(Code.Invalidacl, "Invalid ACL");
         }
 
+        /// <summary>
+        /// Creates an exception with Nochildrenforephemerals code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception ReportNoChildrenAllowedForEphemeralNodes()
         {
             return new RingMasterException(Code.Nochildrenforephemerals, "Ephemeral nodes cannot have children");
         }
 
+        /// <summary>
+        /// Creates an exception with NotEmpty code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception NotEmpty()
         {
             return new RingMasterException(Code.Notempty, "Not Empty");
         }
 
+        /// <summary>
+        /// Creates an exception with Nonode code
+        /// </summary>
+        /// <param name="path">Path expected to exist</param>
+        /// <returns>Exception created</returns>
         public static Exception NoNode(string path)
         {
             return new RingMasterException(Code.Nonode, string.Format("Node {0} was not found", path));
         }
 
+        /// <summary>
+        /// Creates an exception with NodeExists code
+        /// </summary>
+        /// <param name="path">Path of the existing node</param>
+        /// <returns>Exception created</returns>
         public static Exception NodeExists(string path)
         {
             return new RingMasterException(Code.Nodeexists, string.Format("Node {0} already exists", path));
         }
 
+        /// <summary>
+        /// Creates an exception with InvalidCallback code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception InvalidCallback()
         {
             return new RingMasterException(Code.Invalidcallback, "Invalid callback");
         }
 
+        /// <summary>
+        /// Creates an exception with ApiError code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception ApiError()
         {
             return new RingMasterException(Code.Apierror, "Api error");
         }
 
+        /// <summary>
+        /// Creates an exception with SystemError code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception SystemError()
         {
             return new RingMasterException(Code.Systemerror, "System error");
         }
 
+        /// <summary>
+        /// Creates an exception with Unknown code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception Unknown()
         {
             return new RingMasterException(Code.Unknown, "Unknown error");
         }
 
+        /// <summary>
+        /// Creates an exception with RuntimeInconsistency code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception RuntimeInconsistency()
         {
             return new RingMasterException(Code.Runtimeinconsistency, "Runtime inconsistency");
         }
 
+        /// <summary>
+        /// Creates an exception with DataInconsistency code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception DataInconsistency()
         {
             return new RingMasterException(Code.Datainconsistency, "Data inconsistency");
         }
 
+        /// <summary>
+        /// Creates an exception with SystemMoved code
+        /// </summary>
+        /// <returns>Exception created</returns>
         public static Exception SystemMoved()
         {
             return new RingMasterException(Code.Sessionmoved, "Session Moved");

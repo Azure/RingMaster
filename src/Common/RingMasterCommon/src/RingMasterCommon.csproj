@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -7,6 +7,8 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Common</AssemblyName>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -43,6 +45,8 @@
     <Compile Include="Data\TreeNode.cs" />
     <Compile Include="DeleteMode.cs" />
     <Compile Include="IRingMasterRequestHandler.cs" />
+    <Compile Include="IRingMasterRequestHandlerOverlapped.cs" />
+    <Compile Include="QueuedWorkItemPool.cs" />
     <Compile Include="IWatcher.cs" />
     <Compile Include="MoveMode.cs" />
     <Compile Include="PrefixedClientCache.cs" />
@@ -85,6 +89,7 @@
     <Compile Include="CertificateRules\CertIdentities.cs" />
     <Compile Include="CertificateRules\ICertificateRulesInstrumentation.cs" />
     <Compile Include="CertificateRules\CertAccessor.cs" />
+    <Compile Include="CertificateRules\CertificateRulesEventSource.cs" />
     <Compile Include="CertificateRules\CertificateRulesFlags.cs" />
     <Compile Include="CertificateRules\CertificateValidator.cs" />
     <Compile Include="CertificateRules\AbstractCertificateRule.cs" />
@@ -100,6 +105,7 @@
     <Compile Include="CertificateRules\AllowSigningCertRule.cs" />
     <Compile Include="CertificateRules\BreakGlassThumbprintRule.cs" />
     <Compile Include="CertificateRules\BreakGlassCertificatesRule.cs" />
+    <Compile Include="WatcherKind.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Backend\HelperTypes\HelperTypes.csproj">

@@ -1,4 +1,4 @@
-﻿// <copyright file="DictionaryOfCollection.cs" company="Microsoft">
+﻿// <copyright file="DictionaryOfCollection.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -12,7 +12,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// <typeparam name="TK">The type of the tk.</typeparam>
     /// <typeparam name="TV">The type of the tv.</typeparam>
     /// <typeparam name="TCollection">The type of the t collection.</typeparam>
-    public class DictionaryOfCollection<TK, TV, TCollection> where TCollection : class, ICollection<TV>, new()
+    public class DictionaryOfCollection<TK, TV, TCollection>
+        where TCollection : class, ICollection<TV>, new()
     {
         /// <summary>
         /// The _keys

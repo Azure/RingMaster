@@ -1,11 +1,12 @@
-﻿// <copyright file="IPersistenceInstrumentation.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="IPersistenceInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 {
     using System;
 
+#pragma warning disable CS1591, SA1600
     /// <summary>
     /// Instrumentation for Persistence.
     /// </summary>
@@ -43,4 +44,5 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 
         void DataLoadCompleted(long dataCount, long duplicatesCount, long orphansCount);
     }
+#pragma warning restore
 }

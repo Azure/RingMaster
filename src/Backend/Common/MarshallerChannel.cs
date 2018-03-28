@@ -1,11 +1,10 @@
-﻿// <copyright file="MarshallerChannel.cs" company="Microsoft">
+﻿// <copyright file="MarshallerChannel.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
-    using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
     using System.IO;
@@ -20,77 +19,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using WatcherCall = Microsoft.Azure.Networking.Infrastructure.RingMaster.WatcherCall;
 
     /// <summary>
-    /// Class RequestCall.
-    /// </summary>
-    public class RequestCall
-    {
-        private readonly long creationTimeTicks = DateTime.UtcNow.Ticks;
-
-        public long ElapsedInTicks => DateTime.UtcNow.Ticks - this.creationTimeTicks;
-
-        /// <summary>
-        /// Gets or sets the call identifier.
-        /// </summary>
-        /// <value>The call identifier.</value>
-        public ulong CallId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the request.
-        /// </summary>
-        /// <value>The request.</value>
-        public IRingMasterBackendRequest Request { get; set; }
-
-        /// <summary>
-        /// Gets or sets the value indicating if this was sent to the server.
-        /// </summary>
-        /// <value>Was this request sent to the server?</value>
-        public bool Sent { get; set; }
-
-        internal RequestCall Previous { get; set; }
-
-        internal RequestCall Next { get; set; }
-    }
-
-    /// <summary>
-    /// Interface IByteArrayMarshaller abstract the hability to read and write into byte arrays requests and responses
-    /// </summary>
-    public interface IByteArrayMarshaller
-    {
-        /// <summary>
-        /// Serializes the request as bytes.
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <returns>serialized bytes</returns>
-        byte[] SerializeRequestAsBytes(RequestCall request);
-
-        /// <summary>
-        /// Deserializes the request from bytes.
-        /// </summary>
-        /// <param name="requestBytes">The request bytes.</param>
-        /// <returns>deserialized object</returns>
-        RequestCall DeserializeRequestFromBytes(byte[] requestBytes);
-
-        /// <summary>
-        /// Serializes the response as bytes.
-        /// </summary>
-        /// <param name="response">The response.</param>
-        /// <returns>serialized bytes.</returns>
-        byte[] SerializeResponseAsBytes(RequestResponse response);
-
-        /// <summary>
-        /// Deserializes the response from bytes.
-        /// </summary>
-        /// <param name="responseBytes">The response bytes.</param>
-        /// <returns>deserialized object</returns>
-        RequestResponse DeserializeResponseFromBytes(byte[] responseBytes);
-    }
-
-    /// <summary>
     /// Channel through which requests are sent and responses are received.
     /// </summary>
     internal class MarshallerChannel : IByteArrayMarshaller, IDisposable
     {
+        /// <summary>
+        /// Current marshal version
+        /// </summary>
         public const uint CurrentMarshalVersion = SerializationFormatVersions.MaximumSupportedVersion;
+
         private static readonly uint SProposedVersion;
 
         private readonly RingMasterCommunicationProtocol protocol = new RingMasterCommunicationProtocol();
@@ -161,7 +98,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public string FriendlyName { get; set; }
 
         /// <summary>
-        /// version agreed as minimum between the two of us.
+        /// Gets or sets the version agreed as minimum between the two of us.
         /// </summary>
         public uint UsedMarshalVersion { get; protected set; }
 
@@ -324,7 +261,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             RequestDefinitions.RequestCall call = new RequestDefinitions.RequestCall()
             {
                 CallId = request.CallId,
-                Request = request.Request.WrappedRequest
+                Request = request.Request.WrappedRequest,
             };
 
             return this.protocol.SerializeRequest(call, this.UsedMarshalVersion);
@@ -352,7 +289,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             return new RequestCall()
             {
                 CallId = call.CallId,
-                Request = BackendRequest.Wrap(call.Request)
+                Request = BackendRequest.Wrap(call.Request),
             };
         }
 
@@ -392,18 +329,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 WatcherCall watcherCall = response.Content as WatcherCall;
                 if (watcherCall != null)
                 {
-                    watcherCall.Watcher = this.watchers.GetObjectForId(watcherCall.WatcherId, watcherCall.OneUse);
+                    watcherCall.Watcher = this.watchers.GetObjectForId(watcherCall.WatcherId, watcherCall.Kind.HasFlag(WatcherKind.OneUse));
                 }
             }
 
             return response;
         }
 
+        /// <summary>
+        /// Set the response to enqueue
+        /// </summary>
+        /// <param name="enqueue">Response to set</param>
         public void SetResponseQueue(Action<RequestResponse> enqueue)
         {
             this.enqueueResponse = enqueue;
         }
 
+        /// <summary>
+        /// Flushes the writer
+        /// </summary>
         public void Flush()
         {
             this.EnterWriter();
@@ -548,7 +492,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         {
             return new RequestCall()
             {
-                Request = BackendRequest.Wrap(request)
+                Request = BackendRequest.Wrap(request),
             };
         }
 
@@ -655,7 +599,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         {
             if (watcher.Id != ObjectTracker<IWatcher>.IdForNull)
             {
-                return new ProxyWatcher(this, watcher.Id, watcher.OneUse, path);
+                return new ProxyWatcher(this, watcher.Id, watcher.Kind, path);
             }
 
             return null;
@@ -712,24 +656,42 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// </summary>
             /// <param name="marshaller">The marshaller.</param>
             /// <param name="id">The identifier.</param>
-            /// <param name="oneUse">if set to <c>true</c> [one use].</param>
+            /// <param name="kind">Kind of the watcher.</param>
             /// <param name="path">Path associated with the watcher</param>
-            public ProxyWatcher(MarshallerChannel marshaller, ulong id, bool oneUse, string path)
+            public ProxyWatcher(MarshallerChannel marshaller, ulong id, WatcherKind kind, string path)
             {
                 this.marshaller = marshaller;
                 this.Id = id;
-                this.OneUse = oneUse;
+                this.Kind = kind;
                 this.Path = path;
             }
 
+            /// <summary>
+            /// Gets or sets the watcher ID
+            /// </summary>
             public ulong Id { get; set; }
 
+            /// <summary>
+            /// Gets a value indicating whether the watcher is for a single use only.
+            /// </summary>
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets or sets the callback on process
+            /// </summary>
             public Action<WatchedEvent> OnProcess { get; set; } = null;
 
-            public bool OneUse { get; set; }
+            /// <summary>
+            /// Gets or sets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind { get; set; }
 
+            /// <summary>
+            /// Gets the path of the watcher
+            /// </summary>
             public string Path { get; }
 
+            /// <inheritdoc />
             public override string ToString()
             {
                 if (this.toString == null)
@@ -740,6 +702,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return this.toString;
             }
 
+            /// <inheritdoc />
             public virtual void Process(WatchedEvent evt)
             {
                 try
@@ -750,7 +713,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         {
                             CallId = ulong.MaxValue,
                             ResultCode = (int)RingMasterException.Code.Ok,
-                            Content = new WatcherCall() { WatcherId = this.Id, WatcherEvt = evt, OneUse = this.OneUse }
+                            Content = new WatcherCall()
+                            {
+                                WatcherId = this.Id,
+                                WatcherEvt = evt,
+                                Kind = this.Kind,
+                            },
                         });
                 }
                 catch (Exception e)
@@ -785,6 +753,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
             }
 
+            /// <summary>
+            /// Sets the to string for later used by <see cref="ToString"/>
+            /// </summary>
+            /// <param name="v">Value to be set</param>
             internal void SetToString(string v)
             {
                 this.toString = v;
@@ -807,14 +779,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// <param name="reqWatcher">The watcher to invoke.</param>
             /// <param name="path">Path associated with the watcher</param>
             public FakeProxyWatcher(IWatcher reqWatcher, string path)
-                : base(null, 0, reqWatcher != null && reqWatcher.OneUse, path)
+                : base(null, 0, reqWatcher == null ? default(WatcherKind) : reqWatcher.Kind, path)
             {
-                if (reqWatcher == null)
-                {
-                    throw new ArgumentNullException(nameof(reqWatcher));
-                }
-
-                this.reqWatcher = reqWatcher;
+                this.reqWatcher = reqWatcher ?? throw new ArgumentNullException(nameof(reqWatcher));
             }
 
             /// <summary>
@@ -831,6 +798,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     this.OnProcess?.Invoke(evt);
                 }
+            }
+        }
+
+        private static class FakeGuid
+        {
+            private static int num = 1;
+
+            public static Guid NewGuid()
+            {
+                int intValue = Interlocked.Increment(ref num);
+
+                byte[] intBytes = BitConverter.GetBytes(intValue);
+                if (BitConverter.IsLittleEndian)
+                {
+                    Array.Reverse(intBytes);
+                }
+
+                byte[] result = new byte[16];
+                for (int i = result.Length - 1, j = intBytes.Length - 1; i >= 0 && j >= 0; i--, j--)
+                {
+                    result[i] = intBytes[j];
+                }
+
+                return new Guid(result);
             }
         }
 
@@ -858,15 +849,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             public ulong Id { get; set; }
 
             /// <summary>
+            /// Gets a value indicating whether the watcher is for a single use only.
+            /// </summary>
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
             /// Gets the path associated with the watcher.
             /// </summary>
             public string Path { get; }
 
             /// <summary>
-            /// Gets a value indicating whether [one use].
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
             /// </summary>
-            /// <value><c>true</c> if [one use]; otherwise, <c>false</c>.</value>
-            public bool OneUse => this.w.OneUse;
+            public WatcherKind Kind => this.w.Kind;
 
             /// <summary>
             /// Processes the specified evt.
@@ -875,30 +870,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             public void Process(WatchedEvent evt)
             {
                 this.w.Process(evt);
-            }
-        }
-
-        private static class FakeGuid
-        {
-            private static int num = 1;
-
-            public static Guid NewGuid()
-            {
-                int intValue = Interlocked.Increment(ref num);
-
-                byte[] intBytes = BitConverter.GetBytes(intValue);
-                if (BitConverter.IsLittleEndian)
-                {
-                    Array.Reverse(intBytes);
-                }
-
-                byte[] result = new byte[16];
-                for (int i = result.Length - 1, j = intBytes.Length - 1; i >= 0 && j >= 0; i--, j--)
-                {
-                    result[i] = intBytes[j];
-                }
-
-                return new Guid(result);
             }
         }
     }

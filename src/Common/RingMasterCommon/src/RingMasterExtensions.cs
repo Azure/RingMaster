@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterExtensions.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterExtensions.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -133,10 +133,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="path">Node path</param>
-        /// <param name="version">Node will be deleted only if this 
+        /// <param name="version">Node will be deleted only if this
         /// value matches the current version of the node</param>
         /// <param name="isRecursive">If set to <c>true</c> a recursive delete is performed.</param>
-        /// <returns>Task that will resolve on success to either <c>true</c> if the node 
+        /// <returns>Task that will resolve on success to either <c>true</c> if the node
         /// was successfully deleted or<c>false</c> if no node was found at that path.</returns>
         [SuppressMessage("Microsoft.MSInternal", "CA908:AvoidTypesThatRequireJitCompilationInPrecompiledAssemblies", Justification = "We are not using ngen")]
         public static async Task<bool> Delete(this IRingMasterRequestHandler ringMaster, string path, int version, bool isRecursive)
@@ -149,10 +149,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="path">Node path</param>
-        /// <param name="version">Node will be deleted only if this 
+        /// <param name="version">Node will be deleted only if this
         /// value matches the current version of the node</param>
         /// <param name="deletemode">delete mode of the operation</param>
-        /// <returns>Task that will resolve on success to either <c>true</c> if the node 
+        /// <returns>Task that will resolve on success to either <c>true</c> if the node
         /// was successfully deleted or<c>false</c> if no node was found at that path.</returns>
         [SuppressMessage("Microsoft.MSInternal", "CA908:AvoidTypesThatRequireJitCompilationInPrecompiledAssemblies", Justification = "We are not using ngen")]
         public static async Task<bool> Delete(this IRingMasterRequestHandler ringMaster, string path, int version, DeleteMode deletemode = DeleteMode.None)
@@ -190,7 +190,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     path,
                     watcher));
 
-            if (ignoreNonodeError 
+            if (ignoreNonodeError
             && (RingMasterException.GetCode(response.ResultCode) == RingMasterException.Code.Nonode))
             {
                 return response.Stat;
@@ -337,7 +337,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="path">Node path</param>
         /// <param name="stat"><see cref="Stat"/> associated with the node</param>
-        /// <returns>Task that will resolve on success to a List of <see cref="Acl"/>s associated 
+        /// <returns>Task that will resolve on success to a List of <see cref="Acl"/>s associated
         /// with the node</returns>
         public static async Task<IReadOnlyList<Acl>> GetACL(this IRingMasterRequestHandler ringMaster, string path, IStat stat)
         {
@@ -356,7 +356,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="path">Node path</param>
         /// <param name="acl">Access control list to associate with the node</param>
         /// <param name="version">Version to compare with the current version of the node</param>
-        /// <returns>Task that will resolve on success to the <see cref="Stat"/> associated with 
+        /// <returns>Task that will resolve on success to the <see cref="Stat"/> associated with
         /// the node</returns>
         public static async Task<IStat> SetACL(this IRingMasterRequestHandler ringMaster, string path, IReadOnlyList<Acl> acl, int version)
         {
@@ -386,14 +386,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
-        /// Executes multiple operations as an atomic group at the server. Either the whole list takes 
+        /// Executes multiple operations as an atomic group at the server. Either the whole list takes
         /// effect, or no operation do.
         /// </summary>
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="operations">List of operations</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until changes are guaranteed to be durable (and are applied locally).</param>
-        /// <returns>Task that will resolve on success to a list of 
+        /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
         public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false)
         {
@@ -407,7 +407,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
-        /// Executes multiple operations as an atomic group at the server. Either the whole list takes 
+        /// Executes multiple operations as an atomic group at the server. Either the whole list takes
         /// effect, or no operation do.
         /// </summary>
         /// <param name="ringMaster">Interface to ringmaster</param>
@@ -415,14 +415,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="scheduledName">if not null, this multi will be scheduled for background execution</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until changes are guaranteed to be durable (and are applied locally).</param>
-        /// <returns>Task that will resolve on success to a list of 
+        /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
         public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, string scheduledName, bool mustCompleteSynchronously = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestMulti(
                     operations,
-                    mustCompleteSynchronously, 
+                    mustCompleteSynchronously,
                     scheduledName));
 
             ThrowIfError(response);
@@ -436,7 +436,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="operations">List of operations</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until all successful operations are guaranteed to be durable (and are applied locally).</param>
-        /// <returns>Task that will resolve on success to a list of 
+        /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
         public static async Task<IReadOnlyList<OpResult>> Batch(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false)
         {
@@ -554,7 +554,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             {
                 string parentPath = queue.Dequeue();
                 await ringMaster.ForEachChild(
-                    parentPath, 
+                    parentPath,
                     maxChildrenPerRequest,
                     child =>
                     {
@@ -577,11 +577,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="onChange">The notification callback.</param>
         /// <returns>an async task indicating a boolean where true means the callback will be invoked</returns>
         public static async Task<bool> RegisterOnAnySubPathChange(
-            this IRingMasterRequestHandler ringMaster, 
-            int timeout, 
-            string pathToWatch, 
+            this IRingMasterRequestHandler ringMaster,
+            int timeout,
+            string pathToWatch,
             bool oneuse,
-            bool sessionlocal, 
+            bool sessionlocal,
             RegisterOnAnySubPathChangeDelegate onChange)
         {
             if (ringMaster == null)
@@ -603,7 +603,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             byte[] data = Encoding.UTF8.GetBytes("$startswith:" + pathToWatch + ",$sessionlocal:" + sessionlocal);
 
             DelegateWatcher watcher = new DelegateWatcher(
-                ev => 
+                ev =>
                 {
                     // if the event was signaled because the bulkwatcher node was deleted, this means the watcher is removed as well.
                     if (ev.EventType == WatchedEvent.WatchedEventType.NodeDeleted && string.Equals(ev.Path, path))
@@ -617,8 +617,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     {
                         ringMaster.Delete(path, -1, DeleteMode.None).Wait();
                     }
-                }, 
-                oneuse);
+                },
+                oneuse ? WatcherKind.OneUse : default(WatcherKind));
 
             DateTime maxTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(timeout);
 
@@ -721,7 +721,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         {
             await ringMaster.Exists(string.Format("bulkwatcher:{0}", pathPrefix), watcher);
         }
-        
+
         /// <summary>
         /// Gets the name of the bulk watcher.
         /// </summary>

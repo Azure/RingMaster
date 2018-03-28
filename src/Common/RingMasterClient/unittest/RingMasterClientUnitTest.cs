@@ -81,11 +81,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                 return new CoreRequestHandler(this.backend, initRequest);
             };
 
-            RingMasterClient.TraceLevel = TraceLevel.Verbose;
-
-            RingMasterServer.TraceLevel = TraceLevel.Verbose;
-            SecureTransport.TraceLevel = RingMasterClient.TraceLevel;
-
             foreach (var source in EventSource.GetSources())
             {
                 if (source.Guid == this.ringMasterClientEventSourceGuid)

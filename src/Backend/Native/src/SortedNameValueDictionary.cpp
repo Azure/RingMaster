@@ -1,6 +1,8 @@
 #include <cliext/adapter>
 #include <cliext/map>
 
+#pragma comment(lib, "mscoree.lib")
+
 using namespace cliext;
 using namespace System;
 using namespace System::Threading;

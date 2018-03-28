@@ -1,4 +1,4 @@
-﻿// <copyright file="SortedArrayList.cs" company="Microsoft">
+﻿// <copyright file="SortedArrayList.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -8,23 +8,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     using System.Collections;
     using System.Collections.Generic;
 
+    /// <summary>
+    /// Dictionary with sorted keys
+    /// </summary>
+    /// <typeparam name="TK">Type of the key</typeparam>
+    /// <typeparam name="TV">Type of the value</typeparam>
     internal class SortedArrayList<TK, TV> : IDictionary<TK, TV>
     {
-        private struct Entry
-        {
-            public TK K;
-            public TV V;
-        }
-
         private Entry[] array;
         private byte size;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SortedArrayList{TK, TV}"/> class.
+        /// </summary>
+        /// <param name="capacity">Number of key-value pairs can be stored</param>
         public SortedArrayList(int capacity)
         {
             this.array = new Entry[capacity];
             this.size = 0;
         }
 
+        /// <inheritdoc />
+        public int Count => this.size;
+
+        /// <inheritdoc />
+        public bool IsReadOnly => false;
+
+        /// <inheritdoc />
+        public ICollection<TK> Keys => new KeyCollection(this);
+
+        /// <inheritdoc />
+        public ICollection<TV> Values => new ValueCollection(this);
+
+        /// <inheritdoc />
         public TV this[TK key]
         {
             get
@@ -36,6 +52,149 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             {
                 this.SetOrReplace(key, value, true);
             }
+        }
+
+        /// <inheritdoc />
+        public void Add(KeyValuePair<TK, TV> item)
+        {
+            this.SetOrReplace(item.Key, item.Value, false);
+        }
+
+        /// <inheritdoc />
+        public void Add(TK key, TV value)
+        {
+            this.SetOrReplace(key, value, false);
+        }
+
+        /// <inheritdoc />
+        public void Clear()
+        {
+            this.size = 0;
+        }
+
+        /// <inheritdoc />
+        public bool Contains(KeyValuePair<TK, TV> item)
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                if (this.array[i].K.Equals(item.Key) && this.array[i].V.Equals(item.Value))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public bool ContainsKey(TK key)
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                if (this.array[i].K.Equals(key))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public void CopyTo(KeyValuePair<TK, TV>[] array, int arrayIndex)
+        {
+            if (array == null)
+            {
+                throw new ArgumentNullException(nameof(array));
+            }
+
+            for (int i = 0; i < this.size; i++)
+            {
+                array[arrayIndex++] = new KeyValuePair<TK, TV>(this.array[i].K, this.array[i].V);
+            }
+        }
+
+        /// <inheritdoc />
+        public IEnumerator<KeyValuePair<TK, TV>> GetEnumerator()
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                yield return new KeyValuePair<TK, TV>(this.array[i].K, this.array[i].V);
+            }
+        }
+
+        /// <inheritdoc />
+        public bool Remove(KeyValuePair<TK, TV> item)
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                if (this.array[i].K.Equals(item.Key) && this.array[i].V.Equals(item.Value))
+                {
+                    this.size--;
+
+                    for (int j = i; j < this.size; j++)
+                    {
+                        this.array[j] = this.array[j + 1];
+                    }
+
+                    if (this.size < 128 && this.array.Length >= 2 * this.size)
+                    {
+                        Array.Resize(ref this.array, this.size);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public bool Remove(TK key)
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                if (this.array[i].K.Equals(key))
+                {
+                    this.size--;
+
+                    for (int j = i; j < this.size; j++)
+                    {
+                        this.array[j] = this.array[j + 1];
+                    }
+
+                    if (this.size < 128 && this.array.Length >= 2 * this.size)
+                    {
+                        Array.Resize(ref this.array, this.size);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public bool TryGetValue(TK key, out TV value)
+        {
+            for (int i = 0; i < this.size; i++)
+            {
+                if (this.array[i].K.Equals(key))
+                {
+                    value = this.array[i].V;
+                    return true;
+                }
+            }
+
+            value = default(TV);
+            return false;
+        }
+
+        /// <inheritdoc />
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
         }
 
         private TV Find(TK key)
@@ -82,9 +241,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             this.array[this.size++].V = value;
         }
 
-        public int Count => this.size;
-
-        public bool IsReadOnly => false;
+        private struct Entry
+        {
+            public TK K;
+            public TV V;
+        }
 
         private class KeyCollection : ICollection<TK>
         {
@@ -218,142 +379,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                     yield return this.array.array[i].V;
                 }
             }
-        }
-
-        public ICollection<TK> Keys => new KeyCollection(this);
-
-        public ICollection<TV> Values => new ValueCollection(this);
-
-        public void Add(KeyValuePair<TK, TV> item)
-        {
-            this.SetOrReplace(item.Key, item.Value, false);
-        }
-
-        public void Add(TK key, TV value)
-        {
-            this.SetOrReplace(key, value, false);
-        }
-
-        public void Clear()
-        {
-            this.size = 0;
-        }
-
-        public bool Contains(KeyValuePair<TK, TV> item)
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                if (this.array[i].K.Equals(item.Key) && this.array[i].V.Equals(item.Value))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool ContainsKey(TK key)
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                if (this.array[i].K.Equals(key))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public void CopyTo(KeyValuePair<TK, TV>[] array, int arrayIndex)
-        {
-            if (array == null)
-            {
-                throw new ArgumentNullException(nameof(array));
-            }
-
-            for (int i = 0; i < this.size; i++)
-            {
-                array[arrayIndex++] = new KeyValuePair<TK, TV>(this.array[i].K, this.array[i].V);
-            }
-        }
-
-        public IEnumerator<KeyValuePair<TK, TV>> GetEnumerator()
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                yield return new KeyValuePair<TK, TV>(this.array[i].K, this.array[i].V);
-            }
-        }
-
-        public bool Remove(KeyValuePair<TK, TV> item)
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                if (this.array[i].K.Equals(item.Key) && this.array[i].V.Equals(item.Value))
-                {
-                    this.size--;
-
-                    for (int j = i; j < this.size; j++)
-                    {
-                        this.array[j] = this.array[j + 1];
-                    }
-
-                    if (this.size < 128 && this.array.Length >= 2 * this.size)
-                    {
-                        Array.Resize(ref this.array, this.size);
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool Remove(TK key)
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                if (this.array[i].K.Equals(key))
-                {
-                    this.size--;
-
-                    for (int j = i; j < this.size; j++)
-                    {
-                        this.array[j] = this.array[j + 1];
-                    }
-
-                    if (this.size < 128 && this.array.Length >= 2 * this.size)
-                    {
-                        Array.Resize(ref this.array, this.size);
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool TryGetValue(TK key, out TV value)
-        {
-            for (int i = 0; i < this.size; i++)
-            {
-                if (this.array[i].K.Equals(key))
-                {
-                    value = this.array[i].V;
-                    return true;
-                }
-            }
-
-            value = default(TV);
-            return false;
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
         }
     }
 }

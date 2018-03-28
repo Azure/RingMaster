@@ -1,18 +1,14 @@
-﻿// ***********************************************************************
-// <copyright file="AtomicDictionaryFacade.cs" company="Microsoft">
-//     Copyright 2015
+﻿// <copyright file="AtomicDictionaryFacade.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Threading;
+
     /// <summary>
     /// AtomicDictionaryFacade wraps the given underlying dictionary with a spin lock to synchronize
     /// reads and updates.
@@ -24,12 +20,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Mask to check if a writer is active.
         /// </summary>
-        private const long WriterIsActiveMask = (long)0x80000000;
+        private const long WriterIsActiveMask = 0x80000000L;
 
         /// <summary>
         /// Mask for reader count.
         /// </summary>
-        private const long ReaderCountMask = (long)0x7FFFFFFF;
+        private const long ReaderCountMask = 0x7FFFFFFFL;
 
         /// <summary>
         /// The dictionary that is wrapped by this facade.
@@ -42,7 +38,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private long readerWriterLockControl;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AtomicDictionaryFacade"/> class.
+        /// Initializes a new instance of the <see cref="AtomicDictionaryFacade{TKey, TValue}"/> class.
         /// </summary>
         /// <param name="dictionary">Dictionary that must be protected with a lock</param>
         public AtomicDictionaryFacade(IDictionary<TKey, TValue> dictionary)
@@ -56,6 +52,60 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public IDictionary<TKey, TValue> UnderlyingDictionary
         {
             get { return this.underlyingDictionary; }
+        }
+
+        /// <summary>
+        /// Gets the number of items in the underlying dictionary.
+        /// </summary>
+        public int Count
+        {
+            get
+            {
+                return this.RunWithReadLock<int>(() => this.underlyingDictionary.Count);
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the underlying dictionary is read only.
+        /// </summary>
+        public bool IsReadOnly
+        {
+            get
+            {
+                return this.RunWithReadLock<bool>(() => this.underlyingDictionary.IsReadOnly);
+            }
+        }
+
+        /// <summary>
+        /// Gets the collection of keys in the dictionary.
+        /// </summary>
+        /// <remarks>
+        /// The dictionary must not be updated for the entire duration of enumeration in order
+        /// to avoid getting incorrect results. That must be accomplished with a higher level lock
+        /// and is out of scope of the spin lock used by this class.
+        /// </remarks>
+        public ICollection<TKey> Keys
+        {
+            get
+            {
+                return this.underlyingDictionary.Keys;
+            }
+        }
+
+        /// <summary>
+        /// Gets the collection of values in the dictionary.
+        /// </summary>
+        /// <remarks>
+        /// The dictionary must not be updated for the entire duration of enumeration in order
+        /// to avoid getting incorrect results. That must be accomplished with a higher level lock
+        /// and is out of scope of the spin lock used by this class.
+        /// </remarks>
+        public ICollection<TValue> Values
+        {
+            get
+            {
+                return this.underlyingDictionary.Values;
+            }
         }
 
         /// <summary>
@@ -82,61 +132,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             set
             {
                 this.RunWithUpdateLock(() => this.underlyingDictionary[key] = value);
-            }
-        }
-
-        /// <summary>
-        /// Gets the number of items in the underlying dictionary.
-        /// </summary>
-        public int Count
-        {
-            get
-            {
-                return this.RunWithReadLock<int>(() => this.underlyingDictionary.Count);
-            }
-        }
-
-        /// <summary>
-        /// Gets whether the underlying dictionary is read only.
-        /// </summary>
-        public bool IsReadOnly
-        {
-            get
-            {
-                return this.RunWithReadLock<bool>(() => this.underlyingDictionary.IsReadOnly);
-            }
-        }
-
-        /// <summary>
-        /// Gets the collection of keys in the dictionary.
-        /// </summary>
-        /// <remarks>
-        /// The dictionary must not be updated for the entire duration of enumeration in order
-        /// to avoid getting incorrect results. That must be accomplished with a higher level lock
-        /// and is out of scope of the spin lock used by this class.
-        /// </remarks>
-        public ICollection<TKey> Keys
-        {
-            get
-            {
-                return this.underlyingDictionary.Keys;
-            }
-        }
-
-
-        /// <summary>
-        /// Gets the collection of values in the dictionary.
-        /// </summary>
-        /// <remarks>
-        /// The dictionary must not be updated for the entire duration of enumeration in order
-        /// to avoid getting incorrect results. That must be accomplished with a higher level lock
-        /// and is out of scope of the spin lock used by this class.
-        /// </remarks>
-        public ICollection<TValue> Values
-        {
-            get
-            {
-                return this.underlyingDictionary.Values;
             }
         }
 
@@ -174,7 +169,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Determines whether the dictionary contains a specific value.
         /// </summary>
         /// <param name="item">The object to locate in the dictionary</param>
-        /// <returns></returns>
+        /// <returns>True if the dictionary contains the given item, false if otherwise</returns>
         public bool Contains(KeyValuePair<TKey, TValue> item)
         {
             return this.RunWithReadLock(() => this.underlyingDictionary.Contains(item));
@@ -203,7 +198,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return true;
             });
         }
-
 
         /// <summary>
         /// Removes the the given item.
@@ -261,6 +255,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// to avoid getting incorrect results. That must be accomplished with a higher level lock
         /// and is out of scope of the spin lock used by this class.
         /// </remarks>
+        /// <returns>enumerator object</returns>
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
             return this.underlyingDictionary.GetEnumerator();
@@ -270,10 +265,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
         /// <remarks>
+        /// <returns>Enumerator of the dictionary</returns>
         /// The dictionary must not be updated for the entire duration of enumeration in order
         /// to avoid getting incorrect results. That must be accomplished with a higher level lock
         /// and is out of scope of the spin lock used by this class.
         /// </remarks>
+        /// <returns>Enumerator of the underlying dictionary</returns>
         IEnumerator IEnumerable.GetEnumerator()
         {
             return this.underlyingDictionary.GetEnumerator();
@@ -315,6 +312,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Runs the given function which performs an update on the underlying dictionary.
         /// </summary>
         /// <param name="func">Function that performs the update</param>
+        /// <typeparam name="T">Type of input function</typeparam>
         /// <returns>Result of the update</returns>
         private T RunWithUpdateLock<T>(Func<T> func)
         {
@@ -331,16 +329,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         private void AcquireReadLock()
         {
-            for (;;)
+            for (; ;)
             {
                 // Spin as long as a writer is active
                 SpinWait.SpinUntil(() => (this.readerWriterLockControl & WriterIsActiveMask) == 0);
 
-                long oldReaderCount = (this.readerWriterLockControl & ReaderCountMask);
+                long oldReaderCount = this.readerWriterLockControl & ReaderCountMask;
                 long newReaderCount = oldReaderCount + 1;
 
-                // Attempt to replace the reader count. If a new writer came in after the check above, the following 
-                // compare exchange operation will fail.  If will also fail if the reader count had been incremented  by
+                // Attempt to replace the reader count. If a new writer came in after the check above, the following
+                // compare exchange operation will fail.  If will also fail if the reader count had been incremented by
                 // another thread and we will spin once again.
                 if (Interlocked.CompareExchange(ref this.readerWriterLockControl, newReaderCount, oldReaderCount) == oldReaderCount)
                 {
@@ -359,7 +357,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         private void AcquireWriteLock()
         {
-            for (;;)
+            for (; ;)
             {
                 // Spin as long as any reader or writer has the lock.
                 SpinWait.SpinUntil(() => this.readerWriterLockControl == 0);

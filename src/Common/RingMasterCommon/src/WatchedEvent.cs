@@ -1,5 +1,5 @@
-// <copyright file="WatchedEvent.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="WatchedEvent.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -18,11 +18,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="eventType">Type of the event</param>
         /// <param name="keeperState">State of the keeper</param>
         /// <param name="path">The path of the node associated with this notification</param>
-        public WatchedEvent(WatchedEventType eventType, WatchedEventKeeperState keeperState, string path)
+        /// <param name="data">Changed data of the node</param>
+        /// <param name="stat">Stat of the node</param>
+        public WatchedEvent(
+            WatchedEventType eventType,
+            WatchedEventKeeperState keeperState,
+            string path,
+            byte[] data = null,
+            Data.IStat stat = null)
         {
             this.EventType = eventType;
             this.KeeperState = keeperState;
             this.Path = path;
+            this.Data = data;
+            this.Stat = stat;
         }
 
         /// <summary>
@@ -58,7 +67,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// <summary>
             /// Watcher set on the node has been removed.
             /// </summary>
-            WatcherRemoved
+            WatcherRemoved,
         }
 
         /// <summary>
@@ -114,10 +123,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public string Path { get; private set; }
 
         /// <summary>
-        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
+        /// Gets the data of the node after the change
+        /// </summary>
+        public byte[] Data { get; private set; }
+
+        /// <summary>
+        /// Gets the state after the change
+        /// </summary>
+        public Data.IStat Stat { get; private set; }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="object" /> is equal to this instance.
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             WatchedEvent other = obj as WatchedEvent;
@@ -161,7 +180,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <returns>A string representing the class</returns>
         public override string ToString()
         {
-            return string.Format("Event:{0} KeeperState:{1} Path:{2}", this.EventType, this.KeeperState, this.Path);
+            return string.Format(
+                "Event:{0} KeeperState:{1} Path:{2} Data:({3}) Stat:{4}",
+                this.EventType,
+                this.KeeperState,
+                this.Path,
+                this.Data?.Length,
+                this.Stat?.ToString());
         }
     }
 }

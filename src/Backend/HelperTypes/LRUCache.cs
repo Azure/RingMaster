@@ -1,4 +1,4 @@
-﻿// <copyright file="LRUCache.cs" company="Microsoft">
+﻿// <copyright file="LRUCache.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -8,8 +8,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     using System.Collections.Generic;
     using System.Threading;
 
+    /// <summary>
+    /// LRU cache
+    /// </summary>
+    /// <typeparam name="TKey">Type of cache key</typeparam>
+    /// <typeparam name="TValue">Type of cache value</typeparam>
     public sealed class LruCache<TKey, TValue> : IDisposable
     {
+        /// <summary>
+        /// The dictionary of keys that are declared to be inflight
+        /// </summary>
+        private readonly Dictionary<TKey, EventAndCount> inflight = new Dictionary<TKey, EventAndCount>();
+
         /// <summary>
         /// The maximum capacity of the cache
         /// </summary>
@@ -59,11 +69,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// The maximum percentage capacity under which we will not try to resort the LRU elements.
         /// </summary>
         private double maxCapacityPercentageForSorting;
-
-        /// <summary>
-        /// The dictionary of keys that are declared to be inflight
-        /// </summary>
-        private readonly Dictionary<TKey, EventAndCount> inflight = new Dictionary<TKey, EventAndCount>();
 
         /// <summary>
         /// The perennial keys, those that are only removed from the cache if "Clear" is invoked.
@@ -185,31 +190,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Initializes the LRUCache instance.
+        /// Adds a perennial key
         /// </summary>
-        /// <param name="capacity">The capacity.</param>
-        /// <param name="maxMillisecondsToAllowInMiddleOfList">The maximum milliseconds to allow an "unaccessed object" to stay in middle of list.</param>
-        /// <param name="maxMillisecondsToAllowInListTop">The maximum milliseconds to allow an "unaccessed object" to stay in list top.</param>
-        /// <param name="numberOfElementsToAttemptMoveInBulk">The number of elements to attempt move in bulk from top if we need to move objects.</param>
-        /// <param name="maxCapacityPercentageForSorting">The maximum capacity percentage under which we will not bother sorting.</param>
-        private void Initialize(int capacity, uint maxMillisecondsToAllowInMiddleOfList, uint maxMillisecondsToAllowInListTop, uint numberOfElementsToAttemptMoveInBulk, double maxCapacityPercentageForSorting)
-        {
-            if (this.lruList != null)
-            {
-                throw new InvalidOperationException("Initialize can only be invoked once.");
-            }
-
-            this.maxCapacity = capacity;
-            this.count = 0;
-            this.maxMillisecondsToAllowInMiddleOfList = maxMillisecondsToAllowInMiddleOfList;
-            this.maxMillisecondsToAllowInListTop = maxMillisecondsToAllowInListTop;
-            this.numberOfElementsToAttemptMoveInBulk = numberOfElementsToAttemptMoveInBulk;
-            this.MaxCapacityPercentageForSorting = maxCapacityPercentageForSorting;
-            this.positionsByKey = new Dictionary<TKey, LinkedListNode<CacheItem>>();
-            this.lruList = new LinkedList<CacheItem>();
-            this.disposeItems = typeof(IDisposable).IsAssignableFrom(typeof(TValue));
-        }
-
+        /// <param name="key">Key to be added</param>
         public void AddPerennial(TKey key)
         {
             this.isCacheWriting.EnterWriteLock();
@@ -228,6 +211,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
+        /// <summary>
+        /// Clears all perennial keys
+        /// </summary>
         public void ClearPerennials()
         {
             this.isCacheWriting.EnterWriteLock();
@@ -426,89 +412,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Class EventAndCount abstracts an event that is auto-disposed when the last thread waiting on it gets awaken
-        /// </summary>
-        private class EventAndCount
-        {
-            private ManualResetEvent ev;
-            private volatile int waitCount;
-            private SpinLock mayBeReleasing;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="EventAndCount"/> class.
-            /// </summary>
-            public EventAndCount()
-            {
-                this.waitCount = 0;
-                this.ev = ManualResetEventPool.InstancePool.GetOne();
-                this.mayBeReleasing = new SpinLock();
-            }
-
-            /// <summary>
-            /// Sets this instance.
-            /// </summary>
-            public void Set()
-            {
-                ManualResetEventPool.InstancePool.Set(this.ev);
-            }
-
-            /// <summary>
-            /// waits for the event to be set and returns the event if this is the last thread waiting for it.
-            /// </summary>
-            public void WaitAndReturnIfLast()
-            {
-                // the idea here is that two threads can be in this routine concurrently.
-                // Thread A may be starting the wait (after Interlocked.Increment)
-                // Thread B may be finishing the wait (after WaitOne)
-                // The goal is to make sure B doesn't ever release if A is about to wait
-
-                // 1. lock the releasing Critical Section
-                bool taken = false;
-                do
-                {
-                    this.mayBeReleasing.Enter(ref taken);
-                }
-                while (!taken);
-
-                // 2. increase the counter of waiting threads
-                this.waitCount++;
-
-                // 3. remember the event we have
-                ManualResetEvent thisEv = this.ev;
-
-                // 4. unlock the C.S.
-                this.mayBeReleasing.Exit();
-
-                // 5. wait, if there is a valid event
-                if (thisEv == null)
-                {
-                    return;
-                }
-
-                thisEv.WaitOne();
-
-                // 6. lock the C.S.
-                taken = false;
-                do
-                {
-                    this.mayBeReleasing.Enter(ref taken);
-                }
-                while (!taken);
-
-                // 7. decrease the counter of wait threads, and if none left, release the event
-                this.waitCount--;
-
-                if (this.waitCount == 0)
-                {
-                    ManualResetEventPool.InstancePool.ReturnOne(ref this.ev);
-                }
-
-                // 8. unlock the C.S.
-                this.mayBeReleasing.Exit();
-            }
-        }
-
-        /// <summary>
         /// Tries to add an element to the dictionary.
         /// </summary>
         /// <param name="key">The key.</param>
@@ -618,6 +521,85 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
+        /// Removes the given element from the list, and from the dictionary.
+        /// </summary>
+        /// <param name="key">The key for the entry to remove</param>
+        /// <returns>Whether key exists</returns>
+        public bool Remove(TKey key)
+        {
+            this.isCacheWriting.EnterWriteLock();
+            try
+            {
+                LinkedListNode<CacheItem> node;
+
+                // IMPORTANT: first add to the dictionary, and only then add to the list,
+                // so if the key was already present, we don't leave behind garbage in the list
+                this.positionsByKey.TryGetValue(key, out node);
+
+                if (node == null)
+                {
+                    return false;
+                }
+
+                // IMPORTANT: although not strictly necessary here, we assume everywhere in the class
+                // that all element in the dictionary is present in the list,
+                // so we first remove from the list, and then from the dictionary, if that second remove fails, the basic assumption
+                // had been violated. Even with that assumption violated, though, it is safe to proceed because the LRU item was just
+                // not indexed.
+                if (!this.positionsByKey.Remove(node.Value.Key))
+                {
+                    System.Diagnostics.Debug.Fail("the dictionary doesn't contain the element!");
+                }
+
+                this.lruList.Remove(node.Value);
+
+                this.count--;
+
+                // sanity checks
+                System.Diagnostics.Debug.Assert(this.count == this.lruList.Count, "Sanity check");
+                System.Diagnostics.Debug.Assert(this.count == this.positionsByKey.Count, "Sanity check");
+                return true;
+            }
+            finally
+            {
+                this.isCacheWriting.ExitWriteLock();
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            this.isCacheWriting?.Dispose();
+            this.isCacheWriting = null;
+        }
+
+        /// <summary>
+        /// Initializes the LRUCache instance.
+        /// </summary>
+        /// <param name="capacity">The capacity.</param>
+        /// <param name="maxMillisecondsToAllowInMiddleOfList">The maximum milliseconds to allow an "unaccessed object" to stay in middle of list.</param>
+        /// <param name="maxMillisecondsToAllowInListTop">The maximum milliseconds to allow an "unaccessed object" to stay in list top.</param>
+        /// <param name="numberOfElementsToAttemptMoveInBulk">The number of elements to attempt move in bulk from top if we need to move objects.</param>
+        /// <param name="maxCapacityPercentageForSorting">The maximum capacity percentage under which we will not bother sorting.</param>
+        private void Initialize(int capacity, uint maxMillisecondsToAllowInMiddleOfList, uint maxMillisecondsToAllowInListTop, uint numberOfElementsToAttemptMoveInBulk, double maxCapacityPercentageForSorting)
+        {
+            if (this.lruList != null)
+            {
+                throw new InvalidOperationException("Initialize can only be invoked once.");
+            }
+
+            this.maxCapacity = capacity;
+            this.count = 0;
+            this.maxMillisecondsToAllowInMiddleOfList = maxMillisecondsToAllowInMiddleOfList;
+            this.maxMillisecondsToAllowInListTop = maxMillisecondsToAllowInListTop;
+            this.numberOfElementsToAttemptMoveInBulk = numberOfElementsToAttemptMoveInBulk;
+            this.MaxCapacityPercentageForSorting = maxCapacityPercentageForSorting;
+            this.positionsByKey = new Dictionary<TKey, LinkedListNode<CacheItem>>();
+            this.lruList = new LinkedList<CacheItem>();
+            this.disposeItems = typeof(IDisposable).IsAssignableFrom(typeof(TValue));
+        }
+
+        /// <summary>
         /// Moves the node if needed to the end of the lru list.
         /// Potentially, it might also move some nodes from the top of the list, if they have been accessed recently enough.
         /// NOTE: This method is not thread safe
@@ -709,55 +691,86 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Removes the given element from the list, and from the dictionary.
+        /// Class EventAndCount abstracts an event that is auto-disposed when the last thread waiting on it gets awaken
         /// </summary>
-        /// <param name="key">The key for the entry to remove</param>
-        /// <returns>Whether key exists</returns>
-        public bool Remove(TKey key)
+        private class EventAndCount
         {
-            this.isCacheWriting.EnterWriteLock();
-            try
+            private ManualResetEvent ev;
+            private volatile int waitCount;
+            private SpinLock mayBeReleasing;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="EventAndCount"/> class.
+            /// </summary>
+            public EventAndCount()
             {
-                LinkedListNode<CacheItem> node;
+                this.waitCount = 0;
+                this.ev = ManualResetEventPool.InstancePool.GetOne();
+                this.mayBeReleasing = default(SpinLock);
+            }
 
-                // IMPORTANT: first add to the dictionary, and only then add to the list,
-                // so if the key was already present, we don't leave behind garbage in the list
-                this.positionsByKey.TryGetValue(key, out node);
+            /// <summary>
+            /// Sets this instance.
+            /// </summary>
+            public void Set()
+            {
+                ManualResetEventPool.InstancePool.Set(this.ev);
+            }
 
-                if (node == null)
+            /// <summary>
+            /// waits for the event to be set and returns the event if this is the last thread waiting for it.
+            /// </summary>
+            public void WaitAndReturnIfLast()
+            {
+                // the idea here is that two threads can be in this routine concurrently.
+                // Thread A may be starting the wait (after Interlocked.Increment)
+                // Thread B may be finishing the wait (after WaitOne)
+                // The goal is to make sure B doesn't ever release if A is about to wait
+
+                // 1. lock the releasing Critical Section
+                bool taken = false;
+                do
                 {
-                    return false;
+                    this.mayBeReleasing.Enter(ref taken);
+                }
+                while (!taken);
+
+                // 2. increase the counter of waiting threads
+                this.waitCount++;
+
+                // 3. remember the event we have
+                ManualResetEvent thisEv = this.ev;
+
+                // 4. unlock the C.S.
+                this.mayBeReleasing.Exit();
+
+                // 5. wait, if there is a valid event
+                if (thisEv == null)
+                {
+                    return;
                 }
 
-                // IMPORTANT: although not strictly necessary here, we assume everywhere in the class
-                // that all element in the dictionary is present in the list,
-                // so we first remove from the list, and then from the dictionary, if that second remove fails, the basic assumption
-                // had been violated. Even with that assumption violated, though, it is safe to proceed because the LRU item was just
-                // not indexed.
-                if (!this.positionsByKey.Remove(node.Value.Key))
+                thisEv.WaitOne();
+
+                // 6. lock the C.S.
+                taken = false;
+                do
                 {
-                    System.Diagnostics.Debug.Fail("the dictionary doesn't contain the element!");
+                    this.mayBeReleasing.Enter(ref taken);
+                }
+                while (!taken);
+
+                // 7. decrease the counter of wait threads, and if none left, release the event
+                this.waitCount--;
+
+                if (this.waitCount == 0)
+                {
+                    ManualResetEventPool.InstancePool.ReturnOne(ref this.ev);
                 }
 
-                this.lruList.Remove(node.Value);
-
-                this.count--;
-
-                // sanity checks
-                System.Diagnostics.Debug.Assert(this.count == this.lruList.Count, "Sanity check");
-                System.Diagnostics.Debug.Assert(this.count == this.positionsByKey.Count, "Sanity check");
-                return true;
+                // 8. unlock the C.S.
+                this.mayBeReleasing.Exit();
             }
-            finally
-            {
-                this.isCacheWriting.ExitWriteLock();
-            }
-        }
-
-        public void Dispose()
-        {
-            this.isCacheWriting?.Dispose();
-            this.isCacheWriting = null;
         }
 
         /// <summary>
@@ -765,15 +778,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// </summary>
         private class CacheItem
         {
-            /// <summary>
-            /// The key of the item
-            /// </summary>
-            internal TKey Key { get; }
-
-            /// <summary>
-            /// The value of the item
-            /// </summary>
-            internal TValue Value { get; }
+            private static readonly long StartTimeInTicks = DateTime.UtcNow.Ticks;
 
             /// <summary>
             /// the last time this object was accessed,
@@ -781,7 +786,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             /// </summary>
             private int lastAccessInMilisSinceProcessStartUp;
 
-            private static readonly long StartTimeInTicks = DateTime.UtcNow.Ticks;
+            /// <summary>
+            /// Initializes a new instance of the <see cref="CacheItem"/> class.
+            /// </summary>
+            /// <param name="k">The key of the element.</param>
+            /// <param name="v">The value for the elemet.</param>
+            public CacheItem(TKey k, TValue v)
+            {
+                this.Key = k;
+                this.Value = v;
+            }
+
+            /// <summary>
+            /// Gets the key of the item
+            /// </summary>
+            internal TKey Key { get; }
+
+            /// <summary>
+            /// Gets the value of the item
+            /// </summary>
+            internal TValue Value { get; }
 
             internal int EllapsedMillisSinceLastAccess
             {
@@ -802,17 +826,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                 int lastTime = Interlocked.Exchange(ref this.lastAccessInMilisSinceProcessStartUp, nowInMillis);
 
                 return nowInMillis - lastTime;
-            }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="CacheItem"/> class.
-            /// </summary>
-            /// <param name="k">The key of the element.</param>
-            /// <param name="v">The value for the elemet.</param>
-            public CacheItem(TKey k, TValue v)
-            {
-                this.Key = k;
-                this.Value = v;
             }
         }
     }

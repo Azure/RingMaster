@@ -1,5 +1,5 @@
-// <copyright file="ServiceDiscovery.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="ServiceDiscovery.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
@@ -18,15 +18,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
 
+    /// <summary>
+    /// Service discovery using <see cref="FabricClient"/>
+    /// </summary>
     public sealed class ServiceDiscovery : IDisposable
     {
         private readonly FabricClient fabricClient;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceDiscovery"/> class.
+        /// </summary>
+        /// <param name="fabricClient">Fabric client object</param>
         public ServiceDiscovery(FabricClient fabricClient = null)
         {
             this.fabricClient = fabricClient ?? new FabricClient();
         }
 
+        /// <summary>
+        /// Gets the endpoint URI of the specified replica
+        /// </summary>
+        /// <param name="replicaAddress">replica address</param>
+        /// <param name="endpointName">Name of the endpoint</param>
+        /// <returns>Replica URI</returns>
         public static Uri GetReplicaEndpointUri(string replicaAddress, string endpointName)
         {
             if (replicaAddress == null)
@@ -47,13 +60,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
             return new Uri(endpointUri);
         }
 
+        /// <summary>
+        /// Gets a list of service URI
+        /// </summary>
+        /// <param name="serviceUri">Service URI</param>
+        /// <param name="endpointName">Name of endpoint</param>
+        /// <returns>Async task that resolves to a list of URI</returns>
         public async Task<IReadOnlyList<Uri>> GetServiceEndpoints(Uri serviceUri, string endpointName)
         {
             var endpointList = new List<Uri>();
 
-            await ForEachPartition(serviceUri, async partition =>
+            await this.ForEachPartition(serviceUri, async partition =>
             {
-                await ForEachReplica(partition.PartitionInformation.Id, async replica =>
+                await this.ForEachReplica(partition.PartitionInformation.Id, async replica =>
                 {
                     if (string.IsNullOrEmpty(replica.ReplicaAddress))
                     {
@@ -68,6 +87,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
             });
 
             return endpointList;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            this.fabricClient.Dispose();
         }
 
         private async Task ForEachPartition(Uri serviceUri, Func<Partition, Task> func)
@@ -100,11 +125,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
                 }
             }
             while (continuationToken != null);
-        }
-
-        public void Dispose()
-        {
-            this.fabricClient.Dispose();
         }
     }
 }

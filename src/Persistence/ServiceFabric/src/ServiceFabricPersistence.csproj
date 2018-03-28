@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -14,6 +14,8 @@
     <WarningLevel>4</WarningLevel>
     <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <AdditionalFileItemNames>$(AdditionalFileItemNames);None</AdditionalFileItemNames>
@@ -44,19 +46,17 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IServiceFabricPersistenceInstrumentation.cs" />
-    <Compile Include="PersistedData.cs" />
+    <Compile Include="ServiceFabricPersistedData.cs" />
     <Compile Include="PersistedDataFactory.cs" />
     <Compile Include="PersistedDataSerializer.cs" />
     <Compile Include="ServiceFabricPersistenceEventSource.cs" />
     <Compile Include="ServiceFabricPersistenceInstrumentation.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />

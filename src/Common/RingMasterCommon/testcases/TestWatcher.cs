@@ -207,11 +207,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// <summary>
         /// Verifies that the watcher is notified when the data of a watched node is changed.
         /// </summary>
+        /// <param name="includeData">Whether to include data in the watched event or not</param>
         /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
-        public async Task TestDataChangedEvent()
+        public async Task TestDataChangedEvent(bool includeData = false)
         {
             Task<WatchedEvent> watchTask;
-            var watcher = CreateWatcher(out watchTask);
+            var kind = includeData ? WatcherKind.OneUse | WatcherKind.IncludeData : WatcherKind.OneUse;
+            var watcher = CreateWatcher(out watchTask, kind);
             using (var ringMaster = this.ConnectToRingMaster())
             {
                 string nodePath = string.Format("{0}/TestDataChangedEvent_{1}", TestWatcher.TestPrefix, Guid.NewGuid());
@@ -236,6 +238,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(WatchedEvent.WatchedEventType.NodeDataChanged, watchedEvent.EventType);
                 Assert.AreEqual(nodePath, watchedEvent.Path);
                 Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, watchedEvent.KeeperState);
+                if (includeData)
+                {
+                    Assert.IsNotNull(watchedEvent.Data, "Data should not be null in the watcher return");
+                    Assert.IsNotNull(watchedEvent.Stat, "Stat should not be null in the watcher return");
+                }
+                else
+                {
+                    Assert.IsNull(watchedEvent.Data, $"Data should be null, actual length {watchedEvent.Data?.Length}");
+                    Assert.IsNull(watchedEvent.Stat, $"Stat should be null, actual: {watchedEvent.Stat}");
+                }
             }
         }
 
@@ -519,15 +531,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// Create a watcher that completes a task when notified.
         /// </summary>
         /// <param name="watchedEventTask">The task that will be completed when the watcher is notified</param>
+        /// <param name="kind">Kind of the watcher</param>
         /// <returns>Interface to the watcher</returns>
-        private static IWatcher CreateWatcher(out Task<WatchedEvent> watchedEventTask)
+        private static IWatcher CreateWatcher(out Task<WatchedEvent> watchedEventTask, WatcherKind kind = WatcherKind.OneUse)
         {
             var watcherTaskCompletionSource = new TaskCompletionSource<WatchedEvent>();
             var watcher = new DelegateWatcher(
                 watchedEvent =>
                 {
                     Task.Run(() => watcherTaskCompletionSource.SetResult(watchedEvent));
-                });
+                },
+                kind);
 
             watchedEventTask = watcherTaskCompletionSource.Task;
 
@@ -568,7 +582,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     }
 
                     Task.Run(() => item.SetResult(watchedEvent));
-                }, false);
+                },
+                default(WatcherKind));
 
             return watcher;
         }
@@ -587,11 +602,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             /// Initializes a new instance of the <see cref="DelegateWatcher"/> class.
             /// </summary>
             /// <param name="watchedEventDelegate">The delegate to be invoked</param>
-            /// <param name="oneUse">if set to <c>true</c> the delegate is for a single use</param>
+            /// <param name="kind">Kind of the watcher</param>
             /// <exception cref="System.ArgumentNullException">Thrown if onProcess is null</exception>
-            public DelegateWatcher(Action<WatchedEvent> watchedEventDelegate, bool oneUse = true)
+            public DelegateWatcher(Action<WatchedEvent> watchedEventDelegate, WatcherKind kind = WatcherKind.OneUse)
             {
-                this.OneUse = oneUse;
+                this.Kind = kind;
                 this.watchedEventDelegate = watchedEventDelegate;
                 if (watchedEventDelegate == null)
                 {
@@ -608,9 +623,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             }
 
             /// <summary>
-            /// Gets or sets a value indicating whether this watcher is for a single use.
+            /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            public bool OneUse { get; set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets or sets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind { get; set; }
 
             /// <summary>
             /// Invoked when a watched event occurs.

@@ -1,5 +1,5 @@
-﻿// <copyright file="ZkprCommunicationProtocol.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ZkprCommunicationProtocol.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         }
 
         /// <summary>
-        /// Gets a value that indicates whether to read using network byte order
+        /// Gets a value indicating whether to read using network byte order
         /// </summary>
         public bool UseNetworkByteOrderFlag { get; } = true;
 

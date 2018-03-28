@@ -1,13 +1,13 @@
-// <copyright file="OpCode.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="OpCode.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
+#pragma warning disable SA1602, CS1591 // TODO: document enum items
     /// <summary>
     /// Operation codes.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1602:EnumerationItemsMustBeDocumented", Justification = "Simple declaration of Op codes")]
     public enum OpCode : int
     {
         Auth = 1,
@@ -30,6 +30,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         SetData,
         SetWatches,
         Sync,
-        Move
+        Move,
     }
+#pragma warning restore
 }

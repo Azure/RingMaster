@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -8,14 +8,15 @@
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.RingMasterService</AssemblyName>
     <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <OacrDisabled>true</OacrDisabled>
     <CoverageDisabled>true</CoverageDisabled>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Events">
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Events" Condition="'$(OSSBUILD)' == ''">
       <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework)\lib\net40\Microsoft.Cloud.InstrumentationFramework.Events.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Metrics">
+    <Reference Include="Microsoft.Cloud.InstrumentationFramework.Metrics" Condition="'$(OSSBUILD)' == ''">
       <HintPath>$(PkgMicrosoft_Cloud_InstrumentationFramework)\lib\net40\Microsoft.Cloud.InstrumentationFramework.Metrics.dll</HintPath>
     </Reference>
     <Reference Include="System.Fabric">
@@ -43,15 +44,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\IfxEvents.dll">
+    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\IfxEvents.dll" Condition="'$(OSSBUILD)' == ''">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\IfxMetrics.dll">
+    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\IfxMetrics.dll" Condition="'$(OSSBUILD)' == ''">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\Tfx.dll">
+    <Content Include="$(PkgMicrosoft_Cloud_InstrumentationFramework)\build\native\lib\Tfx.dll" Condition="'$(OSSBUILD)' == ''">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
@@ -67,22 +68,23 @@
     <Compile Include="ZooKeeperTcpListener.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\Utilities\Utilities.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\ZooKeeperServer\src\ZooKeeperServer.csproj" />
     <ProjectReference Include="$(SRCROOT)\Infrastructure\IfxInstrumentation\IfxInstrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
     <ProjectReference Include="$(SRCROOT)\Infrastructure\ServiceFabric\ServiceFabric.csproj" />
     <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
     <ProjectReference Include="$(SRCROOT)\Persistence\ServiceFabric\src\ServiceFabricPersistence.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\ZooKeeperServer\src\ZooKeeperServer.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\Utilities\Utilities.csproj" />
   </ItemGroup>
   <ItemGroup>
     <QCustomInput Include="PackageRoot\ServiceManifest.xml" />
@@ -96,5 +98,5 @@
   -->
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ServiceProject.targets" />
+  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ServiceProject.targets" Condition="Exists('$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ServiceProject.targets')"/>
 </Project>

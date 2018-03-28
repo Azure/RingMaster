@@ -90,7 +90,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
                     var nodePath = this.nodeList[index];
 
                     ulong id = (ulong)Interlocked.Increment(ref lastAssignedUniqueId);
-                    var watcher = new Watcher(id, true, this.instrumentation, watcherSemaphore);
+                    var watcher = new Watcher(id, WatcherKind.OneUse, this.instrumentation, watcherSemaphore);
 
                     watcherSemaphore.Wait(this.cancellationToken);
                     var existsRequest = new RequestExists(nodePath, watcher, id);
@@ -143,10 +143,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             private readonly SemaphoreSlim watcherSemaphore;
             private readonly Stopwatch lifetime;
 
-            public Watcher(ulong id, bool oneUse, WatcherPerformance.IInstrumentation instrumentation, SemaphoreSlim watcherSemaphore)
+            public Watcher(ulong id, WatcherKind kind, WatcherPerformance.IInstrumentation instrumentation, SemaphoreSlim watcherSemaphore)
             {
                 this.Id = id;
-                this.OneUse = oneUse;
+                this.Kind = kind;
                 this.instrumentation = instrumentation;
                 this.watcherSemaphore = watcherSemaphore;
                 this.lifetime = Stopwatch.StartNew();
@@ -154,7 +154,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 
             public ulong Id { get; private set; }
 
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            public WatcherKind Kind { get; private set; }
 
             /// <summary>
             /// Process a watcher notification.

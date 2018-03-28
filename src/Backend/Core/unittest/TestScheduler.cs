@@ -802,7 +802,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
                     this.ev.PushEvent(this.ToString(evt));
 
-                    if (watcher.OneUse)
+                    if (watcher.Kind.HasFlag(WatcherKind.OneUse))
                     {
                         this.watchers.Remove(path);
                     }

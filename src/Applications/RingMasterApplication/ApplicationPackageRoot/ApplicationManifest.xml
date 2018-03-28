@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="1.0.0.96" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="#BUILDNUMBER#" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- Note: These should be overridden in your Params Override file as needed -->
     <Parameter Name="EnvironmentName" DefaultValue="" />
@@ -13,7 +13,7 @@
     <Parameter Name="RingMasterWatchdog_InstanceCount" DefaultValue="1" />
   </Parameters>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="1.0.0.96" />
+    <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="#BUILDNUMBER#" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -28,9 +28,12 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SetupLocalSystem" />
+    </Policies>
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="RingMasterWatchdog" ServiceManifestVersion="1.0.0.96" />
+    <ServiceManifestRef ServiceManifestName="RingMasterWatchdog" ServiceManifestVersion="#BUILDNUMBER#" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -45,6 +48,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SetupLocalSystem" />
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <Service Name="RingMasterService">
@@ -58,4 +64,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <Principals>
+    <Users>
+      <User Name="SetupLocalSystem" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
 </ApplicationManifest>

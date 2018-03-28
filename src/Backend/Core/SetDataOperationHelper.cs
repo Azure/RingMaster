@@ -1,5 +1,5 @@
-﻿// <copyright file="SetDataOperationHelper.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="SetDataOperationHelper.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
@@ -7,11 +7,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
-    public sealed class SetDataOperationHelper : ISetDataOperationHelper
+    /// <summary>
+    /// Set data operation helper
+    /// </summary>
+    internal sealed class SetDataOperationHelper : ISetDataOperationHelper
     {
         private const uint Magic = 0xf00dface;
         private const int Length = sizeof(uint) + sizeof(ushort) + sizeof(long);
 
+        /// <summary>
+        /// Gets the global instance
+        /// </summary>
         public static SetDataOperationHelper Instance { get; } = new SetDataOperationHelper();
 
         /// <summary>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" />
-  
   <PropertyGroup Label="Globals">
     <TargetName>Microsoft.RingMaster.Backend.Native</TargetName>
     <ProjectGuid>{236C5829-F892-44EE-9FC1-2D964221CB61}</ProjectGuid>
@@ -12,36 +11,41 @@
     <OacrDisabled>true</OacrDisabled>
     <CoverageDisabled>true</CoverageDisabled>
   </PropertyGroup>
-  
   <Import Project="$(ExtendedTargetsPath)\Microsoft.Cpp.Default.props" />
-  
   <PropertyGroup Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CLRSupport>true</CLRSupport>
     <CharacterSet>Unicode</CharacterSet>
     <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>V141</PlatformToolset>
   </PropertyGroup>
-  
   <Import Project="$(ExtendedTargetsPath)\Microsoft.Cpp.props" />
-  
   <PropertyGroup>
     <NetFxSdkLibPath>$(PkgNetFxSDK_Corext)\lib\um\x64</NetFxSdkLibPath>
-    <UcrtIncludePath>$(PkgWindowsSdk_Corext)\Include\10.0.10240.0\ucrt</UcrtIncludePath>
-    <UcrtLibPath>$(PkgWindowsSdk_Corext)\lib\10.0.10240.0\ucrt\x64</UcrtLibPath>
+    <UcrtIncludePath>$(PkgWindowsSdk_Corext)\Include\10.0.16299.0\ucrt</UcrtIncludePath>
+    <UcrtLibPath>$(PkgWindowsSdk_Corext)\lib\10.0.16299.0\ucrt\x64</UcrtLibPath>
     <VisualCppIncludePath>$(PkgVisualCpp_Corext)\include</VisualCppIncludePath>
-    <WindowsSdkIncludePath>$(PkgWindowsSdk_Corext)\Include\10.0.10240.0</WindowsSdkIncludePath>
-    <WindowsSdkLibPath>$(PkgWindowsSdk_Corext)\lib\10.0.10240.0\um\x64</WindowsSdkLibPath>
+    <WindowsSdkIncludePath>$(PkgWindowsSdk_Corext)\Include\10.0.16299.0</WindowsSdkIncludePath>
+    <WindowsSdkLibPath>$(PkgWindowsSdk_Corext)\lib\10.0.16299.0\um\x64</WindowsSdkLibPath>
   </PropertyGroup>
-
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
-
   <ItemDefinitionGroup>
-    <ClCompile>
+    <ClCompile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>
+        $(VisualCppIncludePath);
+        $(UcrtIncludePath);
+        $(AdditionalIncludeDirectories);
+      </AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ClCompile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>
         $(VisualCppIncludePath);
         $(UcrtIncludePath);
@@ -58,7 +62,7 @@
     </ResourceCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(OSSBUILD)' == ''">
         $(NetFxSdkLibPath)\mscoree.lib;
         $(UcrtLibPath)\ucrt.lib;
         $(WindowsSdkLibPath)\kernel32.lib;
@@ -66,9 +70,12 @@
       </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  
   <ItemGroup>
     <ClCompile Include="SortedNameValueDictionary.cpp" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.Cpp.targets" />
+  <PropertyGroup>
+    <!-- Required to be able to load this project in VS 2017 since CoreXt overrides $(VCTargetsPath) -->
+    <RequiredBundles />
+  </PropertyGroup>
 </Project>

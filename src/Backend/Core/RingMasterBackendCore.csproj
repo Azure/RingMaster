@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
   <PropertyGroup>
@@ -7,6 +7,9 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Backend.Core</AssemblyName>
+    <RunAnalysis>true</RunAnalysis>
+    <EnableStyleCop>true</EnableStyleCop>
+    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -26,7 +29,6 @@
     <Compile Include="ConnectionStringBuilder.cs" />
     <Compile Include="EphemeralFactory.cs" />
     <Compile Include="FxCopRulesModifications.cs" />
-    <Compile Include="HealthDefinition.cs" />
     <Compile Include="IChangeList.cs" />
     <Compile Include="IClientSession.cs" />
     <Compile Include="ILockListTransaction.cs" />
@@ -37,9 +39,11 @@
     <Compile Include="IRingMasterServerInstrumentation.cs" />
     <Compile Include="IRingMasterAudit.cs" />
     <Compile Include="IRingMasterRequestExecutor.cs" />
+    <Compile Include="IServiceHealingManagerCallbacks.cs" />
+    <Compile Include="LayeredLockCollection.cs" />
     <Compile Include="IUnsafeTreeAccess.cs" />
     <Compile Include="LockDownSet.cs" />
-    <Compile Include="LockList.cs" />
+    <Compile Include="LockListForRW.cs" />
     <Compile Include="LockListForRO.cs" />
     <Compile Include="LoopbackRingMaster.cs" />
     <Compile Include="MultiLevelLockPool.cs" />
@@ -48,6 +52,9 @@
     <Compile Include="RetriableOperationException.cs" />
     <Compile Include="RingMaster.cs" />
     <Compile Include="RingMasterBackendCore.cs" />
+    <Compile Include="RingMasterBackendCore.SecondaryPreprocessor.cs" />
+    <Compile Include="RingMasterBackendCore.SetDataOperations.cs" />
+    <Compile Include="RingMasterBackendCore.UnsafeTreeAccess.cs" />
     <Compile Include="RingMasterRequestExecutor.cs" />
     <Compile Include="RingMasterEventSource.cs" />
     <Compile Include="RingMasterServerInstrumentation.cs" />
@@ -67,6 +74,9 @@
     <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RingMasterBackendCore.RMCommands.cs" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

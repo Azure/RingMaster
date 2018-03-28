@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterBackendInstrumentation.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="RingMasterBackendInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumentation
@@ -764,6 +764,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
             this.replicaFinishedCheckpoint.LogValue(elapsed.Ticks);
         }
 
+        /// <inheritdoc />
         public void OnAcquireLock(bool readOnly, bool succeeded, int level, TimeSpan elapsed)
         {
             this.acquireLock.LogValue(
@@ -773,6 +774,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
                 level.ToString());
         }
 
+        /// <inheritdoc />
         public void OnResponseWaitForReplication(TimeSpan elapsed)
         {
             this.responseWaitForReplication.LogValue(elapsed.Ticks / (TimeSpan.TicksPerMillisecond / 1000));

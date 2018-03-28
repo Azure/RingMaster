@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             Name="fabric:/vegamsa"
+             xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <!--
+      Replica set size and instance count for all services
+    -->
+    <Parameter Name="AgentPkg_InstanceCount" Value="1" />
+
+    <!--
+      All other parameters
+    -->
+    <!-- Dummy accounts, will not upload to storage account -->
+    <Parameter Name="MAXStoreAccounts" Value="MadariMdsTest#false#DummyAccount#adsdsdsadsdsdj#http://table.core.windows.net#http://queue.core.windows.net#http://blob.core.windows.net;MadariMdsTestAuditStore#false#DummyAccount#sdfdffdsfdsfdsfdsfds#http://table.core.windows.net#http://queue.core.windows.net#http://blob.core.windows.net;MadariMdsTestAzSecurityStore#false#DummyAccount#dskfldasjfdsdfdfsfsd#http://table.core.windows.net#http://queue.core.windows.net#http://blob.core.windows.net" />
+    <Parameter Name="ClusterName" Value="ussouthcentral-prod"/>
+    <Parameter Name="DataCenterName" Value="localhost" />
+    <Parameter Name="MAConfigFileName" Value="VegaMAConfig.Test.xml" />
+  </Parameters>
+</Application>

@@ -5,9 +5,11 @@
 namespace Microsoft.Vega.Performance
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Azure.Networking.Infrastructure.RingMaster;
@@ -21,6 +23,8 @@ namespace Microsoft.Vega.Performance
     [TestClass]
     public class VegaServiceFabricPerf
     {
+        private const int MaxChildrenCount = 256;
+
         /// <summary>
         /// Logging delegate
         /// </summary>
@@ -32,9 +36,15 @@ namespace Microsoft.Vega.Performance
         private static string server;
 
         /// <summary>
-        /// RingMaster client
+        /// Name of the root node. If multiple instances of perf test are running, each one can choose a different
+        /// name to stress the service in parallel.
         /// </summary>
-        private static RingMasterClient client;
+        private static string rootNodeName;
+
+        /// <summary>
+        /// RingMaster clients, i.e. connections to the backend
+        /// </summary>
+        private static RingMasterClient[] clients;
 
         /// <summary>
         /// Minimum data payload size
@@ -67,6 +77,11 @@ namespace Microsoft.Vega.Performance
         private static int batchOpCount = 32;
 
         /// <summary>
+        /// Number of async task to await in a batch
+        /// </summary>
+        private static int asyncTaskCount = 64;
+
+        /// <summary>
         /// Total amount of data being processed
         /// </summary>
         private static long totalDataSize = 0;
@@ -75,6 +90,11 @@ namespace Microsoft.Vega.Performance
         /// Total number of data items being processed
         /// </summary>
         private static long totalDataCount = 0;
+
+        /// <summary>
+        /// Total number of failures in each test
+        /// </summary>
+        private static long totalFailures = 0;
 
         /// <summary>
         /// Test setup
@@ -89,17 +109,49 @@ namespace Microsoft.Vega.Performance
             testCaseSeconds = int.Parse(ConfigurationManager.AppSettings["TestCaseSeconds"]);
             requestTimeout = int.Parse(ConfigurationManager.AppSettings["RequestTimeout"]);
             threadCount = int.Parse(ConfigurationManager.AppSettings["ThreadCount"]);
+            asyncTaskCount = int.Parse(ConfigurationManager.AppSettings["AsyncTaskCount"]);
+
+            if (threadCount < 0)
+            {
+                threadCount = Environment.ProcessorCount;
+            }
 
             log = s => context.WriteLine(s);
 
-            server = TestCommon.GetVegaServiceEndpoint().Result;
+            var serviceInfo = TestCommon.GetVegaServiceInfo().Result;
 
-            client = new RingMasterClient(
+            // Allow the endpoint address being specified from the command line
+            if (context.Properties.Contains("ServerAddress"))
+            {
+                server = context.Properties["ServerAddress"] as string;
+            }
+            else
+            {
+                server = serviceInfo.Item1;
+            }
+
+            if (context.Properties.Contains("RootNodeName"))
+            {
+                rootNodeName = context.Properties["RootNodeName"] as string;
+            }
+            else
+            {
+                rootNodeName = "Perf";
+            }
+
+            clients = Enumerable.Range(0, threadCount).Select(x => new RingMasterClient(
                 connectionString: server,
                 clientCerts: null,
                 serverCerts: null,
                 requestTimeout: requestTimeout,
-                watcher: null);
+                watcher: null))
+                .ToArray();
+
+            // Ensure the sufficient threads in the pool for the async tasks.
+            ThreadPool.GetMinThreads(out int minWorker, out int minIOC);
+            ThreadPool.SetMinThreads(threadCount * 2, minIOC);
+
+            MdmHelper.Initialize(serviceInfo.Item2);
         }
 
         /// <summary>
@@ -108,7 +160,53 @@ namespace Microsoft.Vega.Performance
         [ClassCleanup]
         public static void TestClassCleanup()
         {
-            client.Dispose();
+            foreach (var client in clients)
+            {
+                client.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Pings the service to measure the overhead of basic request processing path without any read/write operation
+        /// </summary>
+        [TestMethod]
+        public void TestRingMasterPingPong()
+        {
+            ResetCounts();
+            var rate = TestFlowAsync(
+                "Ping-Pong Test",
+                OperationType.PingPong,
+                async (client, cancellationToken, threadId) =>
+                {
+                    var clock = Stopwatch.StartNew();
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var startTime = clock.Elapsed;
+                            var tasks = Enumerable.Range(0, asyncTaskCount)
+                                .Select(task => client.Exists(string.Empty, null, true)
+                                        .ContinueWith(t =>
+                                        {
+                                            var duration = clock.Elapsed - startTime;
+                                            MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, OperationType.PingPong);
+                                        }))
+                                .ToArray();
+
+                            await Task.WhenAll(tasks);
+
+                            Interlocked.Add(ref totalDataCount, tasks.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            Interlocked.Increment(ref totalFailures);
+                            log($"Failed to call Batch: {ex.Message}");
+                        }
+                    }
+                },
+                testCaseSeconds)
+                .GetAwaiter().GetResult();
+            log($"Ping-Pong test rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -117,13 +215,14 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterGetFullSubtree()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
+            ResetCounts();
+            var rate = TestFlowAsync(
                 "Get full sub-tree perf test",
+                OperationType.GetFullSubtree,
                 GetFullSubtreeThread,
                 testCaseSeconds * 8)
                 .GetAwaiter().GetResult();
-            log($"Node create rate: {rate} /sec");
+            log($"Node create rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -132,13 +231,14 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterCreate()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
+            ResetCounts();
+            var rate = TestFlowAsync(
                 "Create data node perf test",
+                OperationType.Create,
                 CreateNodeThread,
                 testCaseSeconds)
                 .GetAwaiter().GetResult();
-            log($"Node create rate: {rate} /sec");
+            log($"Node create rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -147,13 +247,14 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterGet()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
+            ResetCounts();
+            var rate = TestFlowAsync(
                 "Get data node perf test",
+                OperationType.Get,
                 GetNodeThread,
                 testCaseSeconds * 2)
                 .GetAwaiter().GetResult();
-            log($"Node get rate: {rate} /sec");
+            log($"Node get rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -162,13 +263,14 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterSet()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
+            ResetCounts();
+            var rate = TestFlowAsync(
                 "Set node perf test",
+                OperationType.Set,
                 SetNodeThread,
                 testCaseSeconds)
                 .GetAwaiter().GetResult();
-            log($"Node set rate: {rate} /sec");
+            log($"Node set rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -177,15 +279,15 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterDelete()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
+            ResetCounts();
+            var rate = TestFlowAsync(
                 "Delete node perf test",
+                OperationType.Delete,
                 async (client, cancellationToken, threadId) =>
                 {
-                    var pid = Process.GetCurrentProcess().Id;
                     var rnd = new Random();
 
-                    var path = $"/Proc{pid}/Thread{threadId}";
+                    var path = $"/{rootNodeName}/Thread{threadId}";
 
                     int deleteCount = 0;
 
@@ -200,33 +302,76 @@ namespace Microsoft.Vega.Performance
                         },
                     };
 
-                    var children = await client.GetChildren(path, watcher);
+                    var tasks = new ConcurrentDictionary<Task, bool>();
+                    int taskCount = 0;
+                    var childrenCount = 0;
+                    var startFrom = string.Empty;
+                    var clock = Stopwatch.StartNew();
 
-                    foreach (var child in children)
+                    while (!cancellationToken.IsCancellationRequested)
                     {
-                        try
+                        var children = await client.GetChildren(path, watcher, $">:{MaxChildrenCount}:{startFrom}");
+
+                        foreach (var child in children)
                         {
-                            var data = await client.Delete(string.Concat(path, "/", child), -1, DeleteMode.FastDelete);
-                            Interlocked.Increment(ref totalDataCount);
+                            SpinWait.SpinUntil(() => taskCount < asyncTaskCount || cancellationToken.IsCancellationRequested);
+                            var startTime = clock.Elapsed;
+                            var task = client.Delete(string.Concat(path, "/", child), -1, DeleteMode.FastDelete)
+                                   .ContinueWith(
+                                       t =>
+                                       {
+                                           Interlocked.Decrement(ref taskCount);
+                                           tasks.TryRemove(t, out var _);
+
+                                           if (t.Exception != null)
+                                           {
+                                               Interlocked.Increment(ref totalFailures);
+                                               log($"Failed to get {path}: {t.Exception.Message}");
+                                           }
+                                           else
+                                           {
+                                               Interlocked.Increment(ref totalDataCount);
+
+                                               var duration = clock.Elapsed - startTime;
+                                               MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, OperationType.Delete);
+                                           }
+                                       });
+
+                            Interlocked.Increment(ref taskCount);
+                            tasks.TryAdd(task, true);
+
+                            startFrom = child;
                         }
-                        catch (Exception ex)
+
+                        childrenCount += children.Count;
+
+                        if (children.Count < MaxChildrenCount)
                         {
-                            log($"Failed delete {child} under {path}: {ex}");
+                            break;
                         }
+                    }
+
+                    SpinWait.SpinUntil(() => taskCount == 0);
+
+                    var timeoutClock = Stopwatch.StartNew();
+                    while (deleteCount < childrenCount && timeoutClock.ElapsedMilliseconds < 5000)
+                    {
+                        await Task.Delay(1000);
+                        log($"Thread {threadId} waiting for notification. Children count {childrenCount}, Notification count: {deleteCount}");
                     }
 
                     watcher.OnProcess = null;
 
-                    int delta = children.Count - deleteCount;
+                    int delta = childrenCount - deleteCount;
                     if (delta != 0)
                     {
-                        log($"Thread {threadId} Children count {children.Count} Notification count: {deleteCount}");
+                        log($"Thread {threadId} Children count {childrenCount} Notification count: {deleteCount}");
                     }
                 },
                 testCaseSeconds)
                 .GetAwaiter().GetResult();
 
-            log($"Node delete rate: {rate} /sec");
+            log($"Node delete rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -235,45 +380,20 @@ namespace Microsoft.Vega.Performance
         [TestMethod]
         public void TestRingMasterBatchCreate()
         {
-            totalDataCount = totalDataSize = 0;
-            var rate = this.TestFlowAsync(
-                "Batch(Create) node perf test",
-                async (client, cancellationToken, threadId) =>
-                {
-                    var pid = Process.GetCurrentProcess().Id;
-                    var rnd = new Random();
-                    int seq = 0;
-                    while (!cancellationToken.IsCancellationRequested)
-                    {
-                        var ops = new List<Op>(batchOpCount);
-                        var totalSize = 0;
+            ResetCounts();
+            var rate = TestBatchOrMultiCreate(true, OperationType.BatchCreate).GetAwaiter().GetResult();
+            log($"Node batch create rate: {rate:G4} /sec");
+        }
 
-                        for (int i = 0; i < batchOpCount; i++)
-                        {
-                            var path = $"/Proc{pid}/Thread{threadId}/{seq++}";
-                            var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
-                            totalSize += data.Length;
-
-                            ops.Add(Op.Create(path, data, null, CreateMode.PersistentAllowPathCreation));
-                        }
-
-                        try
-                        {
-                            await client.Batch(ops).ConfigureAwait(false);
-
-                            Interlocked.Add(ref totalDataSize, totalSize);
-                            Interlocked.Add(ref totalDataCount, ops.Count);
-                        }
-                        catch (Exception ex)
-                        {
-                            log($"Failed to call Batch: {ex}");
-                        }
-                    }
-                },
-                testCaseSeconds)
-                .GetAwaiter().GetResult();
-
-            log($"Node batch create rate: {rate} /sec");
+        /// <summary>
+        /// Test the multi creation
+        /// </summary>
+        [TestMethod]
+        public void TestRingMasterMultiCreate()
+        {
+            ResetCounts();
+            var rate = TestBatchOrMultiCreate(false, OperationType.MultiCreate).GetAwaiter().GetResult();
+            log($"Node multi create rate: {rate:G4} /sec");
         }
 
         /// <summary>
@@ -299,7 +419,69 @@ namespace Microsoft.Vega.Performance
         }
 
         /// <summary>
-        /// Work load for testing GetNode method
+        /// Tests create scenario using either batch or multi
+        /// </summary>
+        /// <param name="batch">true if using batch, false if using multi</param>
+        /// <param name="operationType">Type of the operation.</param>
+        /// <returns>
+        /// Request per second
+        /// </returns>
+        private static async Task<double> TestBatchOrMultiCreate(bool batch, OperationType operationType)
+        {
+            var name = batch ? "Batch" : "Multi";
+            return await TestFlowAsync(
+                $"{name}(Create) node perf test",
+                operationType,
+                async (client, cancellationToken, threadId) =>
+                {
+                    var rnd = new Random();
+                    int seq = 0;
+                    var clock = Stopwatch.StartNew();
+
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        var ops = new List<Op>(batchOpCount);
+                        var totalSize = 0;
+
+                        for (int i = 0; i < batchOpCount; i++)
+                        {
+                            var path = $"/{rootNodeName}/Thread{threadId}/{seq++}";
+                            var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+                            totalSize += data.Length;
+
+                            ops.Add(Op.Create(path, data, null, CreateMode.PersistentAllowPathCreation));
+                        }
+
+                        try
+                        {
+                            var startTime = clock.Elapsed;
+                            if (batch)
+                            {
+                                await client.Batch(ops).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await client.Multi(ops).ConfigureAwait(false);
+                            }
+
+                            var duration = clock.Elapsed - startTime;
+                            MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, operationType);
+
+                            Interlocked.Add(ref totalDataSize, totalSize);
+                            Interlocked.Add(ref totalDataCount, ops.Count);
+                        }
+                        catch (Exception ex)
+                        {
+                            Interlocked.Increment(ref totalFailures);
+                            log($"Failed to call {name}: {ex.Message}");
+                        }
+                    }
+                },
+                testCaseSeconds);
+        }
+
+        /// <summary>
+        /// Work load for testing SetNode method
         /// </summary>
         /// <param name="client">RingMasterClient object</param>
         /// <param name="token">Cancellation token</param>
@@ -307,23 +489,63 @@ namespace Microsoft.Vega.Performance
         /// <returns>Async task</returns>
         private static async Task SetNodeThread(RingMasterClient client, CancellationToken token, int threadId)
         {
-            var pid = Process.GetCurrentProcess().Id;
+            var tasks = new ConcurrentDictionary<Task, bool>();
+            int taskCount = 0;
             var rnd = new Random();
+            var clock = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested)
             {
-                var path = $"/Proc{pid}/Thread{threadId}";
-                var children = await client.GetChildren(path, false).ConfigureAwait(false);
+                var basePath = $"/{rootNodeName}/Thread{threadId}";
+                var startFrom = string.Empty;
 
-                foreach (var child in children)
+                while (!token.IsCancellationRequested)
                 {
-                    var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
-                    await client.SetData(string.Concat(path, "/", child), data, -1).ConfigureAwait(false);
+                    var children = await client.GetChildren(basePath, false, $">:{MaxChildrenCount}:{startFrom}").ConfigureAwait(false);
 
-                    Interlocked.Add(ref totalDataSize, data.Length);
-                    Interlocked.Increment(ref totalDataCount);
+                    foreach (var child in children)
+                    {
+                        var path = string.Concat(basePath, "/", child);
+                        var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+
+                        SpinWait.SpinUntil(() => taskCount < asyncTaskCount || token.IsCancellationRequested);
+                        var startTime = clock.Elapsed;
+                        var task = client.SetData(path, data, -1)
+                             .ContinueWith(
+                               t =>
+                               {
+                                   Interlocked.Decrement(ref taskCount);
+                                   tasks.TryRemove(t, out var _);
+
+                                   if (t.Exception != null)
+                                   {
+                                       Interlocked.Increment(ref totalFailures);
+                                       log($"Failed to set {path}: {t.Exception.Message}");
+                                   }
+                                   else
+                                   {
+                                       Interlocked.Add(ref totalDataSize, data.Length);
+                                       Interlocked.Increment(ref totalDataCount);
+
+                                       var duration = clock.Elapsed - startTime;
+                                       MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, OperationType.Set);
+                                   }
+                               });
+
+                        Interlocked.Increment(ref taskCount);
+                        tasks.TryAdd(task, true);
+
+                        startFrom = child;
+                    }
+
+                    if (children.Count < MaxChildrenCount)
+                    {
+                        break;
+                    }
                 }
             }
+
+            SpinWait.SpinUntil(() => taskCount == 0);
         }
 
         /// <summary>
@@ -335,23 +557,43 @@ namespace Microsoft.Vega.Performance
         /// <returns>Async task</returns>
         private static async Task CreateNodeThread(RingMasterClient client, CancellationToken token, int threadId)
         {
-            var pid = Process.GetCurrentProcess().Id;
             var rnd = new Random();
             int seq = 0;
+            var clock = Stopwatch.StartNew();
+
             while (!token.IsCancellationRequested)
             {
-                var path = $"/Proc{pid}/Thread{threadId}/{seq++}";
-                var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+                var tasks = new List<Task>();
+                var dataSize = 0;
+                var dataCount = 0;
+
+                for (int i = 0; i < asyncTaskCount; i++)
+                {
+                    var path = $"/{rootNodeName}/Thread{threadId}/{seq++}";
+                    var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+
+                    var startTime = clock.Elapsed;
+                    tasks.Add(client.Create(path, data, null, CreateMode.PersistentAllowPathCreation)
+                        .ContinueWith(t =>
+                        {
+                            var duration = clock.Elapsed - startTime;
+                            MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, OperationType.Create);
+                        }));
+
+                    dataSize += data.Length;
+                    dataCount++;
+                }
+
                 try
                 {
-                    await client.Create(path, data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
-
-                    Interlocked.Add(ref totalDataSize, data.Length);
-                    Interlocked.Increment(ref totalDataCount);
+                    await Task.WhenAll(tasks);
+                    Interlocked.Add(ref totalDataSize, dataSize);
+                    Interlocked.Add(ref totalDataCount, dataCount);
                 }
                 catch (Exception ex)
                 {
-                    log($"Failed to set {path}: {ex}");
+                    Interlocked.Increment(ref totalFailures);
+                    log($"Failed to create node in {threadId}: {ex.Message}");
                 }
             }
         }
@@ -365,37 +607,48 @@ namespace Microsoft.Vega.Performance
         /// <returns>Async task</returns>
         private static async Task GetFullSubtreeThread(RingMasterClient client, CancellationToken token, int threadId)
         {
-            var pid = Process.GetCurrentProcess().Id;
             var rnd = new Random();
             int seq = 0;
             var clock = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested)
             {
-                var path = $"/Proc{pid}/Thread{threadId}-{seq++}";
-                var data = TestCommon.MakeSequentialData(rnd.Next(64, 256));
+                var path = $"/{rootNodeName}/Thread{threadId}-{seq++}";
+                var data = TestCommon.MakeSequentialData(rnd.Next(minDataSize, maxDataSize));
 
                 try
                 {
-                    await client.Create(path, data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                    await client.Create(path, data, null, CreateMode.PersistentAllowPathCreation, false).ConfigureAwait(false);
 
                     Interlocked.Add(ref totalDataSize, data.Length);
                     Interlocked.Increment(ref totalDataCount);
-
-                    if (seq % 16 == 0 && threadId < 8)
-                    {
-                        var root = $"/Proc{pid}";
-                        var startTime = clock.Elapsed;
-                        var rootNode = await client.GetFullSubtree(root, true).ConfigureAwait(false);
-                        var count = rootNode.Children.Count;
-                        var duration = (clock.Elapsed - startTime).TotalMilliseconds;
-
-                        log($"Thread {threadId}: seq={seq} duration={duration}ms count={count} rate={count * 1000 / duration}");
-                    }
                 }
                 catch (Exception ex)
                 {
-                    log($"Failed to set {path}: {ex}");
+                    Interlocked.Increment(ref totalFailures);
+                    log($"Failed to create {path}: {ex.Message}");
+                }
+
+                if (seq % 16 == 0 && threadId < 8)
+                {
+                    try
+                    {
+                        path = $"/{rootNodeName}";
+
+                        var startTime = clock.Elapsed;
+                        var rootNode = await client.GetFullSubtree(path, true).ConfigureAwait(false);
+                        var count = rootNode.Children.Count;
+                        var duration = (clock.Elapsed - startTime).TotalMilliseconds;
+                        MdmHelper.LogOperationDuration((long)duration, OperationType.GetFullSubtree);
+
+                        var rate = count * 1000 / duration;
+                        log($"Thread {threadId}: seq={seq} duration={duration:F1}ms count={count} rate={rate:G4}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref totalFailures);
+                        log($"Failed to GetFullSubtree {path}: {ex.Message}");
+                    }
                 }
             }
         }
@@ -409,32 +662,75 @@ namespace Microsoft.Vega.Performance
         /// <returns>Async task</returns>
         private static async Task GetNodeThread(RingMasterClient client, CancellationToken token, int threadId)
         {
-            var pid = Process.GetCurrentProcess().Id;
+            var tasks = new ConcurrentDictionary<Task, bool>();
+            int taskCount = 0;
+            var clock = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested)
             {
-                var path = $"/Proc{pid}/Thread{threadId}";
-                var children = await client.GetChildren(path, false).ConfigureAwait(false);
+                var basePath = $"/{rootNodeName}/Thread{threadId}";
+                var startFrom = string.Empty;
 
-                foreach (var child in children)
+                while (!token.IsCancellationRequested)
                 {
-                    var data = await client.GetData(string.Concat(path, "/", child), false).ConfigureAwait(false);
+                    var children = await client.GetChildren(basePath, false, $">:{MaxChildrenCount}:{startFrom}");
 
-                    Interlocked.Add(ref totalDataSize, data.Length);
-                    Interlocked.Increment(ref totalDataCount);
+                    foreach (var child in children)
+                    {
+                        var path = string.Concat(basePath, "/", child);
+
+                        SpinWait.SpinUntil(() => taskCount < asyncTaskCount || token.IsCancellationRequested);
+                        var startTime = clock.Elapsed;
+                        var task = client.GetData(path, false)
+                            .ContinueWith(
+                                t =>
+                                {
+                                    Interlocked.Decrement(ref taskCount);
+                                    tasks.TryRemove(t, out var _);
+
+                                    if (t.Exception != null)
+                                    {
+                                        Interlocked.Increment(ref totalFailures);
+                                        log($"Failed to get {path}: {t.Exception.Message}");
+                                    }
+                                    else
+                                    {
+                                        var data = t.Result;
+                                        Interlocked.Add(ref totalDataSize, data.Length);
+                                        Interlocked.Increment(ref totalDataCount);
+
+                                        var duration = clock.Elapsed - startTime;
+                                        MdmHelper.LogOperationDuration((long)duration.TotalMilliseconds, OperationType.Get);
+                                    }
+                                });
+
+                        Interlocked.Increment(ref taskCount);
+                        tasks.TryAdd(task, true);
+
+                        startFrom = child;
+                    }
+
+                    if (children.Count < MaxChildrenCount)
+                    {
+                        break;
+                    }
                 }
             }
+
+            SpinWait.SpinUntil(() => taskCount == 0);
         }
 
         /// <summary>
         /// Main test workflow
         /// </summary>
         /// <param name="testTitle">Title of the test case</param>
+        /// <param name="operationType">the operation type</param>
         /// <param name="workload">Workload in each thread</param>
         /// <param name="durationInSeconds">How long the test should run</param>
         /// <returns>Number of operations per second</returns>
-        private async Task<double> TestFlowAsync(
+        private static async Task<double> TestFlowAsync(
             string testTitle,
+            OperationType operationType,
             Func<RingMasterClient, CancellationToken, int, Task> workload,
             int durationInSeconds)
         {
@@ -444,7 +740,7 @@ namespace Microsoft.Vega.Performance
 
             var threads = StartMultipleThreads(
                 threadCount,
-                (object n) => workload(client, cancellation.Token, (int)n).GetAwaiter().GetResult());
+                (object n) => workload(clients[(int)n], cancellation.Token, (int)n).GetAwaiter().GetResult());
 
             var lastCount = Interlocked.Read(ref totalDataCount);
             var lastSize = Interlocked.Read(ref totalDataSize);
@@ -461,8 +757,9 @@ namespace Microsoft.Vega.Performance
                 long delta = size - lastSize;
 
                 long count = Interlocked.Read(ref totalDataCount);
+                long deltaCount = count - lastCount;
 
-                log($"{DateTime.Now} - {count - lastCount} - {delta}");
+                log($"{DateTime.Now} - {deltaCount} - {delta}");
 
                 lastSize = size;
                 lastCount = count;
@@ -473,7 +770,8 @@ namespace Microsoft.Vega.Performance
             var processedSize = Interlocked.Read(ref totalDataSize) - initialSize;
             var rate = processedCount / stopwatch.Elapsed.TotalSeconds;
 
-            log($"Stopping test {testTitle}. Data processed {processedSize} bytes in {processedCount}");
+            log($"Stopping test {testTitle}. Data processed {processedSize} bytes in {processedCount} ops. Failures = {totalFailures}");
+            MdmHelper.LogBytesProcessed(processedSize, operationType);
             cancellation.Cancel();
 
             foreach (var thread in threads)
@@ -484,6 +782,11 @@ namespace Microsoft.Vega.Performance
             log($"Stopped {testTitle}.");
 
             return rate;
+        }
+
+        private static void ResetCounts()
+        {
+            totalDataCount = totalDataSize = totalFailures = 0;
         }
     }
 }

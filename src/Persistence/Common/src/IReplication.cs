@@ -1,11 +1,12 @@
-﻿// <copyright file="IReplication.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="IReplication.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 {
     using System;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
 
     /// <summary>
     /// Interface to an object that is used to track a pending replication.

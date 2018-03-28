@@ -944,19 +944,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             public TestWatcher(int id)
             {
                 this.Id = (ulong)id;
-                this.OneUse = true;
+                this.Kind = WatcherKind.OneUse;
             }
 
             public ulong Id { get; private set; }
 
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            public WatcherKind Kind { get; private set; }
 
             public void Process(WatchedEvent evt)
             {
             }
         }
 
-        private sealed class TestRequestHandler : IRingMasterRequestHandler
+        private sealed class TestRequestHandler : IRingMasterRequestHandlerOverlapped
         {
             public int Timeout { get; set; }
 
@@ -974,6 +976,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             public Task<RequestResponse> Request(IRingMasterRequest request)
             {
                 return Task.FromResult(this.Implementation(request));
+            }
+
+            public void RequestOverlapped(IRingMasterRequest request, Action<RequestResponse, Exception> onCompletion)
+            {
+                onCompletion?.Invoke(this.Implementation(request), null);
             }
         }
     }

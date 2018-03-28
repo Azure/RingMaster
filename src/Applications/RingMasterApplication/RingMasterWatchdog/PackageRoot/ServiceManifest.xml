@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
-<ServiceManifest Name="RingMasterWatchdog" Version="1.0.0.96" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ServiceManifest Name="RingMasterWatchdog" Version="#BUILDNUMBER#" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ServiceTypes>
     <StatelessServiceType ServiceTypeName="RingMasterWatchdog" />
   </ServiceTypes>
-  <CodePackage Name="Code" Version="1.0.0.96">
+  <CodePackage Name="Code" Version="#BUILDNUMBER#">
     <EntryPoint>
       <ExeHost>
         <Program>Microsoft.RingMaster.RingMasterWatchdog.exe</Program>
       </ExeHost>
     </EntryPoint>
   </CodePackage>
-  <ConfigPackage Name="Config" Version="1.0.0.96" />
+  <ConfigPackage Name="Config" Version="#BUILDNUMBER#" />
 </ServiceManifest>

@@ -1,4 +1,4 @@
-﻿// <copyright file="ICloneableStream.cs" company="Microsoft">
+﻿// <copyright file="ICloneableStream.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 

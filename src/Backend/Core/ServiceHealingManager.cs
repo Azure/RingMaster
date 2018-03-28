@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="ServiceHealingManager.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ServiceHealingManager.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -12,31 +8,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Threading;
     using System.Text;
+    using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
-
-    public interface IServiceHealingManagerCallbacks
-    {
-        /// <summary>
-        /// return the runtime members
-        /// </summary>
-        /// <returns>the list of members as per the runtime</returns>
-        ClusterMember[] GetRuntimeMemberset();
-
-        /// <summary>
-        /// return the cluster members
-        /// </summary>
-        /// <returns>the list of members as agreed by the cluster members themselves (e.g. the codex)</returns>
-        ClusterMember[] GetClusterMemberset();
-
-        /// <summary>
-        /// establishes a candidate for the new member set.
-        /// </summary>
-        /// <param name="clusterMemberset">cluste memberset</param>
-        /// <param name="proposedMemberset">proposed memberset</param>
-        void EnableNewRuntimeMemberset(List<ClusterMember> clusterMemberset, List<ClusterMember> proposedMemberset);
-    }
 
     /// <summary>
     /// Class ServiceHealingManager. Makes decissions about the replicaset during service healing
@@ -44,96 +18,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     public class ServiceHealingManager
     {
         private readonly IServiceHealingManagerCallbacks callbacks;
+        private Timer timer = null;
+        private int periodInMillis = 15000;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceHealingManager"/> class.
+        /// </summary>
+        /// <param name="callbacks">Callback</param>
         public ServiceHealingManager(IServiceHealingManagerCallbacks callbacks)
         {
             this.callbacks = callbacks;
         }
 
-        private Timer timer = null;
-
-        public void Stop()
+        /// <summary>
+        /// Action can be performed on a member set
+        /// </summary>
+        public enum MembersetAction
         {
-            Timer t = timer;
-            if (t == null)
-            {
-                return;
-            }
-            t.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-
-        public void Start()
-        {
-            if (timer != null)
-            {
-                return;
-            }
-            timer = new Timer(OnTimer, null, periodInMillis, Timeout.Infinite);
-        }
-
-        private int periodInMillis = 15000;
-
-        private void OnTimer(object ign)
-        {
-            Timer t = timer;
-
-            if (t == null)
-            {
-                return;
-            }
-
-            try
-            {
-                List<ClusterMember> runtimeMembers;
-                List<ClusterMember> codexMembers;
-
-                runtimeMembers = Normalize(callbacks.GetRuntimeMemberset());
-                if (runtimeMembers == null)
-                {
-                    return;
-                }
-                codexMembers = Normalize(callbacks.GetClusterMemberset());
-                if (codexMembers == null)
-                {
-                    return;
-                }
-
-                MembersetAction action = GetAction(codexMembers, runtimeMembers);
-                bool postNewRuntime = false;
-                switch (action)
-                {
-                    case MembersetAction.None:
-                        break;
-                    case MembersetAction.DoableServiceHealing:
-                        postNewRuntime = true;
-                        break;
-                    case MembersetAction.DoableScaleOut:
-                        postNewRuntime = true;
-                        break;
-                    case MembersetAction.DoableScaleDown:
-                        Trace.TraceWarning("We should not have DoableScaleDown enabled");
-                        break;
-                    case MembersetAction.UndoableChange:
-                        Trace.TraceWarning("Undoable Memberset change required: {0} - {1}", ToString(codexMembers), ToString(runtimeMembers));
-                        break;
-                    default:
-                        Trace.TraceWarning("Unknown MembersetAction {0}", action);
-                        break;
-                }
-
-                if (postNewRuntime)
-                {
-                    callbacks.EnableNewRuntimeMemberset(codexMembers, runtimeMembers);
-                }
-                else
-                {
-                    callbacks.EnableNewRuntimeMemberset(null, null);
-                }
-            }
-            finally
-            {
-                t.Change(periodInMillis, Timeout.Infinite);
-            }
+#pragma warning disable SA1602, CS1591 // add doc later
+            None = 0,
+            DoableServiceHealing,
+            DoableScaleDown,
+            DoableScaleOut,
+            UndoableChange,
+#pragma warning restore
         }
 
         /// <summary>
@@ -167,6 +75,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     continue;
                 }
+
                 mapping.Add(m.MemberId, m);
             }
 
@@ -182,10 +91,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             return mapping;
         }
 
+        /// <summary>
+        /// Convers a list of cluster members to a string
+        /// </summary>
+        /// <param name="members">List of members to convert</param>
+        /// <returns>string after the conversion</returns>
         public static string ToString(IEnumerable<ClusterMember> members)
         {
             StringBuilder sb = new StringBuilder();
-            string sep = String.Empty;
+            string sep = string.Empty;
             sb.Append("[");
 
             // Sort the list of members, so we all agree on a name
@@ -197,10 +111,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 sb.AppendFormat("{0}{1}:{2}", sep, m.MemberId, m.Address);
                 sep = ",";
             }
+
             sb.Append("]");
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Gets member set action
+        /// </summary>
+        /// <param name="codexMembers">List of codex members</param>
+        /// <param name="runtimeMembers">List of runtime members</param>
+        /// <returns>Member set action</returns>
         public static MembersetAction GetAction(List<ClusterMember> codexMembers, List<ClusterMember> runtimeMembers)
         {
             if (codexMembers == null)
@@ -220,8 +141,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return GetActionForResize(codexMembers, runtimeMembers);
             }
 
-            //Compare difference. if minority changed, return membersetchanged, otherwise undoable
-
+            // Compare difference. if minority changed, return membersetchanged, otherwise undoable
             int maxDif = ((int)(numMembers / 2)) + 1;
             int numDif = 0;
 
@@ -238,7 +158,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     numDif++;
 
-                    //if we have too many changes, not supported.
+                    // if we have too many changes, not supported.
                     if (numDif >= maxDif)
                     {
                         return MembersetAction.UndoableChange;
@@ -247,7 +167,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
 
             // no dif, nothing to do
-            if (numDif ==0)
+            if (numDif == 0)
             {
                 return MembersetAction.None;
             }
@@ -256,50 +176,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             return MembersetAction.DoableServiceHealing;
         }
 
-        private class MemberComparer : IEqualityComparer<ClusterMember>
-        {
-            public static MemberComparer Instance = new MemberComparer();
-            public bool Equals(ClusterMember x, ClusterMember y)
-            {
-                if (ReferenceEquals(x, null) || ReferenceEquals(y, null))
-                {
-                    return ReferenceEquals(x, y);
-                }
-
-                if (x.MemberId != y.MemberId)
-                {
-                    // a member Id is different. not same
-                    return false;
-                }
-
-                // if the address changed, take note
-                if (!x.Address.Equals(y.Address))
-                {
-                    return false;
-                }
-
-                return true;
-            }
-
-            public int GetHashCode(ClusterMember obj)
-            {
-                if (obj == null)
-                {
-                    return 0;
-                }
-                int hash = 0;
-                if (obj.MemberId != null)
-                {
-                    hash = obj.MemberId.GetHashCode();
-                }
-                if (obj.Address != null)
-                {
-                    hash ^= obj.Address.GetHashCode();
-                }
-                return hash;
-            }
-        }
-
+        /// <summary>
+        /// Gets the member set action for resize
+        /// </summary>
+        /// <param name="codexMembers">List of codex members</param>
+        /// <param name="runtimeMembers">List of runtime members</param>
+        /// <returns>Action to resize</returns>
         public static MembersetAction GetActionForResize(List<ClusterMember> codexMembers, List<ClusterMember> runtimeMembers)
         {
             if (codexMembers == null)
@@ -320,7 +202,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 throw new InvalidOperationException("GetActionForResize can only be invoked for changes in memberset size");
             }
 
-            int newMajority = (((int)(numMembersNew / 2)) + 1);
+            int newMajority = ((int)(numMembersNew / 2)) + 1;
 
             if (numMembersNew > numMembersOld)
             {
@@ -366,7 +248,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             // newOnes now contains the elements added in the new set
             // removedOnes contains the elements removed from the old set
-
             if (removedOnes.Count > 0)
             {
                 // we don't allow removal + addition at once
@@ -383,13 +264,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             return MembersetAction.DoableScaleOut;
         }
 
-        public enum MembersetAction
+        /// <summary>
+        /// Stops this instance
+        /// </summary>
+        public void Stop()
         {
-            None = 0,
-            DoableServiceHealing,
-            DoableScaleDown,
-            DoableScaleOut,
-            UndoableChange
+            Timer t = this.timer;
+            if (t == null)
+            {
+                return;
+            }
+
+            t.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        /// <summary>
+        /// Starts this instance
+        /// </summary>
+        public void Start()
+        {
+            if (this.timer != null)
+            {
+                return;
+            }
+
+            this.timer = new Timer(this.OnTimer, null, this.periodInMillis, Timeout.Infinite);
         }
 
         private static List<ClusterMember> Normalize(ClusterMember[] array)
@@ -402,6 +301,118 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             List<ClusterMember> res = new List<ClusterMember>(array);
             res.Sort((m1, m2) => { return m1.MemberId.CompareTo(m2.MemberId); });
             return res;
+        }
+
+        private void OnTimer(object ign)
+        {
+            Timer t = this.timer;
+
+            if (t == null)
+            {
+                return;
+            }
+
+            try
+            {
+                List<ClusterMember> runtimeMembers;
+                List<ClusterMember> codexMembers;
+
+                runtimeMembers = Normalize(this.callbacks.GetRuntimeMemberset());
+                if (runtimeMembers == null)
+                {
+                    return;
+                }
+
+                codexMembers = Normalize(this.callbacks.GetClusterMemberset());
+                if (codexMembers == null)
+                {
+                    return;
+                }
+
+                MembersetAction action = GetAction(codexMembers, runtimeMembers);
+                bool postNewRuntime = false;
+                switch (action)
+                {
+                    case MembersetAction.None:
+                        break;
+                    case MembersetAction.DoableServiceHealing:
+                        postNewRuntime = true;
+                        break;
+                    case MembersetAction.DoableScaleOut:
+                        postNewRuntime = true;
+                        break;
+                    case MembersetAction.DoableScaleDown:
+                        Trace.TraceWarning("We should not have DoableScaleDown enabled");
+                        break;
+                    case MembersetAction.UndoableChange:
+                        Trace.TraceWarning("Undoable Memberset change required: {0} - {1}", ToString(codexMembers), ToString(runtimeMembers));
+                        break;
+                    default:
+                        Trace.TraceWarning("Unknown MembersetAction {0}", action);
+                        break;
+                }
+
+                if (postNewRuntime)
+                {
+                    this.callbacks.EnableNewRuntimeMemberset(codexMembers, runtimeMembers);
+                }
+                else
+                {
+                    this.callbacks.EnableNewRuntimeMemberset(null, null);
+                }
+            }
+            finally
+            {
+                t.Change(this.periodInMillis, Timeout.Infinite);
+            }
+        }
+
+        private class MemberComparer : IEqualityComparer<ClusterMember>
+        {
+            public static MemberComparer Instance { get; } = new MemberComparer();
+
+            public bool Equals(ClusterMember x, ClusterMember y)
+            {
+                if (ReferenceEquals(x, null) || ReferenceEquals(y, null))
+                {
+                    return ReferenceEquals(x, y);
+                }
+
+                if (x.MemberId != y.MemberId)
+                {
+                    // a member Id is different. not same
+                    return false;
+                }
+
+                // if the address changed, take note
+                if (!x.Address.Equals(y.Address))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            public int GetHashCode(ClusterMember obj)
+            {
+                if (obj == null)
+                {
+                    return 0;
+                }
+
+                int hash = 0;
+                if (obj.MemberId != null)
+                {
+                    hash = obj.MemberId.GetHashCode();
+                }
+
+                if (obj.Address != null)
+                {
+                    hash ^= obj.Address.GetHashCode();
+                }
+
+                return hash;
+            }
         }
     }
 }

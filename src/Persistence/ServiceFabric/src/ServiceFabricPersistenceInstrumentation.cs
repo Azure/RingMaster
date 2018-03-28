@@ -1,5 +1,5 @@
-﻿// <copyright file="ServiceFabricPersistenceInstrumentation.cs" company="Microsoft">
-//   Copyright ©  2017
+﻿// <copyright file="ServiceFabricPersistenceInstrumentation.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric
@@ -51,6 +51,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         private readonly IMetric0D duplicatesFound;
         private readonly IMetric0D orphansFound;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceFabricPersistenceInstrumentation"/> class.
+        /// </summary>
+        /// <param name="metricsFactory">Metrics factory</param>
         public ServiceFabricPersistenceInstrumentation(IMetricsFactory metricsFactory)
         {
             if (metricsFactory == null)
@@ -96,47 +100,56 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             this.orphansFound = metricsFactory.Create0D(nameof(this.orphansFound));
         }
 
+        /// <inheritdoc />
         public void AddRequested(TimeSpan elapsed)
         {
             this.addRequested.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void RemoveRequested(TimeSpan elapsed)
         {
             this.removeRequested.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void UpdateRequested(TimeSpan elapsed)
         {
             this.updateRequested.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void LoadTreeCompleted(TimeSpan elapsed)
         {
             this.loadTreeCompleted.LogValue(1);
             this.loadTreeTime.LogValue((long)elapsed.TotalMilliseconds);
         }
 
+        /// <inheritdoc />
         public void ProcessLoadCompleted()
         {
             this.processLoadCompleted.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessLoadFailed()
         {
             this.processLoadFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessAddCompleted()
         {
             this.processAddCompleted.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessAddFailed()
         {
             this.processAddFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessDictionaryRebuildCompleted(long enumeratedCount, TimeSpan elapsed)
         {
             this.dictionaryEntriesEnumerated.LogValue(enumeratedCount);
@@ -144,37 +157,44 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             this.processDictionaryRebuildTime.LogValue((long)elapsed.TotalMilliseconds);
         }
 
+        /// <inheritdoc />
         public void ProcessDictionaryRebuildFailed(TimeSpan elapsed)
         {
             this.processDictionaryRebuildFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessRemoveCompleted()
         {
             this.processRemoveCompleted.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessRemoveFailed()
         {
             this.processRemoveFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessUpdateCompleted()
         {
             this.processUpdateCompleted.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ProcessUpdateFailed()
         {
             this.processUpdateFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ReportStatistics(ulong totalNodes, ulong totalDataSize)
         {
             this.totalNodes.LogValue((long)totalNodes);
             this.totalDataSize.LogValue((long)totalDataSize);
         }
 
+        /// <inheritdoc />
         public void TransactionCommitted(long transactionId, long commitSequenceNumber)
         {
             this.transactionCommitted.LogValue(1);
@@ -182,22 +202,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             this.lastCommitSequenceNumber.LogValue(commitSequenceNumber);
         }
 
+        /// <inheritdoc />
         public void ChangeListCommitted(TimeSpan elapsed)
         {
             this.changeListCommitted.LogValue(1);
             this.changeListCommitTime.LogValue((long)elapsed.TotalMilliseconds);
         }
 
+        /// <inheritdoc />
         public void ChangeListCommitFailed()
         {
             this.changeListCommitFailed.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void ChangeListAborted(TimeSpan elapsed)
         {
             this.changeListAborted.LogValue(1);
         }
 
+        /// <inheritdoc />
         public void DataLoadCompleted(long dataCount, long duplicatesCount, long orphansCount)
         {
             this.dataLoaded.LogValue(dataCount);

@@ -1,5 +1,5 @@
-// <copyright file="IRingMasterRequestExecutor.cs" company="Microsoft">
-//     Copyright 2017
+// <copyright file="IRingMasterRequestExecutor.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
@@ -26,6 +26,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="request">Request that must be processed</param>
         /// <param name="session">Client session associated with the request</param>
         /// <param name="onCompletion">Action that must be invoked when the request is completed</param>
-        void ProcessMessage(IRingMasterBackendRequest request, ClientSession session, Action<RequestResponse> onCompletion);
+        void ProcessMessage(IRingMasterBackendRequest request, ClientSession session, Action<RequestResponse, Exception> onCompletion);
     }
 }

@@ -1,15 +1,16 @@
-﻿// <copyright file="Certificates.cs" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
+﻿// <copyright file="Certificates.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 {
     using System;
-    using System.Diagnostics;
     using System.IO;
-    using System.Security.Cryptography;
     using System.Security.Cryptography.X509Certificates;
 
+    /// <summary>
+    /// Helper methods to deal with certificates
+    /// </summary>
     public static class Certificates
     {
         /// <summary>

@@ -56,8 +56,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
                 configuration.ServerCertificates = SecureTransport.GetCertificatesFromThumbPrintOrFileName(serviceThumbprints);
             }
 
-            SecureTransport.TraceLevel = (TraceLevel)Enum.Parse(typeof(TraceLevel), ConfigurationManager.AppSettings["TraceLevel"]);
-
             Trace.TraceInformation(
                 "Connecting to {0}.  Using SSL={1} RequestLength={2} MaxConcurrentRequests={3}, SendBufferSize={4}, ReceiveBufferSize={5}",
                 connectionString,

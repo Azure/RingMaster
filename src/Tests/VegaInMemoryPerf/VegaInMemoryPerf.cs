@@ -74,6 +74,11 @@ namespace Microsoft.Vega.Performance
         private static int threadCount;
 
         /// <summary>
+        /// Endpoint address of the backend server
+        /// </summary>
+        private static string serverAddress;
+
+        /// <summary>
         /// Start the backend server
         /// </summary>
         /// <param name="context">Test context</param>
@@ -82,25 +87,35 @@ namespace Microsoft.Vega.Performance
         {
             log = s => context.WriteLine(s);
 
-            backendCore = CreateBackend();
-            backendServer = new RingMasterServer(protocol, null, CancellationToken.None);
-
-            var transportConfig = new SecureTransport.Configuration
+            // If a parameter is specified as follows:
+            //      te.exe VegaInMemoryPerf.dll /p:ServerAddress=127.0.0.1:99
+            if (!context.Properties.Contains("ServerAddress"))
             {
-                UseSecureConnection = false,
-                IsClientCertificateRequired = false,
-                CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion
-            };
+                backendCore = CreateBackend();
+                backendServer = new RingMasterServer(protocol, null, CancellationToken.None);
 
-            serverTransport = new SecureTransport(transportConfig);
+                var transportConfig = new SecureTransport.Configuration
+                {
+                    UseSecureConnection = false,
+                    IsClientCertificateRequired = false,
+                    CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion,
+                };
 
-            backendServer.RegisterTransport(serverTransport);
-            backendServer.OnInitSession = initRequest =>
+                serverTransport = new SecureTransport(transportConfig);
+
+                backendServer.RegisterTransport(serverTransport);
+                backendServer.OnInitSession = initRequest =>
+                {
+                    return new CoreRequestHandler(backendCore, initRequest);
+                };
+
+                serverTransport.StartServer(10009);
+                serverAddress = "127.0.0.1:10009";
+            }
+            else
             {
-                return new CoreRequestHandler(backendCore, initRequest);
-            };
-
-            serverTransport.StartServer(10009);
+                serverAddress = context.Properties["ServerAddress"] as string;
+            }
 
             // Read the app settings
             minPayloadSize = int.Parse(ConfigurationManager.AppSettings["MinPayloadSize"]);
@@ -114,6 +129,11 @@ namespace Microsoft.Vega.Performance
         [AssemblyCleanup]
         public static void Cleanup()
         {
+            if (serverTransport == null)
+            {
+                return;
+            }
+
             using (var cancellationSource = new CancellationTokenSource())
             {
                 var cancel = cancellationSource.Token;
@@ -146,7 +166,7 @@ namespace Microsoft.Vega.Performance
             {
                 var cancel = cancellationSource.Token;
 
-                using (var client = new RingMasterClient("127.0.0.1:10009", null, null, 10000))
+                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
                 {
                     var rnd = new Random();
                     var createCount = 0;
@@ -217,8 +237,76 @@ namespace Microsoft.Vega.Performance
 
                 Thread.Sleep(100 * 1000);
                 cancellationSource.Cancel();
+                Parallel.ForEach(threads, t => t.Join());
                 log($"CreateCount = {operationCount.CreateCount} SetCount = {operationCount.SetCount} Failures = {operationCount.FailureCount}");
             }
+        }
+
+        /// <summary>
+        /// Test the scenario when one thread tries to get full subtree
+        /// while another thread tries to update the subtree,
+        /// the first thread should not get inconsistant subtree.
+        /// </summary>
+        [TestMethod]
+        public async void TestGetFullSubtreeWhileUpdating()
+        {
+            const int InitialNodeData = 1;
+            const int NewNodeData = 2;
+            const int ChildrenCount = 50000;
+            const string RootName = "Root";
+
+            using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+            {
+                byte[] data = BitConverter.GetBytes(InitialNodeData);
+                await client.Create($"/{RootName}/node1", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                await client.Create($"/{RootName}/node2", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                await client.Create($"/{RootName}/node3", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+
+                var ops = new List<Op>(ChildrenCount);
+                for (int count = 0; count < ChildrenCount; count++)
+                {
+                    ops.Add(Op.Create($"/{RootName}/node2/{count}", data, null, CreateMode.PersistentAllowPathCreation));
+                }
+
+                await client.Batch(ops).ConfigureAwait(false);
+            }
+
+            ManualResetEvent manualResetEvent = new ManualResetEvent(false);
+            Task<TreeNode> getSubtreeTask = new Task<TreeNode>(() =>
+            {
+                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                {
+                    return client.GetFullSubtree($"/{RootName}").Result;
+                }
+            });
+
+            Task updateDataTask = Task.Run(async () =>
+            {
+                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                {
+                    var ops = new List<Op>(2);
+                    byte[] newData = BitConverter.GetBytes(NewNodeData);
+
+                    ops.Add(Op.SetData($"/{RootName}/node1", newData, -1));
+                    ops.Add(Op.SetData($"/{RootName}/node3", newData, -1));
+
+                    manualResetEvent.WaitOne();
+
+                    // this is to make sure the set data occurs after get full substree started.
+                    Thread.Sleep(20);
+                    await client.Batch(ops).ConfigureAwait(false);
+                }
+            });
+
+            getSubtreeTask.Start();
+            manualResetEvent.Set();
+
+            await Task.WhenAll(getSubtreeTask, updateDataTask);
+            var tree = getSubtreeTask.Result;
+            int node1Data = BitConverter.ToInt32(tree.Children[0].Data, 0);
+            int node3Data = BitConverter.ToInt32(tree.Children[2].Data, 0);
+
+            Assert.IsTrue(node1Data >= node3Data);
         }
 
         /// <summary>
@@ -270,7 +358,7 @@ namespace Microsoft.Vega.Performance
         /// <param name="operationCount">Object to store operation statistics</param>
         private void MockLnmThread(CancellationToken cancel, int threadId, OperationCount operationCount)
         {
-            using (var client = new RingMasterClient("127.0.0.1:10009", null, null, 10000))
+            using (var client = new RingMasterClient(serverAddress, null, null, 10000))
             {
                 var rnd = new Random();
 
@@ -321,7 +409,7 @@ namespace Microsoft.Vega.Performance
                             operationCount.IncrementFailure();
 
                             // Ignore and keep going
-                            log($"FAIL in {threadId}: {ex}");
+                            log($"FAIL in {threadId}: {ex.Message}");
                         }
                     }).GetAwaiter().GetResult();
                 }

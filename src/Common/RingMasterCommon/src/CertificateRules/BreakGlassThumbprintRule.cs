@@ -1,4 +1,4 @@
-﻿// <copyright file="BreakGlassThumbprintRule.cs" company="Microsoft">
+﻿// <copyright file="BreakGlassThumbprintRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -69,7 +68,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (this.allowAny || this.thumbprints.Contains(CertAccessor.Instance.GetThumbprint(cert)))
             {
-                Trace.TraceInformation("ValidateSslPolicyErrors: BreakGlassThumbprint: Found breakglass thumbprint: {0}", CertAccessor.Instance.GetThumbprint(cert));
+                CertificateRulesEventSource.Log.BreakGlassThumbprintRule_BreakGlassUnlessBlackListed(CertAccessor.Instance.GetThumbprint(cert));
                 return Behavior.BreakGlassUnlessBlackListed;
             }
 

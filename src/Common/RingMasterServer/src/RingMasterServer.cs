@@ -1,16 +1,13 @@
-﻿// <copyright file="RingMasterServer.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="RingMasterServer.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
 {
     using System;
-    using System.Diagnostics;
     using System.Threading;
-    using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
@@ -33,36 +30,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
         /// <param name="cancellationToken">Token to observe for cancellation signal</param>
         public RingMasterServer(ICommunicationProtocol protocol, IRingMasterServerInstrumentation instrumentation, CancellationToken cancellationToken)
         {
-            if (protocol == null)
-            {
-                throw new ArgumentNullException(nameof(protocol));
-            }
-
-            this.protocol = protocol;
+            this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.instrumentation = instrumentation;
             this.cancellationToken = cancellationToken;
+
+            QueuedWorkItemPool.Default.Initialize(Environment.ProcessorCount * 2, cancellationToken);
         }
 
         /// <summary>
-        /// Gets or sets the <see cref="TraceLevel"/> that controls which trace messages are logged by the <see cref="RingMasterServer"/>.
+        /// Gets the total number of sessions
         /// </summary>
-        public static TraceLevel TraceLevel
+        public long TotalSessionCout
         {
-            get
-            {
-                return RingMasterServerEventSource.Log.TraceLevel;
-            }
+            get { return this.totalSessionCount; }
+        }
 
-            set
-            {
-                RingMasterServerEventSource.Log.TraceLevel = value;
-            }
+        /// <summary>
+        /// Gets the number of active sessions
+        /// </summary>
+        public long ActiveSessionCout
+        {
+            get { return this.activeSessionCount; }
         }
 
         /// <summary>
         /// Gets or sets the function to invoke when a new session is to be initialized.
         /// </summary>
-        public Func<RequestInit, IRingMasterRequestHandler> OnInitSession { get; set; }
+        public Func<RequestInit, IRingMasterRequestHandlerOverlapped> OnInitSession { get; set; }
 
         /// <summary>
         /// Gets or sets the function that will be invoked to determine if a request must be redirected.
@@ -116,22 +110,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
                 connection.DoPacketReceive = packetReciever;
             }
 
-            connection.OnPacketReceived = packet =>
-            {
-                Task.Run(
-                    async () =>
-                    {
-                        try
-                        {
-                            await session.OnPacketReceived(packet);
-                        }
-                        catch (Exception ex)
-                        {
-                            RingMasterServerEventSource.Log.OnPacketReceived_Failed(session.Id, ex.ToString());
-                        }
-                    },
-                    this.cancellationToken);
-            };
+            connection.OnPacketReceived = packet => session.OnPacketReceived(packet);
 
             connection.OnConnectionLost = () =>
             {

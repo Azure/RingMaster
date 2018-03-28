@@ -1,12 +1,15 @@
-﻿// <copyright file="ArrayExtensions.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ArrayExtensions.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
 {
     using System;
 
-    public static class ArrayExtensions
+    /// <summary>
+    /// Extension methods for <see cref="Array"/>
+    /// </summary>
+    internal static class ArrayExtensions
     {
         /// <summary>
         /// Reverse a byte array

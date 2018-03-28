@@ -1,10 +1,9 @@
-﻿// <copyright file="ICertificateRulesInstrumentation.cs" company="Microsoft">
+﻿// <copyright file="ICertificateRulesInstrumentation.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
-    using System.Diagnostics;
     using System.Security.Cryptography.X509Certificates;
 
     /// <summary>
@@ -41,18 +40,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         {
             if (certificate == null)
             {
-                Trace.TraceWarning("ValidateCertificateCompleted: {0} but null cert (reason = {1})", succeeded ? "Success" : "Failure", reason);
+                CertificateRulesEventSource.Log.ValidateCertificate_NullCertificate(succeeded, reason);
                 return;
             }
 
             if (succeeded)
             {
-                Trace.TraceInformation("ValidateClientCertificate succeeded serialNumber={0}, issuer={1}, subject={2}, thumbprint={3}, reason={4}", CertAccessor.Instance.GetSerialNumberString(certificate), CertAccessor.Instance.GetIssuer(certificate), CertAccessor.Instance.GetSubject(certificate), CertAccessor.Instance.GetThumbprint(certificate), reason);
+                CertificateRulesEventSource.Log.ValidateCertificate_Succeeded(
+                    CertAccessor.Instance.GetSerialNumberString(certificate),
+                    CertAccessor.Instance.GetIssuer(certificate),
+                    CertAccessor.Instance.GetSubject(certificate),
+                    CertAccessor.Instance.GetThumbprint(certificate),
+                    reason);
             }
             else
             {
-                string message = string.Format("ValidateClientCertificate failed serialNumber={0}, issuer={1}, subject={2}, thumbprint={3}, reason={4}", CertAccessor.Instance.GetSerialNumberString(certificate), CertAccessor.Instance.GetIssuer(certificate), CertAccessor.Instance.GetSubject(certificate), CertAccessor.Instance.GetThumbprint(certificate), reason);
-                Trace.TraceError(message);
+                CertificateRulesEventSource.Log.ValidateCertificate_Failed(
+                    CertAccessor.Instance.GetSerialNumberString(certificate),
+                    CertAccessor.Instance.GetIssuer(certificate),
+                    CertAccessor.Instance.GetSubject(certificate),
+                    CertAccessor.Instance.GetThumbprint(certificate),
+                    reason);
             }
         }
     }

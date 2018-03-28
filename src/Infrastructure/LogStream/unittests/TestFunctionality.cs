@@ -39,14 +39,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.LogStreamUnitTest
         private string testPath;
 
         /// <summary>
-        /// Initializes static members of the <see cref="TestFunctionality"/> class.
-        /// </summary>
-        static TestFunctionality()
-        {
-            LogStream.TraceLevel = TraceLevel.Verbose;
-        }
-
-        /// <summary>
         /// Initializes the test.
         /// </summary>
         [TestInitialize]

@@ -1,5 +1,5 @@
-﻿// <copyright file="RequestInit.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RequestInit.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             /// <summary>
             /// Transparently forward requests to the current primary.
             /// </summary>
-            ForwardPreferred
+            ForwardPreferred,
         }
 
         /// <summary>

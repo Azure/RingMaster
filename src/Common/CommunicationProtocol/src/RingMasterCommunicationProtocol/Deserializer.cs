@@ -1,5 +1,5 @@
-﻿// <copyright file="Deserializer.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="Deserializer.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using RingMaster;
     using RingMaster.Data;
     using RingMaster.Requests;
+    using static Requests.RequestGetData;
 
     /// <summary>
     /// Helper class to Deserialize a <see cref="RequestCall"/> or
@@ -85,7 +86,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             return new RequestCall()
             {
                 CallId = callId,
-                Request = ringMasterRequest
+                Request = ringMasterRequest,
             };
         }
 
@@ -114,10 +115,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 ResultCode = resultcode,
                 Content = content,
                 Stat = stat,
-                ResponsePath = responsepath
+                ResponsePath = responsepath,
             };
         }
 
+        /// <summary>
+        /// Disposes the object
+        /// </summary>
         public void Dispose()
         {
             this.memoryStream.Dispose();
@@ -162,7 +166,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case ContentType.StringArray:
                     return this.DeserializeStringArray();
                 case ContentType.String:
-                    return this.DeserializeString();
+                    return this.binaryReader.ReadString();
                 case ContentType.ByteArray:
                     return this.DeserializeByteArray();
                 case ContentType.AclList:
@@ -174,17 +178,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case ContentType.Redirect:
                     return this.DeserializeRedirectSuggested();
                 case ContentType.AnyObject:
-                {
-                    byte[] bytes = this.DeserializeByteArray();
-                    return this.FromByteArray<object>(bytes);
-                }
+                    {
+                        byte[] bytes = this.DeserializeByteArray();
+                        return this.FromByteArray<object>(bytes);
+                    }
 
                 case ContentType.Request:
-                {
-                    IRingMasterRequest ringMasterRequest;
-                    this.DeserializeRingMasterRequest(ulong.MaxValue, out ringMasterRequest);
-                    return ringMasterRequest;
-                }
+                    {
+                        IRingMasterRequest ringMasterRequest;
+                        this.DeserializeRingMasterRequest(ulong.MaxValue, out ringMasterRequest);
+                        return ringMasterRequest;
+                    }
 
                 case ContentType.WatcherCall:
                     return this.DeserializeWatcherCall();
@@ -409,15 +413,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         }
 
         /// <summary>
-        /// Deserialize a string.
-        /// </summary>
-        /// <returns>Deserialized string</returns>
-        private string DeserializeString()
-        {
-            return this.binaryReader.ReadString();
-        }
-
-        /// <summary>
         /// Deserialize a string list.
         /// </summary>
         /// <returns>A list of strings</returns>
@@ -441,7 +436,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         {
             WatcherCall watcherCall = new WatcherCall();
             watcherCall.WatcherId = this.binaryReader.ReadUInt64();
-            watcherCall.OneUse = this.binaryReader.ReadBoolean();
+
+            if (this.serializationVersionUsed >= SerializationFormatVersions.Version23)
+            {
+                watcherCall.Kind = (WatcherKind)this.binaryReader.ReadByte();
+            }
+            else
+            {
+                watcherCall.Kind = this.binaryReader.ReadBoolean() ? WatcherKind.OneUse : default(WatcherKind);
+            }
 
             bool nullwatcher = this.binaryReader.ReadBoolean();
             if (!nullwatcher)
@@ -450,7 +453,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 WatchedEvent.WatchedEventKeeperState state = (WatchedEvent.WatchedEventKeeperState)this.binaryReader.ReadInt32();
                 string path = this.binaryReader.ReadString();
 
-                watcherCall.WatcherEvt = new WatchedEvent(type, state, path);
+                byte[] data = null;
+                IStat stat = null;
+                if (this.serializationVersionUsed >= SerializationFormatVersions.Version23)
+                {
+                    data = this.DeserializeByteArray();
+                    stat = this.DeserializeStat();
+                }
+
+                watcherCall.WatcherEvt = new WatchedEvent(type, state, path, data, stat);
             }
             else
             {
@@ -510,57 +521,57 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     }
 
                 case OpCode.Delete:
-                {
-                    return new OpResult.DeleteResult();
-                }
+                    {
+                        return new OpResult.DeleteResult();
+                    }
 
                 case OpCode.Create:
-                {
-                    Stat stat = this.DeserializeStat();
-                    string path;
-
-                    if (this.serializationVersionUsed >= SerializationFormatVersions.Version22)
                     {
-                        path = this.DeserializeNullableString();
-                    }
-                    else
-                    {
-                        path = this.binaryReader.ReadString();
-                    }
+                        Stat stat = this.DeserializeStat();
+                        string path;
 
-                    return new OpResult.CreateResult(stat, path);
-                }
+                        if (this.serializationVersionUsed >= SerializationFormatVersions.Version22)
+                        {
+                            path = this.DeserializeNullableString();
+                        }
+                        else
+                        {
+                            path = this.binaryReader.ReadString();
+                        }
+
+                        return new OpResult.CreateResult(stat, path);
+                    }
 
                 case OpCode.Move:
-                {
-                    Stat stat = this.DeserializeStat();
-                    string dstpath = this.binaryReader.ReadString();
-                    return new OpResult.MoveResult(stat, dstpath);
-                }
+                    {
+                        Stat stat = this.DeserializeStat();
+                        string dstpath = this.binaryReader.ReadString();
+                        return new OpResult.MoveResult(stat, dstpath);
+                    }
 
                 case OpCode.Error:
-                {
-                    int err = this.binaryReader.ReadInt32();
-                    return new OpResult.ErrorResult(err);
-                }
+                    {
+                        int err = this.binaryReader.ReadInt32();
+                        return new OpResult.ErrorResult(err);
+                    }
 
                 case OpCode.SetData:
-                {
-                    Stat stat = this.DeserializeStat();
-                    return new OpResult.SetDataResult(stat);
-                }
+                    {
+                        Stat stat = this.DeserializeStat();
+                        return new OpResult.SetDataResult(stat);
+                    }
 
                 case OpCode.SetACL:
-                {
-                    Stat stat = this.DeserializeStat();
-                    return new OpResult.SetAclResult(stat);
-                }
+                    {
+                        Stat stat = this.DeserializeStat();
+                        return new OpResult.SetAclResult(stat);
+                    }
 
                 case OpCode.Multi:
-                {
-                    List<OpResult> operationResults = this.DeserializeOpResultList();
-                    return new OpResult.RunResult(operationResults);
-                }
+                    {
+                        List<OpResult> operationResults = this.DeserializeOpResultList();
+                        return new OpResult.RunResult(operationResults);
+                    }
             }
 
             throw new FormatException("bad byte array. unkown opcode " + opcode);
@@ -573,10 +584,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         private IWatcher DeserializeWatcher()
         {
             ulong id = this.binaryReader.ReadUInt64();
-            bool oneUse = this.binaryReader.ReadBoolean();
+            var kind = (WatcherKind)this.binaryReader.ReadByte();
             if (id != 0)
             {
-                return new Watcher(id, oneUse);
+                return new Watcher(id, kind);
             }
 
             return null;
@@ -622,7 +633,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
             return new RedirectSuggested()
             {
-                SuggestedConnectionString = this.binaryReader.ReadNullableString()
+                SuggestedConnectionString = this.binaryReader.ReadNullableString(),
             };
         }
 
@@ -984,7 +995,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <typeparam name="T">Type of the object to deserialize</typeparam>
         /// <param name="bytes">The bytes from which the object must be deserialize</param>
         /// <returns>The deserialized object</returns>
-        private T FromByteArray<T>(byte[] bytes) where T : class
+        private T FromByteArray<T>(byte[] bytes)
+            where T : class
         {
             if (bytes == null || (bytes.Length == 1 && bytes[0] == 1))
             {
@@ -1008,11 +1020,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             /// Initializes a new instance of the <see cref="Watcher"/> class.
             /// </summary>
             /// <param name="id">Id of the watcher</param>
-            /// <param name="oneUse"><c>true</c> if this watcher is a single use watcher</param>
-            public Watcher(ulong id, bool oneUse)
+            /// <param name="kind">Kind of the watcher</param>
+            public Watcher(ulong id, WatcherKind kind)
             {
                 this.Id = id;
-                this.OneUse = oneUse;
+                this.Kind = kind;
             }
 
             /// <summary>
@@ -1021,9 +1033,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             public ulong Id { get; private set; }
 
             /// <summary>
-            /// Gets a value indicating whether this watcher is single use.
+            /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind { get; private set; }
 
             /// <summary>
             /// Process a watcher notification.

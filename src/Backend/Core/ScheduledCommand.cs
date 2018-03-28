@@ -1,28 +1,25 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="ScheduledCommand.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="ScheduledCommand.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Threading;
     using System.Linq;
+    using System.Threading;
     using HelperTypes;
+    using Infrastructure.RingMaster.Data;
     using Requests;
     using Code = Infrastructure.RingMaster.Data.RingMasterException.Code;
-    using Infrastructure.RingMaster.Data;
 
-    /// <summary>
-    /// This class takes care of monitoring and executing scheduler commands.
+    /// <summary>This class takes care of monitoring and executing scheduler commands.</summary>
+    /// <remarks>
+    /// <![CDATA[
     /// Here is the basic algorithm:
     /// - We will serialize request into the data for tree nodes, which are stored in a specific portion of the tree
-    /// - This daemon reads all commands, and register to changes in that tree. And on a single thread executes the command one by one (in lexicographical order). 
+    /// - This daemon reads all commands, and register to changes in that tree. And on a single thread executes the command one by one (in lexicographical order).
     /// - If the command succeeds, the "command node" is deleted atomically.
     /// - If the command fails, the "command node" is deleted and a corresponding one (with the same name) is created in a different subtree containing a serialization of the failure that the command encountered.
     /// - While the command is being executed, the node is in a third "inflight" subtree.
@@ -30,7 +27,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     /// - NOTE THAT IT IS THE APPLICATION RESPONSIBILITY TO CLEANUP NODES FROM THE "FAILURES" TREE.
     ///
     /// All transitions are carefully designed to reduce the locking, and ensure exactly once execution. Here are the details:
-    /// 
+    ///
     /// - There are three relevant paths in the tree:
     ///       /$metadata/scheduler/commands  --> where all the pending scheduled commands are stored
     ///       /$metadata/scheduler/inflight  --> where the (single) inflight command is stored. When there is an inflight command, the tree also contains a "$<inflighttoken>" node. When there is no inflight command, the token is not there.
@@ -38,7 +35,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     ///  - The daemon starts by reading all children of "commands" and registering for changes there
     ///  - There is a single thread that will take the scheduled commands in lexicographic order, and will execute them one by one.
     ///  - Executing a command is a small state machine:
-    ///  
+    ///
     ///       [Begin] ----> State_Deserialize_Command ---(onSuccess)---> State_Setup_Command ---(onSuccess)---> State_Execute_Command --(onSuccess)---> [Done]
     ///                                         |                             |                                            |
     ///                                         |                             |                                            +-----(onFailure)------------>----+
@@ -57,14 +54,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     ///                                               after this (success or failure) the daemon will be restarted.
     ///       State_MoveTofailure:                in a single multi, delete the command node "x" and create a node "x" under "failures tree" containing the serialization of faulted results from running the command x.
     ///                                               if this fails, the daemon will be restarted
-    /// 
-    /// </summary>
+    /// ]]>
+    /// </remarks>
     internal class ScheduledCommand : IWatcher
     {
-        public const string PathCommands = "/$metadata/scheduler/commands";
-        public const string PathFailures = "/$metadata/scheduler/failures";
-        public const string PathInflight = "/$metadata/scheduler/inflight";
-        public const string PathInflightToken = "/$metadata/scheduler/inflight/$<inflighttoken>";
+        private const string PathCommands = "/$metadata/scheduler/commands";
+        private const string PathFailures = "/$metadata/scheduler/failures";
+        private const string PathInflight = "/$metadata/scheduler/inflight";
+        private const string PathInflightToken = "/$metadata/scheduler/inflight/$<inflighttoken>";
 
         private Func<bool> isPrimary;
         private IByteArrayMarshaller marshaller;
@@ -75,37 +72,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private SortedDictionary<string, bool> nodesToProcess = new SortedDictionary<string, bool>();
         private bool registered = false;
 
-        internal Action<Exception> InternalOnAbandon
-        {
-            get; set;
-        }
-
         /// <summary>
-        /// Gets the value indicating if as a watcher, this a "one use watcher"
-        /// </summary>
-        public bool OneUse
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        /// <summary>
-        /// Gets the value indicating as a watcher, this object's ID
-        /// </summary>
-        public ulong Id
-        {
-            get
-            {
-                return 0;
-            }
-        }
-
-        /// <summary>
-        /// Constructor of the scheduler.
+        /// Initializes a new instance of the <see cref="ScheduledCommand"/> class.
         /// </summary>
         /// <param name="isPrimary">the function indicating if the backend object is primary</param>
+        /// <param name="rm">Ring master object</param>
         /// <param name="marshaller">the marshaller to use when serializing/deserializing commands</param>
         internal ScheduledCommand(Func<bool> isPrimary, AbstractRingMaster rm, IByteArrayMarshaller marshaller)
         {
@@ -125,9 +96,44 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
+        /// Gets a value indicating whether the watcher is for a single use only.
+        /// </summary>
+        public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+        /// <summary>
+        /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+        /// </summary>
+        public WatcherKind Kind
+        {
+            get
+            {
+                return WatcherKind.OneUse;
+            }
+        }
+
+        /// <summary>
+        /// Gets the value indicating as a watcher, this object's ID
+        /// </summary>
+        public ulong Id
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets action to perform on abanton
+        /// </summary>
+        internal Action<Exception> InternalOnAbandon
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// return the paths the scheduler needs in the tree
         /// </summary>
-        /// <returns></returns>
+        /// <returns>List of paths</returns>
         public static IEnumerable<string> GetPaths()
         {
             return new string[] { PathCommands, PathFailures, PathInflight };
@@ -165,27 +171,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="ex"></param>
-        /// <returns></returns>
-        public byte[] GetBytes(Exception ex)
-        {
-            if (ex == null)
-            {
-                throw new ArgumentNullException("ex");
-            }
-
-            RequestResponse resp = new RequestResponse()
-            {
-                ResultCode = (int)Code.Badarguments,
-                Content = ex.ToString()
-            };
-
-            return marshaller.SerializeResponseAsBytes(resp);
-        }
-
-        /// <summary>
         /// returns the bytes corresponding to the request given
         /// </summary>
         /// <param name="req">request to serialize</param>
@@ -206,10 +191,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             RequestCall call = new RequestCall()
             {
                 CallId = 0,
-                Request = req
+                Request = req,
             };
 
             return marshaller.SerializeRequestAsBytes(call);
+        }
+
+        /// <summary>
+        /// Returns the bytes corresponding to the given exception
+        /// </summary>
+        /// <param name="ex">Exception to set in the response</param>
+        /// <returns>Serialized byte array</returns>
+        public byte[] GetBytes(Exception ex)
+        {
+            if (ex == null)
+            {
+                throw new ArgumentNullException("ex");
+            }
+
+            RequestResponse resp = new RequestResponse()
+            {
+                ResultCode = (int)Code.Badarguments,
+                Content = ex.ToString(),
+            };
+
+            return this.marshaller.SerializeResponseAsBytes(resp);
         }
 
         /// <summary>
@@ -225,8 +231,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// returns the bytes corresponding to the results given
         /// </summary>
-        /// <param name="results">results to serialize</param>
-        /// <param name="marshaller">marshaller to use</param>
+        /// <param name="resultCode">result code in the response</param>
+        /// <param name="results">Content in the response</param>
         /// <returns>serialization bytes</returns>
         public byte[] GetBytes(Code resultCode, IReadOnlyList<OpResult> results)
         {
@@ -238,10 +244,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             RequestResponse resp = new RequestResponse()
             {
                 ResultCode = (int)resultCode,
-                Content = results
+                Content = results,
             };
 
-            return marshaller.SerializeResponseAsBytes(resp);
+            return this.marshaller.SerializeResponseAsBytes(resp);
         }
 
         /// <summary>
@@ -256,9 +262,48 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return null;
             }
 
-            RequestCall call = marshaller.DeserializeRequestFromBytes(data);
+            RequestCall call = this.marshaller.DeserializeRequestFromBytes(data);
 
             return call.Request;
+        }
+
+        /// <summary>
+        /// Enqueues the processing of the event asynchronously
+        /// </summary>
+        /// <param name="evt">Watched event</param>
+        public void Process(WatchedEvent evt)
+        {
+            this.callbacks.Enqueue(this.ProcessSync, evt);
+        }
+
+        /// <summary>
+        /// Something changed in the command tree. Processes the watcher event now.
+        /// </summary>
+        /// <param name="evt">the watcher event to process.</param>
+        public void ProcessSync(WatchedEvent evt)
+        {
+            if (evt == null)
+            {
+                return;
+            }
+
+            if (this.Kind.HasFlag(WatcherKind.OneUse))
+            {
+                this.registered = false;
+            }
+
+            if (evt.EventType == WatchedEvent.WatchedEventType.WatcherRemoved)
+            {
+                // since we are using a loopback client, the only ways this can happen are:
+                // a) the node where this was registered was deleted
+                // b) we are no longer the primary
+                // in both cases, we don't want to re-register the watcher. Just log the fact.
+                this.registered = false;
+
+                return;
+            }
+
+            this.Start();
         }
 
         /// <summary>
@@ -266,11 +311,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         internal void Close()
         {
-            execution.Drain(HelperTypes.ExecutionQueue.DrainMode.DisallowAllFurtherEnqueues);
+            this.execution.Drain(HelperTypes.ExecutionQueue.DrainMode.DisallowAllFurtherEnqueues);
             lock (this.childrenProcessorLock)
             {
                 this.nodesToProcess.Clear();
-                RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(nodesToProcess.Count);
+                RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
             }
 
             this.self.Close();
@@ -282,7 +327,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         internal void Start()
         {
-            if (registered)
+            if (this.registered)
             {
                 return;
             }
@@ -292,7 +337,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 throw new ObjectDisposedException("this objects has been closed already");
             }
 
-            GetChildrenAndProcess();
+            this.GetChildrenAndProcess();
         }
 
         /// <summary>
@@ -306,18 +351,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 try
                 {
-                    registered = true;
+                    this.registered = true;
 
                     children = this.self.GetChildren(PathCommands, this);
                 }
                 catch (Exception e)
                 {
-                    registered = false;
-                    OnAbandon(e);
+                    this.registered = false;
+                    this.OnAbandon(e);
                     return;
                 }
 
-                AddChildrenAsPending(children);
+                this.AddChildrenAsPending(children);
             }
         }
 
@@ -335,7 +380,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     foreach (string commandName in children)
                     {
-                        nodesToProcess[commandName] = true;
+                        this.nodesToProcess[commandName] = true;
                     }
 
                     if (count == this.nodesToProcess.Count)
@@ -343,11 +388,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         return;
                     }
 
-                    RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(nodesToProcess.Count);
+                    RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
 
-                    if (execution.InFlightCount == 0)
+                    if (this.execution.InFlightCount == 0)
                     {
-                        execution.Enqueue(ExecuteAllCommandsFromDictionary);
+                        this.execution.Enqueue(this.ExecuteAllCommandsFromDictionary);
                     }
                 }
             }
@@ -364,13 +409,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
                 lock (this.childrenProcessorLock)
                 {
-                    if (nodesToProcess.Count == 0)
+                    if (this.nodesToProcess.Count == 0)
                     {
                         break;
                     }
 
                     // get the first one
-                    foreach (string k in nodesToProcess.Keys)
+                    foreach (string k in this.nodesToProcess.Keys)
                     {
                         oneKey = k;
                         break;
@@ -379,18 +424,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
                 try
                 {
-                    ExecuteCommand(oneKey);
+                    this.ExecuteCommand(oneKey);
 
                     lock (this.childrenProcessorLock)
                     {
-                        nodesToProcess.Remove(oneKey);
+                        this.nodesToProcess.Remove(oneKey);
 
-                        RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(nodesToProcess.Count);
+                        RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
                     }
                 }
                 catch (Exception ex)
                 {
-                    // if we are not primary, it is expected this will fail, so there is no need to report this particular failure 
+                    // if we are not primary, it is expected this will fail, so there is no need to report this particular failure
                     // as a bad thing. Instead we will just log it
                     if (this.isPrimary())
                     {
@@ -406,8 +451,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     lock (this.childrenProcessorLock)
                     {
                         this.nodesToProcess.Clear();
-                        registered = false;
-                        OnAbandon(ex);
+                        this.registered = false;
+                        this.OnAbandon(ex);
                     }
                 }
             }
@@ -419,15 +464,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="ex">exception</param>
         private void OnAbandon(Exception ex)
         {
-            Action<Exception> onAbandon = this.InternalOnAbandon;
-            if (onAbandon != null)
-            {
-                onAbandon(ex);
-            }
+            this.InternalOnAbandon?.Invoke(ex);
         }
 
         /// <summary>
-        /// Executes a single command, with the given name. If there is an uncollected "inflight" item, this method will move it back to commands tree, and throw an exception, 
+        /// Executes a single command, with the given name. If there is an uncollected "inflight" item, this method will move it back to commands tree, and throw an exception,
         /// hence making the whole scheduler to restart but this time including those commands that were in the inflight bucket.
         /// </summary>
         /// <param name="scheduledName">the name of the command to execute</param>
@@ -447,16 +488,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 IStat stat = null;
 
-                IRingMasterBackendRequest req = GetRequestOnCommandNode(scheduledCommandPath, ref stat);
+                IRingMasterBackendRequest req = this.GetRequestOnCommandNode(scheduledCommandPath, ref stat);
 
                 try
                 {
-                    resultbytes = ExecuteCommandsAndGetResultsOnError(scheduledCommandPath, stat, req);
+                    resultbytes = this.ExecuteCommandsAndGetResultsOnError(scheduledCommandPath, stat, req);
                 }
                 catch (InflightExistException inflight)
                 {
                     Trace.TraceInformation("Inflight command found: " + inflight);
-                    string[] inflightNames = MoveInflightPathIntoCommandPath();
+                    string[] inflightNames = this.MoveInflightPathIntoCommandPath();
 
                     rethrow = true;
 
@@ -476,7 +517,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     throw;
                 }
 
-                resultbytes = GetBytes(ex);
+                resultbytes = this.GetBytes(ex);
             }
 
             if (resultbytes == null)
@@ -489,7 +530,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             // delete the command and report the result.
             // an exception here will mean we suspend the scheduler.
-            DeleteScheduledCommandAndWriteFailureNode(scheduledCommandPath, faultPath, resultbytes);
+            this.DeleteScheduledCommandAndWriteFailureNode(scheduledCommandPath, faultPath, resultbytes);
 
             RingMasterServerInstrumentation.Instance.OnScheduledCommandFinished(false, sw.ElapsedMilliseconds);
 
@@ -542,17 +583,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             try
             {
-                this.self.Multi(ops.ToArray(), (rc, p, c) =>
-                {
-                    resultCode = (Code)rc;
-
-                    if (rc == (int)Code.Ok)
+                this.self.Multi(
+                    ops.ToArray(),
+                    (rc, p, c) =>
                     {
-                        results = p;
-                    }
+                        resultCode = (Code)rc;
 
-                    e.Set();
-                }, null, true);
+                        if (rc == (int)Code.Ok)
+                        {
+                            results = p;
+                        }
+
+                        e.Set();
+                    },
+                    null,
+                    true);
             }
             finally
             {
@@ -586,7 +631,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 new RequestCreate(faultPath, null, null, null, CreateMode.Persistent, null),
                 new RequestMove(scheduledCommandPath, null, -1, faultPath, null),
-                new RequestCreate(faultPath + "/ResultData", null, resultbytes, null, CreateMode.PersistentAllowPathCreation | CreateMode.SuccessEvenIfNodeExistsFlag, null)
+                new RequestCreate(faultPath + "/ResultData", null, resultbytes, null, CreateMode.PersistentAllowPathCreation | CreateMode.SuccessEvenIfNodeExistsFlag, null),
             };
 
             ManualResetEvent e = ManualResetEventPool.InstancePool.GetOne();
@@ -596,17 +641,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             try
             {
-                this.self.Multi(ops, (rc, p, c) =>
-                {
-                    resultCode = rc;
-
-                    if (rc == (int)Code.Ok)
+                this.self.Multi(
+                    ops,
+                    (rc, p, c) =>
                     {
-                        results = p;
-                    }
+                        resultCode = rc;
 
-                    e.Set();
-                }, null, true);
+                        if (rc == (int)Code.Ok)
+                        {
+                            results = p;
+                        }
+
+                        e.Set();
+                    },
+                    null,
+                    true);
             }
             finally
             {
@@ -660,7 +709,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             IStat readStat = this.self.Exists(scheduledCommandPath, false, false);
 
-            if (null == readStat)
+            if (readStat == null)
             {
                 throw new InvalidOperationException($"Scheduled command stat of [{scheduledCommandPath}] is null");
             }
@@ -679,14 +728,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             IReadOnlyList<OpResult> results = null;
 
             // setup the command into the inflight tree
-            string inflightPath = MoveCommandToInflight(scheduledCommandPath, stat);
+            string inflightPath = this.MoveCommandToInflight(scheduledCommandPath, stat);
 
             // run the command, and atomically remove the inflight marks on success
             IRingMasterBackendRequest[] ops =
             {
                 req,
                 new RequestDelete(inflightPath, null, stat.Version, null, DeleteMode.SuccessEvenIfNodeDoesntExist),
-                new RequestDelete(PathInflightToken, null, -1, null, DeleteMode.SuccessEvenIfNodeDoesntExist)
+                new RequestDelete(PathInflightToken, null, -1, null, DeleteMode.SuccessEvenIfNodeDoesntExist),
             };
 
             e = ManualResetEventPool.InstancePool.GetOne();
@@ -696,17 +745,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             try
             {
-                this.self.Multi(ops, (rc, p, c) =>
-                {
-                    resultCode = (Code)rc;
-
-                    if (resultCode == Code.Ok)
+                this.self.Multi(
+                    ops,
+                    (rc, p, c) =>
                     {
-                        results = p;
-                    }
+                        resultCode = (Code)rc;
 
-                    e.Set();
-                }, null, true);
+                        if (resultCode == Code.Ok)
+                        {
+                            results = p;
+                        }
+
+                        e.Set();
+                    },
+                    null,
+                    true);
             }
             finally
             {
@@ -722,7 +775,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
 
             // otherwise, we need to undo the setup now
-            MoveInflightPathIntoCommandPath();
+            this.MoveInflightPathIntoCommandPath();
 
             return this.GetBytes(resultCode, results);
         }
@@ -753,7 +806,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             IRingMasterBackendRequest[] setupOps =
             {
                 new RequestCreate(PathInflightToken, null, new byte[0], new Acl[0], CreateMode.Persistent, null),
-                new RequestMove(scheduledCommandPath, null, stat.Version, PathInflight, null)
+                new RequestMove(scheduledCommandPath, null, stat.Version, PathInflight, null),
             };
 
             Code resultCode = Code.Unknown;
@@ -763,17 +816,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             try
             {
-                this.self.Multi(setupOps, (rc, p, c) =>
-                {
-                    resultCode = (Code)rc;
-
-                    if (resultCode == Code.Ok)
+                this.self.Multi(
+                    setupOps,
+                    (rc, p, c) =>
                     {
-                        results = p;
-                    }
+                        resultCode = (Code)rc;
 
-                    e.Set();
-                }, null, true);
+                        if (resultCode == Code.Ok)
+                        {
+                            results = p;
+                        }
+
+                        e.Set();
+                    },
+                    null,
+                    true);
             }
             finally
             {
@@ -782,7 +839,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (!this.AllResultsOk(resultCode, results))
             {
-                string details = "";
+                string details = string.Empty;
 
                 if (results != null)
                 {
@@ -792,7 +849,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 throw new InflightExistException($"Could not move command to inflight: {resultCode}, [{details}]");
             }
 
-            return GetInflightPath(scheduledCommandPath);
+            return this.GetInflightPath(scheduledCommandPath);
         }
 
         /// <summary>
@@ -819,7 +876,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     OpResult.RunResult asRunResult = (OpResult.RunResult)res;
 
-                    if (!AllResultsOk(asRunResult.ErrCode, asRunResult.Results))
+                    if (!this.AllResultsOk(asRunResult.ErrCode, asRunResult.Results))
                     {
                         return false;
                     }
@@ -843,15 +900,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             ManualResetEvent e = ManualResetEventPool.InstancePool.GetOne();
             try
             {
-                this.self.GetData(scheduledCommandPath, false, (rc, p, ctx, d, st) =>
-                {
-                    if (rc == (int)Code.Ok)
+                this.self.GetData(
+                    scheduledCommandPath,
+                    false,
+                    (rc, p, ctx, d, st) =>
                     {
-                        data = d;
-                        stat = st;
-                    }
-                    e.Set();
-                }, null);
+                        if (rc == (int)Code.Ok)
+                        {
+                            data = d;
+                            stat = st;
+                        }
+
+                        e.Set();
+                    },
+                    null);
             }
             finally
             {
@@ -869,58 +931,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Enqueues the processing of the event asynchronously
-        /// </summary>
-        /// <param name="evt"></param>
-        public void Process(WatchedEvent evt)
-        {
-            this.callbacks.Enqueue(ProcessSync, evt);
-        }
-
-        /// <summary>
-        /// Something changed in the command tree. Processes the watcher event now.
-        /// </summary>
-        /// <param name="evt">the watcher event to process.</param>
-        public void ProcessSync(WatchedEvent evt)
-        {
-            if (evt == null)
-            {
-                return;
-            }
-
-            if (OneUse)
-            {
-                registered = false;
-            }
-
-            if (evt.EventType == WatchedEvent.WatchedEventType.WatcherRemoved)
-            {
-                // since we are using a loopback client, the only ways this can happen are:
-                // a) the node where this was registered was deleted
-                // b) we are no longer the primary
-                // in both cases, we don't want to re-register the watcher. Just log the fact.
-                registered = false;
-
-                return;
-            }
-
-            this.Start();
-        }
-
-        /// <summary>
         /// This exception is thrown if there are unexpected inflight objects in the inflight tree
         /// </summary>
         [Serializable]
         private class InflightExistException : Exception
         {
             /// <summary>
-            /// Constructs a new instance of the class
+            /// Initializes a new instance of the <see cref="InflightExistException"/> class.
             /// </summary>
-            /// <param name="msg"></param>
-            public InflightExistException(string msg) : base(msg)
+            /// <param name="msg">Exception message</param>
+            public InflightExistException(string msg)
+                : base(msg)
             {
             }
         }
-
     }
 }

@@ -1,5 +1,5 @@
-﻿// <copyright file="SecureTransport.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="SecureTransport.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
@@ -18,6 +18,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
 
+    /// <summary>
+    /// Secure transport for SSL or non-SSL TCP connection management
+    /// </summary>
     public sealed class SecureTransport : ITransport
     {
         private const int ConsecutiveAcceptFailuresLimit = 25;
@@ -42,11 +45,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         private CancellationTokenSource cancellationTokenSource;
         private long lastAssignedConnectionId = 0;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SecureTransport"/> class.
+        /// </summary>
+        /// <param name="configuration">Configuration of the transport</param>
         public SecureTransport(Configuration configuration)
             : this(configuration, null, CancellationToken.None)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SecureTransport"/> class.
+        /// </summary>
+        /// <param name="configuration">Configuration of the transport</param>
+        /// <param name="instrumentation">Instrumentation object for getting notification of the internal state</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         public SecureTransport(Configuration configuration, ISecureTransportInstrumentation instrumentation, CancellationToken cancellationToken)
         {
             this.transportId = Interlocked.Increment(ref SecureTransport.lastAssignedTransportId);
@@ -78,7 +91,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                     Identities = configuration.Identities,
                     SubjectValidations = configuration.SubjectValidations,
                     StartAsClient = configuration.AuthAsClient,
-                    BlacklistedThumbprints = configuration.BlacklistedThumbprints
+                    BlacklistedThumbprints = configuration.BlacklistedThumbprints,
                 };
 
                 this.secureConnectionPolicy = new SslConnection(this.transportId, sslConfiguration);
@@ -93,32 +106,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.instrumentation = instrumentation ?? NoInstrumentation.Instance;
         }
 
-        public static TraceLevel TraceLevel
-        {
-            get { return SecureTransportEventSource.Log.TraceLevel; }
-            set { SecureTransportEventSource.Log.TraceLevel = value; }
-        }
-
         /// <summary>
-        /// The callback that must be invoked whenever a new connection is established.
+        /// Gets or sets the callback that must be invoked whenever a new connection is established.
         /// </summary>
         public Action<IConnection> OnNewConnection { get; set; }
 
         /// <summary>
-        /// The Callback that must be invoked to negotiate protocol
+        /// Gets or sets the Callback that must be invoked to negotiate protocol
         /// </summary>
         public ProtocolNegotiatorDelegate OnProtocolNegotiation { get; set; }
 
         /// <summary>
-        /// Tells the connection to use Network byte order when sending data
+        /// Gets or sets a value indicating whether tells the connection to use Network byte order when sending data
         /// </summary>
         public bool UseNetworkByteOrder { get; set; } = false;
 
         /// <summary>
-        /// The callback that must be invoked when a connection is lost.
+        /// Gets or sets the callback that must be invoked when a connection is lost.
         /// </summary>
         public Action OnConnectionLost { get; set; }
 
+        /// <summary>
+        /// Gets a value indicating whether the transport is active, meaning started and not stopped yet.
+        /// </summary>
         public bool IsActive
         {
             get
@@ -128,18 +138,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         }
 
         /// <summary>
-        /// Gets the maximum lifespan of a connection established by this transport.
+        /// Gets or sets the maximum lifespan of a connection established by this transport.
         /// </summary>
         public TimeSpan MaxConnectionLifeSpan
         {
             get; set;
         }
 
+        /// <summary>
+        /// Gets the local endpoint of the connection of the listening server
+        /// </summary>
+        public EndPoint LocalEndpoint
+        {
+            get
+            {
+                return this.listener != null
+                    ? this.listener.LocalEndpoint
+                    : null;
+            }
+        }
+
+        /// <summary>
+        /// Parses the connection string to a list of endpoints
+        /// </summary>
+        /// <param name="connectionString">Connection string</param>
+        /// <returns>Array of IP endpoints</returns>
         public static IPEndPoint[] ParseConnectionString(string connectionString)
         {
             if (connectionString == null)
             {
-                throw new ArgumentNullException("connectionString");
+                throw new ArgumentNullException(nameof(connectionString));
             }
 
             string[] pieces = connectionString.Split(ConnectionStringSeparators, StringSplitOptions.RemoveEmptyEntries);
@@ -247,6 +275,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             return this.StartClient(TimeSpan.FromSeconds(5), endpoints);
         }
 
+        /// <summary>
+        /// Starts client with a specified server SSL validation timeout
+        /// </summary>
+        /// <param name="validationTimeout">Connection SSL validation timeout</param>
+        /// <param name="endpoints">Endpoints to connect to</param>
+        /// <returns>Client task</returns>
         public Task StartClient(TimeSpan validationTimeout, params IPEndPoint[] endpoints)
         {
             if (this.cancellationTokenSource != null)
@@ -279,12 +313,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             return this.StartServer(port, TimeSpan.FromSeconds(5));
         }
 
+        /// <summary>
+        /// Starts server with a specified client SSL validation timeout
+        /// </summary>
+        /// <param name="port">Port to start server</param>
+        /// <param name="validationTimeout">Client SSL validation timeout</param>
+        /// <returns>Server task</returns>
         public Task StartServer(int port, TimeSpan validationTimeout)
         {
             var endpoint = new IPEndPoint(IPAddress.Any, port);
             return this.StartServer(endpoint, validationTimeout);
         }
 
+        /// <summary>
+        /// Starts server with a specified client SSL validation timeout
+        /// </summary>
+        /// <param name="endpoint">local endpoint start server</param>
+        /// <param name="validationTimeout">Client SSL validation timeout</param>
+        /// <returns>Server task</returns>
         public Task StartServer(IPEndPoint endpoint, TimeSpan validationTimeout)
         {
             if (this.cancellationTokenSource != null)
@@ -307,11 +353,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             return task;
         }
 
+        /// <summary>
+        /// Stops the server with the default 5 seconds timeout
+        /// </summary>
         public void Stop()
         {
             this.Stop(DefaultStopTimeout);
         }
 
+        /// <summary>
+        /// Stops the server with a specified timeout
+        /// </summary>
+        /// <param name="timeout">Timeout waiting for server stop</param>
         public void Stop(TimeSpan timeout)
         {
             if (this.cancellationTokenSource == null)
@@ -608,7 +661,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 SendBufferSize = this.configuration.SendBufferSize,
                 ReceiveBufferSize = this.configuration.ReceiveBufferSize,
                 SendQueueLength = this.configuration.SendQueueLength,
-                MaxUnflushedPacketsCount = this.configuration.MaxUnflushedPacketsCount
+                MaxUnflushedPacketsCount = this.configuration.MaxUnflushedPacketsCount,
             };
 
             using (var connection = new Connection(this.transportId, connectionId, client, secureStream, configuration, this.cancellationTokenSource.Token))
@@ -691,29 +744,46 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public class SubjectValidation
         {
             /// <summary>
-            /// Thumbprints (separated by ;) of the intermediate signing certificate
+            /// Gets or sets thumbprints (separated by ;) of the intermediate signing certificate
             /// </summary>
             public IReadOnlyList<string> SigningCertThumbprints { get; set; }
 
             /// <summary>
-            /// Subject of the certificate
+            /// Gets or sets subject of the certificate
             /// </summary>
             public string CertificateSubject { get; set; }
         }
 
+        /// <summary>
+        /// Specification of subject rule
+        /// </summary>
         public sealed class SubjectRuleValidation
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="SubjectRuleValidation"/> class.
+            /// </summary>
+            /// <param name="role">Role to apply</param>
+            /// <param name="subjectValidation">Subject plus thumbprint rule</param>
             public SubjectRuleValidation(AbstractCertificateRule.RoleToApply role, SecureTransport.SubjectValidation subjectValidation)
             {
                 this.Role = role;
                 this.SubjectValidation = subjectValidation;
             }
 
+            /// <summary>
+            /// Gets the role to apply
+            /// </summary>
             public AbstractCertificateRule.RoleToApply Role { get; }
 
+            /// <summary>
+            /// Gets the subject validaton
+            /// </summary>
             public SecureTransport.SubjectValidation SubjectValidation { get; }
         }
 
+        /// <summary>
+        /// Configuration of the <see cref="SecureTransport"/>
+        /// </summary>
         public class Configuration
         {
             /// <summary>
@@ -742,7 +812,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             public LocalCertificateSelectionCallback LocalCertificateSelectionCallback { get; set; }
 
             /// <summary>
-            /// Gets a value indicating whether the client is asked for a certificate for authentication.
+            /// Gets or sets a value indicating whether the client is asked for a certificate for authentication.
             /// </summary>
             public bool IsClientCertificateRequired { get; set; } = true;
 
@@ -762,22 +832,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             public IReadOnlyList<string> BlacklistedThumbprints { get; set; } = null;
 
             /// <summary>
-            /// If present, the certificate validation rule to be used
+            /// Gets or sets if present, the certificate validation rule to be used
             /// </summary>
             public AbstractCertificateRule ExplicitRule { get; set; } = null;
 
             /// <summary>
-            /// If present identities are processed from here instead of from the members ClientCertificates and ServerCertificates
+            /// Gets or sets if present identities are processed from here instead of from the members ClientCertificates and ServerCertificates
             /// </summary>
             public CertIdentities Identities { get; set; } = null;
 
             /// <summary>
-            /// If present, it provides the subject validation rules
+            /// Gets or sets if present, it provides the subject validation rules
             /// </summary>
             public IReadOnlyList<SubjectRuleValidation> SubjectValidations { get; set; }
 
             /// <summary>
-            /// If it should authenticate as client
+            /// Gets or sets a value indicating whether it should authenticate as client
             /// </summary>
             public bool AuthAsClient { get; set; }
 

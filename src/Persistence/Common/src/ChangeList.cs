@@ -1,5 +1,5 @@
-﻿// <copyright file="ChangeList.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="ChangeList.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
@@ -43,9 +43,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         public enum ChangeType
         {
+            /// <summary>
+            /// Add a new node
+            /// </summary>
             Add,
+
+            /// <summary>
+            /// Update an existing node
+            /// </summary>
             Update,
-            Remove
+
+            /// <summary>
+            /// Remove an existing node
+            /// </summary>
+            Remove,
         }
 
         /// <summary>
@@ -58,6 +69,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         public List<Change> Changes { get; private set; } = new List<Change>();
 
+        /// <summary>
+        /// Clones this object for persistence
+        /// </summary>
+        /// <returns>Cloned object</returns>
         public ChangeList Clone()
         {
             return new ChangeList(this.Id, this.factory)
@@ -130,25 +145,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             }
         }
 
+        /// <summary>
+        /// Records a new persisted being added
+        /// </summary>
+        /// <param name="data">Persisted data being added</param>
         internal void RecordAdd(PersistedData data)
         {
             var change = new Change(ChangeType.Add, data);
             this.Changes.Add(change);
         }
 
+        /// <summary>
+        /// Records an existing persisted being updated
+        /// </summary>
+        /// <param name="data">Persisted data being updated</param>
         internal void RecordUpdate(PersistedData data)
         {
             var change = new Change(ChangeType.Update, data);
             this.Changes.Add(change);
         }
 
+        /// <summary>
+        /// Records an existing persisted being removed
+        /// </summary>
+        /// <param name="data">Persisted data being removed</param>
         internal void RecordRemove(PersistedData data)
         {
             var change = new Change(ChangeType.Remove, data);
             this.Changes.Add(change);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:DisposeObjectsBeforeLosingScope",
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
             Justification = "event lifetime managed by the pool")]
         private static ManualResetEventSlim GetEvent()
         {
@@ -169,18 +198,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             eventPool.Push(evt);
         }
 
+        /// <summary>
+        /// Representation of a single change
+        /// </summary>
         public sealed class Change
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="Change"/> class.
+            /// </summary>
+            /// <param name="changeType">Type of the change</param>
+            /// <param name="data">Persisted data associated with the change</param>
             public Change(ChangeType changeType, PersistedData data)
             {
                 this.ChangeType = changeType;
                 this.Data = data;
             }
 
+            /// <summary>
+            /// Gets the type of the change
+            /// </summary>
             public ChangeType ChangeType { get; private set; }
 
+            /// <summary>
+            /// Gets the persisted data
+            /// </summary>
             public PersistedData Data { get; private set; }
 
+            /// <summary>
+            /// Clones this object for persistence
+            /// </summary>
+            /// <returns>Cloned object</returns>
             public Change Clone()
             {
                 return new Change(this.ChangeType, this.Data.Clone());

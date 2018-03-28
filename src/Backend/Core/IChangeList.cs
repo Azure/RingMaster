@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="IChangeList.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="IChangeList.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence
 {
@@ -12,7 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Interface IChangeList
+    /// Interface of Change List
     /// </summary>
     public interface IChangeList
     {
@@ -32,14 +28,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         void CommitSync(long xid, ManualResetEvent ev, out Task task);
 
         /// <summary>
-        /// Aborts this chagelist.
+        /// Aborts this change list.
         /// </summary>
         void Abort();
 
         /// <summary>
         /// Sets the time (int rm time) when this changelist was initiated
         /// </summary>
-        /// <param name="txTime">The txTime.</param>
+        /// <param name="txTime">Transaction time</param>
         void SetTime(long txTime);
     }
 }

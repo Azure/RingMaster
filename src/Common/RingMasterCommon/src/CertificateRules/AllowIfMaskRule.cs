@@ -1,11 +1,10 @@
-﻿// <copyright file="AllowIfMaskRule.cs" company="Microsoft">
+﻿// <copyright file="AllowIfMaskRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -57,7 +56,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
                 return Behavior.Allowed;
             }
 
-            Trace.TraceInformation("ValidateSslPolicyErrors: AllowIfMaskRule: rule {0} returned {1}", this.rule.GetType(), b);
+            CertificateRulesEventSource.Log.AllowIfMaskRule_Result(this.rule.GetType().ToString(), b.ToString());
             return b == Behavior.BlackListed ? b : Behavior.NotAllowed;
         }
     }

@@ -1,5 +1,5 @@
-﻿// <copyright file="InMemoryFactory.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="InMemoryFactory.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory
@@ -13,6 +13,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence;
+    using static Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ChangeList;
 
     /// <summary>
     /// This factory is used for testing
@@ -27,11 +28,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
         private readonly Task processPendingChangeListsTask;
         private readonly bool isPrimary = false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InMemoryFactory"/> class.
+        /// </summary>
         public InMemoryFactory()
             : this(true, null, CancellationToken.None)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InMemoryFactory"/> class.
+        /// </summary>
+        /// <param name="isPrimary">Whether this replica is primary or not</param>
+        /// <param name="instrumentation">Instrumentation object</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         public InMemoryFactory(bool isPrimary, IPersistenceInstrumentation instrumentation, CancellationToken cancellationToken)
             : base("InMemory", instrumentation, cancellationToken)
         {
@@ -51,6 +61,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
         /// </summary>
         public Action<CommittedChangeList> OnChangeListCommitted { get; set; }
 
+        /// <summary>
+        /// Enumerates the stream and returns a collection of persisted data
+        /// </summary>
+        /// <param name="stream">Stream to read</param>
+        /// <returns>collection of persisted data object</returns>
         public IEnumerable<PersistedData> EnumerateFrom(Stream stream)
         {
             InMemoryPersistenceEventSource.Log.LoadFromStream();
@@ -67,12 +82,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             }
         }
 
+        /// <summary>
+        /// Loads the persisted data from the specified stream to rebuild the in-memory tree
+        /// </summary>
+        /// <param name="stream">Stream to read</param>
         public void LoadFrom(Stream stream)
         {
             InMemoryPersistenceEventSource.Log.LoadFromStream();
             this.Load(this.EnumerateFrom(stream));
         }
 
+        /// <summary>
+        /// Saves the entire in-memory tree to the specified stream
+        /// </summary>
+        /// <param name="stream">Stream to write</param>
         public void SaveTo(Stream stream)
         {
             InMemoryPersistenceEventSource.Log.SaveToStream();
@@ -86,6 +109,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             }
         }
 
+        /// <summary>
+        /// Registers a secondary replica to this factory
+        /// </summary>
+        /// <param name="secondary">Factory object of secondary replica</param>
         public void RegisterSecondary(InMemoryFactory secondary)
         {
             if (secondary == null)
@@ -96,6 +123,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             this.secondaries.Add(secondary);
         }
 
+        /// <inheritdoc />
         protected override async Task StartLoadingData()
         {
             if (this.LoadState != null)
@@ -108,6 +136,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             }
         }
 
+        /// <summary>
+        /// Disposes this object
+        /// </summary>
+        /// <param name="isDisposing">whether to dispose from managed code or native code</param>
         protected override void Dispose(bool isDisposing)
         {
             if (isDisposing)
@@ -123,12 +155,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             base.Dispose(isDisposing);
         }
 
+        /// <inheritdoc />
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "IReplication will be disposed by caller")]
         protected sealed override IReplication StartReplication(ulong id)
         {
             return new PendingReplication(id, this, this.secondaries);
         }
 
+        /// <inheritdoc />
         protected sealed override void OnDeactivate()
         {
             this.cancellationSource.Cancel();
@@ -204,16 +238,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             }
         }
 
+        /// <summary>
+        /// Change list that has been committed
+        /// </summary>
         public sealed class CommittedChangeList
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="CommittedChangeList"/> class.
+            /// </summary>
+            /// <param name="id">Change list ID</param>
             internal CommittedChangeList(ulong id)
             {
                 this.Id = id;
                 this.Changes = new List<ChangeList.Change>();
             }
 
+            /// <summary>
+            /// Gets the identifier of the change list
+            /// </summary>
             public ulong Id { get; private set; }
 
+            /// <summary>
+            /// Gets the list of changes
+            /// </summary>
             public List<ChangeList.Change> Changes { get; private set; }
         }
 

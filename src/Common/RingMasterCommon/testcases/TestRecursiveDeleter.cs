@@ -313,9 +313,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             public int DeleteMultiFailedOperationsCount { get; private set; }
 
             /// <inheritdoc />
-            public void DeleteMultiSucceeded(int operationsCount, TimeSpan latency)
+            public void DeleteQueued(int nodesDeleted, string nodePath)
             {
-                Trace.TraceInformation($"DeleteMultiSucceeded operationsCount={operationsCount}");
+                Trace.TraceInformation($"DeleteQueued nodesDeleted={nodesDeleted}, nodePath={nodePath}");
+            }
+
+            /// <inheritdoc />
+            public void DeleteMultiSucceeded(int nodesDeleted, int operationsCount, TimeSpan latency)
+            {
+                Trace.TraceInformation($"DeleteMultiSucceeded nodesDeleted={nodesDeleted}, operationsCount={operationsCount}");
                 lock (this)
                 {
                     this.DeleteMultiSucceededOperationsCount += operationsCount;
@@ -323,9 +329,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             }
 
             /// <inheritdoc />
-            public void DeleteMultiFailed(int operationsCount, TimeSpan latency)
+            public void DeleteMultiFailed(int nodesDeleted, int operationsCount, TimeSpan latency)
             {
-                Trace.TraceInformation($"DeleteMultiFailed operationsCount={operationsCount}");
+                Trace.TraceInformation($"DeleteMultiFailed nodesDeleted={nodesDeleted}, operationsCount={operationsCount}");
                 lock (this)
                 {
                     this.DeleteMultiFailedOperationsCount += operationsCount;

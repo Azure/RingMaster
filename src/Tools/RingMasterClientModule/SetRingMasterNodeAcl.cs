@@ -1,5 +1,5 @@
-﻿// <copyright file="SetRingMasterNodeAcl.cs" company="Microsoft">
-//     Copyright ©  2018
+﻿// <copyright file="SetRingMasterNodeAcl.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule

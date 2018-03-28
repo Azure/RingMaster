@@ -1,4 +1,4 @@
-﻿// <copyright file="AbstractCertificateRule.cs" company="Microsoft">
+﻿// <copyright file="AbstractCertificateRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -42,7 +42,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             /// <summary>
             /// The rule applies to all certificates (client and server)
             /// </summary>
-            AllCerts = 3
+            AllCerts = 3,
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             /// <summary>
             /// this rule doesn't change the behavior for this certificate
             /// </summary>
-            Neutral = 16
+            Neutral = 16,
         }
 
         /// <summary>

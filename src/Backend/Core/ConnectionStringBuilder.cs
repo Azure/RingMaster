@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="ConnectionStringBuilder.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ConnectionStringBuilder.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary>an abstraction to construct connection strings</summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -20,6 +16,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private int numConnections = 1;
         private HashSet<string> endpoints = new HashSet<string>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionStringBuilder"/> class.
+        /// </summary>
         public ConnectionStringBuilder()
         {
         }
@@ -34,6 +33,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 throw new ArgumentException("endpoint must be <host>:<port> and it is " + endpoint);
             }
+
             this.endpoints.Add(endpoint);
         }
 
@@ -56,30 +56,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.numConnections = num;
         }
 
-        /// <summary>
-        /// returns the string for the connection string.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
 
-            if (endpoints.Count == 0)
+            if (this.endpoints.Count == 0)
             {
                 throw new ArgumentException("at least one endpoint is needed");
             }
 
-            if (numConnections > 1)
+            if (this.numConnections > 1)
             {
-                sb.AppendFormat("numconnections={0}|", numConnections);
+                sb.AppendFormat("numconnections={0}|", this.numConnections);
             }
 
-            string sep = String.Empty;
-            foreach (string ep in endpoints)
+            string sep = string.Empty;
+            foreach (string ep in this.endpoints)
             {
                 sb.AppendFormat("{0}{1}", sep, ep);
                 sep = ";";
             }
+
             return sb.ToString();
         }
     }

@@ -1,4 +1,4 @@
-﻿// <copyright file="SpinEvent.cs" company="Microsoft">
+﻿// <copyright file="SpinEvent.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -12,49 +12,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// </summary>
     public class SpinEvent
     {
-        /// <summary>
-        /// Class TimeoutHelper.
-        /// </summary>
-        internal static class TimeoutHelper
-        {
-            /// <summary>
-            /// Gets the time.
-            /// </summary>
-            /// <returns>System.UInt32.</returns>
-            public static uint GetTime()
-            {
-                return (uint)Environment.TickCount;
-            }
-
-            /// <summary>
-            /// Updates the time out.
-            /// </summary>
-            /// <param name="startTime">The start time.</param>
-            /// <param name="originalWaitMillisecondsTimeout">The original wait milliseconds timeout.</param>
-            /// <returns>System.Int32.</returns>
-            public static int UpdateTimeOut(uint startTime, int originalWaitMillisecondsTimeout)
-            {
-                uint num = GetTime() - startTime;
-                if (num > (uint)int.MaxValue)
-                {
-                    return 0;
-                }
-
-                int num2 = originalWaitMillisecondsTimeout - (int)num;
-                if (num2 <= 0)
-                {
-                    return 0;
-                }
-
-                return num2;
-            }
-        }
-
-        /// <summary>
-        /// The _m owner
-        /// </summary>
-        private int mOwner;
-
         /// <summary>
         /// The spinning factor
         /// </summary>
@@ -96,10 +53,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         private static readonly int MaximumWaiters = 2147483646;
 
         /// <summary>
-        /// Gets whether the lock is currently held by any thread.
+        /// The _m owner
         /// </summary>
-        /// <value><c>true</c> if this instance is held; otherwise, <c>false</c>.</value>
-        public bool IsHeld => (this.mOwner & LockAnonymousOwned) != LockUnowned;
+        private int mOwner;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpinEvent"/> class.
@@ -108,6 +64,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         {
             this.mOwner = LockIdDisableMask;
         }
+
+        /// <summary>
+        /// Gets a value indicating whether the lock is currently held by any thread.
+        /// </summary>
+        /// <value><c>true</c> if this instance is held; otherwise, <c>false</c>.</value>
+        public bool IsHeld => (this.mOwner & LockAnonymousOwned) != LockUnowned;
 
         /// <summary>
         /// Acquires the lock in a reliable manner, such that even if an exception occurs within the method call, lockTaken can be examined reliably to determine whether the lock was acquired.
@@ -172,6 +134,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             this.ContinueTryEnter(millisecondsTimeout, ref lockTaken);
 
             return lockTaken;
+        }
+
+        /// <summary>
+        /// Releases the lock.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">lock is not held</exception>
+        /// <exception cref="T:System.Threading.SynchronizationLockException">Thread ownership tracking is enabled, and the current thread is not the owner of this lock.</exception>
+        public void Release()
+        {
+            Thread.BeginCriticalRegion();
+            if ((this.mOwner & LockAnonymousOwned) == LockUnowned)
+            {
+                Thread.EndCriticalRegion();
+                throw new InvalidOperationException("lock is not held");
+            }
+
+            Interlocked.Decrement(ref this.mOwner);
+
+            Thread.EndCriticalRegion();
         }
 
         /// <summary>
@@ -349,22 +330,41 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Releases the lock.
+        /// Class TimeoutHelper.
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">lock is not held</exception>
-        /// <exception cref="T:System.Threading.SynchronizationLockException">Thread ownership tracking is enabled, and the current thread is not the owner of this lock.</exception>
-        public void Release()
+        internal static class TimeoutHelper
         {
-            Thread.BeginCriticalRegion();
-            if ((this.mOwner & LockAnonymousOwned) == LockUnowned)
+            /// <summary>
+            /// Gets the time.
+            /// </summary>
+            /// <returns>System.UInt32.</returns>
+            public static uint GetTime()
             {
-                Thread.EndCriticalRegion();
-                throw new InvalidOperationException("lock is not held");
+                return (uint)Environment.TickCount;
             }
 
-            Interlocked.Decrement(ref this.mOwner);
+            /// <summary>
+            /// Updates the time out.
+            /// </summary>
+            /// <param name="startTime">The start time.</param>
+            /// <param name="originalWaitMillisecondsTimeout">The original wait milliseconds timeout.</param>
+            /// <returns>System.Int32.</returns>
+            public static int UpdateTimeOut(uint startTime, int originalWaitMillisecondsTimeout)
+            {
+                uint num = GetTime() - startTime;
+                if (num > (uint)int.MaxValue)
+                {
+                    return 0;
+                }
 
-            Thread.EndCriticalRegion();
+                int num2 = originalWaitMillisecondsTimeout - (int)num;
+                if (num2 <= 0)
+                {
+                    return 0;
+                }
+
+                return num2;
+            }
         }
     }
 }

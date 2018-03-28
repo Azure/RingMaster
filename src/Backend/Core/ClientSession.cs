@@ -1,5 +1,5 @@
-﻿// <copyright file="ClientSession.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ClientSession.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
@@ -23,9 +23,49 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     public class ClientSession : IClientSession
     {
         /// <summary>
+        /// Provider for unique session Ids.
+        /// </summary>
+        private static readonly UIdProvider SsessionIdProvider = new UIdProvider();
+
+        /// <summary>
+        /// Collection of active bulk watchers.
+        /// </summary>
+        private static readonly WatcherCollection SbulkWatchers = new WatcherCollection();
+
+        /// <summary>
+        /// Maximum amount of time a session can be idle for
+        /// </summary>
+        private static readonly TimeSpan MaxSessionIdleTime = TimeSpan.FromSeconds(60);
+
+        /// <summary>
+        /// do we want to use ROlocks?
+        /// </summary>
+        private static bool useROLocks = true;
+
+        /// <summary>
+        /// do we want to drain requests upon session termination
+        /// </summary>
+        private static bool drainRequestsOnTermination = false;
+
+        /// <summary>
+        /// Delegate to be invoked with received messages.
+        /// </summary>
+        private readonly ProcessMessageDelegate processMessage;
+
+        /// <summary>
+        /// Authentication info for this session
+        /// </summary>
+        private readonly SessionAuth authenticationInfo = new SessionAuth();
+
+        /// <summary>
+        /// Lock that guards the table of terminate actions.
+        /// </summary>
+        private readonly ReaderWriterLockSlim actionsOnTerminateLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+
+        /// <summary>
         /// The friendly name.
         /// </summary>
-        private string _friendlyName;
+        private string friendlyName;
 
         /// <summary>
         /// The inflightthe number of in flight requests
@@ -38,34 +78,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private Action runOnFlush = null;
 
         /// <summary>
-        /// Provider for unique session Ids.
-        /// </summary>
-        private static readonly UIdProvider SsessionIdProvider = new UIdProvider();
-
-        /// <summary>
-        /// Authentication info for this session
-        /// </summary>
-        private readonly SessionAuth _authenticationInfo = new SessionAuth();
-
-        /// <summary>
-        /// Collection of active bulk watchers.
-        /// </summary>
-        private static readonly WatcherCollection SbulkWatchers = new WatcherCollection();
-
-        /// <summary>
-        /// Delegate to be invoked with received messages.
-        /// </summary>
-        protected readonly ProcessMessageDelegate _processMessage;
-
-        /// <summary>
         /// Table of actions to execute when the connection is terminated.
         /// </summary>
-        private Dictionary<string, Action<bool>> _actionsOnTerminate = new Dictionary<string, Action<bool>>();
-
-        /// <summary>
-        /// Lock that guards the table of terminate actions.
-        /// </summary>
-        private readonly ReaderWriterLockSlim _actionsOnTerminateLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private Dictionary<string, Action<bool>> actionsOnTerminate = new Dictionary<string, Action<bool>>();
 
         /// <summary>
         /// if true, the read only interface will require locks
@@ -88,226 +103,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private object timeoutIdleSessionTimerLockObject = new object();
 
         /// <summary>
-        /// if true (default) the read only operations will require to acquire a RO lock. If false, they don't.
-        /// </summary>
-        public bool ROInterfaceRequiresLocks { get { return roInterfaceRequiresLocks; } set { roInterfaceRequiresLocks = value; } }
-
-        /// <summary>
-        /// if false (default) the session can run any write operations, otherwise, write operations can only be done on ephemeral nodes
-        /// </summary>
-        public bool OnlyEphemeralChangesAllowed { get; set; }
-
-        /// <summary>
-        /// do we want to use ROlocks?
-        /// </summary>
-        private static bool useROLocks = true;
-
-        /// <summary>
-        /// do we want to drain requests upon session termination
-        /// </summary>
-        private static bool DrainRequestsOnTermination = false;
-
-        /// <summary>
-        /// Maximum amount of time a session can be idle for
-        /// </summary>
-        private static readonly TimeSpan MaxSessionIdleTime = TimeSpan.FromSeconds(60);
-
-        /// <summary>
-        /// Redirection policy for write operations addressing a non-primary or non-master
-        /// </summary>
-        public RedirectionPolicy Redirection = RedirectionPolicy.ServerDefault;
-
-        /// <summary>
-        /// Does this session allow any writes?
-        /// </summary>
-        public bool writesAllowed = true;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ClientSession"/> class.
         /// </summary>
         /// <param name="processMessage">Delegate to invoke to process received messages</param>
         public ClientSession(ProcessMessageDelegate processMessage)
         {
-            this._processMessage = processMessage;
+            this.processMessage = processMessage;
             this.SessionId = SsessionIdProvider.NextUniqueId();
             this.FriendlyName = "sid-" + this.SessionId;
         }
-
-        /// <summary>
-        /// Gets or sets the session identifier.
-        /// </summary>
-        /// <value>The session identifier.</value>
-        public ulong SessionId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the friendly name of the client.
-        /// </summary>
-        /// <value>The name of the friendly.</value>
-        public string FriendlyName
-        {
-            get
-            {
-                return this._friendlyName;
-            }
-            set
-            {
-                RmAssert.IsTrue(value != null);
-                this._friendlyName = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets the authentication info for this session
-        /// </summary>
-        public ISessionAuth Auth
-        {
-            get { return this._authenticationInfo; }
-        }
-
-        /// <summary>
-        /// Action that must be executed when the session is terminated.
-        /// </summary>
-        internal Action OnTerminated { get; set; }
 
         /// <summary>
         /// Signature of the delegate invoked to process received messages.
         /// </summary>
         /// <param name="call">The call.</param>
         /// <param name="session">The session.</param>
-        /// <returns>RequestResponse.</returns>
-        public delegate void ProcessMessageDelegate(RequestCall call, ClientSession session, Action<RequestResponse> onCompleted);
-
-        /// <summary>
-        /// Adds an action to execute when this session terminates.
-        /// </summary>
-        /// <param name="name">Name of the action</param>
-        /// <param name="action">Action to execute. the argument is true if the caller's session is being terminated</param>
-        public void AddOnTerminateAction(string name, Action<bool> action)
-        {
-            if (action == null)
-            {
-                throw new ArgumentNullException("action");
-            }
-
-            bool runAction = false;
-
-            this._actionsOnTerminateLock.EnterWriteLock();
-            try
-            {
-                if (this._actionsOnTerminate == null)
-                {
-                    runAction = true;
-                    return;
-                }
-
-                RingMasterEventSource.Log.AddOnTerminateAction(this.SessionId, name);
-                this._actionsOnTerminate.Add(name, action);
-            }
-            finally
-            {
-                this._actionsOnTerminateLock.ExitWriteLock();
-
-                if (runAction)
-                {
-                    action(true);
-                }
-            }
-        }
-
-        /// <summary>
-        /// indicates if there is a terminate action for this session
-        /// </summary>
-        public bool HasOnTerminateActions
-        {
-            get
-            {
-                if (this._actionsOnTerminate == null)
-                {
-                    return false;
-                }
-
-                this._actionsOnTerminateLock.EnterReadLock();
-                try
-                {
-                    if (this._actionsOnTerminate == null)
-                    {
-                        return false;
-                    }
-
-                    return this._actionsOnTerminate.Count != 0;
-                }
-                finally
-                {
-                    this._actionsOnTerminateLock.ExitReadLock();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Tries to remove a terminate action.
-        /// </summary>
-        /// <param name="name">Name of the action to remove</param>
-        /// <param name="action">The removed action.</param>
-        /// <returns><c>true</c> If element was present (and hence removed), <c>false</c> otherwise.</returns>
-        public bool TryRemoveOnTerminateAction(string name, out Action<bool> action)
-        {
-            this._actionsOnTerminateLock.EnterWriteLock();
-            try
-            {
-                if (this._actionsOnTerminate == null)
-                {
-                    action = null;
-                    return false;
-                }
-
-                if (this._actionsOnTerminate.TryGetValue(name, out action))
-                {
-                    RingMasterEventSource.Log.TryRemoveOnTerminateAction(this.SessionId, name, true);
-                    this._actionsOnTerminate.Remove(name);
-                    return true;
-                }
-
-                RingMasterEventSource.Log.TryRemoveOnTerminateAction(this.SessionId, name, false);
-                return false;
-            }
-            finally
-            {
-                this._actionsOnTerminateLock.ExitWriteLock();
-            }
-        }
-
-        /// <summary>
-        /// Removes the on terminate action.
-        /// </summary>
-        /// <param name="name">Name of the action to remove</param>
-        public void RemoveOnTerminateAction(string name)
-        {
-            this._actionsOnTerminateLock.EnterWriteLock();
-            try
-            {
-                if (this._actionsOnTerminate != null)
-                {
-                    RingMasterEventSource.Log.RemoveOnTerminateAction(this.SessionId, name);
-                    this._actionsOnTerminate.Remove(name);
-                }
-            }
-            finally
-            {
-                this._actionsOnTerminateLock.ExitWriteLock();
-            }
-        }
-
-        public void DrainRequests()
-        {
-            if (DrainRequestsOnTermination)
-            {
-                this.SetRunOnFlush(CompleteTermination);
-            }
-            else
-            {
-                CompleteTermination();
-            }
-        }
+        /// <param name="onCompleted">Action to invoke on completed</param>
+        public delegate void ProcessMessageDelegate(RequestCall call, ClientSession session, Action<RequestResponse, Exception> onCompleted);
 
         /// <summary>
         /// Enum SessionState
@@ -337,7 +149,92 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// <summary>
             /// The session has been closed
             /// </summary>
-            Closed
+            Closed,
+        }
+
+        /// <summary>
+        /// Gets redirection policy for write operations addressing a non-primary or non-master
+        /// </summary>
+        public RedirectionPolicy Redirection { get; internal set; } = RedirectionPolicy.ServerDefault;
+
+        /// <summary>
+        /// Gets a value indicating whether this session allow any writes
+        /// </summary>
+        public bool WritesAllowed { get; internal set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the read only operations will require to acquire a RO lock. If false, they don't.
+        /// </summary>
+        public bool ROInterfaceRequiresLocks
+        {
+            get { return this.roInterfaceRequiresLocks; }
+            set { this.roInterfaceRequiresLocks = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the session can run any write operations, if true write operations can only be done on ephemeral nodes
+        /// </summary>
+        public bool OnlyEphemeralChangesAllowed { get; set; }
+
+        /// <summary>
+        /// Gets or sets the session identifier.
+        /// </summary>
+        /// <value>The session identifier.</value>
+        public ulong SessionId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the friendly name of the client.
+        /// </summary>
+        /// <value>The name of the friendly.</value>
+        public string FriendlyName
+        {
+            get
+            {
+                return this.friendlyName;
+            }
+
+            set
+            {
+                RmAssert.IsTrue(value != null);
+                this.friendlyName = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the authentication info for this session
+        /// </summary>
+        public ISessionAuth Auth
+        {
+            get { return this.authenticationInfo; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether there is a terminate action for this session
+        /// </summary>
+        public bool HasOnTerminateActions
+        {
+            get
+            {
+                if (this.actionsOnTerminate == null)
+                {
+                    return false;
+                }
+
+                this.actionsOnTerminateLock.EnterReadLock();
+                try
+                {
+                    if (this.actionsOnTerminate == null)
+                    {
+                        return false;
+                    }
+
+                    return this.actionsOnTerminate.Count != 0;
+                }
+                finally
+                {
+                    this.actionsOnTerminateLock.ExitReadLock();
+                }
+            }
         }
 
         /// <summary>
@@ -346,60 +243,168 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <value>The state.</value>
         public SessionState State { get; internal set; }
 
-        #region Bulk Watchers
         /// <summary>
-        /// gets or creates a locklist
+        /// Gets or sets action that must be executed when the session is terminated.
         /// </summary>
-        /// <param name="req">the request this operation is for</param>
-        /// <param name="lockDownPaths">if not null, this is a list of paths that are in RW lockdown mode.</param>
-        /// <returns>the locklist for this thread</returns>
-        internal ILockListTransaction GetOrCreateLockList(IRingMasterBackendRequest req, LockDownSet lockDownPaths)
+        internal Action OnTerminated { get; set; }
+
+        /// <summary>
+        /// this will close some sessions that are expired (not used for a long time)
+        /// </summary>
+        public static void CloseSomeExpiredSessions()
         {
-            IOperationOverrides over = req.Overrides;
-
-            ILockListTransaction ll;
-
-            ISessionAuth auth = req.Auth;
-
-            if (auth == null)
-            {
-                auth = this._authenticationInfo;
-            }
-
-            if (this.ROInterfaceRequiresLocks || this.writesAllowed || !useROLocks)
-            {
-                ll = new LockListForRW(lockDownPaths, this.OnlyEphemeralChangesAllowed);
-            }
-            else
-            {
-                ll = new LockListForRO();
-            }
-
-            try
-            {
-                ll.Initialize(auth, over);
-            }
-            catch (Exception)
-            {
-                ll.Dispose();
-                throw;
-            }
-
-            return ll;
+            // for now, it is a no-op
         }
 
         /// <summary>
-        /// unlocks and close changes if needed (committing or aborting those)
+        /// Adds an action to execute when this session terminates.
         /// </summary>
-        /// <param name="ll">the locklist to release</param>
-        /// <param name="task">async task to indicate the completion of lock list replication</param>
-        internal void IfNeededUnlockAllAndCloseChanges(ILockListTransaction ll, out Task task)
+        /// <param name="name">Name of the action</param>
+        /// <param name="action">Action to execute. the argument is true if the caller's session is being terminated</param>
+        public void AddOnTerminateAction(string name, Action<bool> action)
         {
-            task = null;
-            if (ll != null && ll.Complete(out task))
+            if (action == null)
             {
-                ll.Dispose();
+                throw new ArgumentNullException("action");
             }
+
+            bool runAction = false;
+
+            this.actionsOnTerminateLock.EnterWriteLock();
+            try
+            {
+                if (this.actionsOnTerminate == null)
+                {
+                    runAction = true;
+                    return;
+                }
+
+                RingMasterEventSource.Log.AddOnTerminateAction(this.SessionId, name);
+                this.actionsOnTerminate.Add(name, action);
+            }
+            finally
+            {
+                this.actionsOnTerminateLock.ExitWriteLock();
+
+                if (runAction)
+                {
+                    action(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove a terminate action.
+        /// </summary>
+        /// <param name="name">Name of the action to remove</param>
+        /// <param name="action">The removed action.</param>
+        /// <returns><c>true</c> If element was present (and hence removed), <c>false</c> otherwise.</returns>
+        public bool TryRemoveOnTerminateAction(string name, out Action<bool> action)
+        {
+            this.actionsOnTerminateLock.EnterWriteLock();
+            try
+            {
+                if (this.actionsOnTerminate == null)
+                {
+                    action = null;
+                    return false;
+                }
+
+                if (this.actionsOnTerminate.TryGetValue(name, out action))
+                {
+                    RingMasterEventSource.Log.TryRemoveOnTerminateAction(this.SessionId, name, true);
+                    this.actionsOnTerminate.Remove(name);
+                    return true;
+                }
+
+                RingMasterEventSource.Log.TryRemoveOnTerminateAction(this.SessionId, name, false);
+                return false;
+            }
+            finally
+            {
+                this.actionsOnTerminateLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Removes the on terminate action.
+        /// </summary>
+        /// <param name="name">Name of the action to remove</param>
+        public void RemoveOnTerminateAction(string name)
+        {
+            this.actionsOnTerminateLock.EnterWriteLock();
+            try
+            {
+                if (this.actionsOnTerminate != null)
+                {
+                    RingMasterEventSource.Log.RemoveOnTerminateAction(this.SessionId, name);
+                    this.actionsOnTerminate.Remove(name);
+                }
+            }
+            finally
+            {
+                this.actionsOnTerminateLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Drains all requests
+        /// </summary>
+        public void DrainRequests()
+        {
+            if (drainRequestsOnTermination)
+            {
+                this.SetRunOnFlush(this.CompleteTermination);
+            }
+            else
+            {
+                this.CompleteTermination();
+            }
+        }
+
+        /// <summary>
+        /// Closes the session
+        /// </summary>
+        public virtual void Close()
+        {
+            this.CompleteTermination();
+        }
+
+        /// <summary>
+        /// Sets the client information
+        /// </summary>
+        /// <param name="clientIP">IP address of the client</param>
+        /// <param name="clientIdentity">Identity of the client</param>
+        public void SetClientInfo(string clientIP, string clientIdentity)
+        {
+            this.authenticationInfo.ClientIP = clientIP;
+            this.authenticationInfo.ClientIdentity = clientIdentity;
+        }
+
+        /// <summary>
+        /// Starts the idle session timeout timer
+        /// </summary>
+        public void StartTimeoutIdleSessionTimer()
+        {
+            this.timeoutIdleSessionTimer = new Timer(this.TimeoutIdleSession, null, MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
+
+            this.AddOnTerminateAction("RemoveTimeoutIdleSessionTimer", _ =>
+            {
+                try
+                {
+                    lock (this.timeoutIdleSessionTimerLockObject)
+                    {
+                        if (this.timeoutIdleSessionTimer != null)
+                        {
+                            this.timeoutIdleSessionTimer.Dispose();
+                            this.timeoutIdleSessionTimer = null;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            });
         }
 
         /// <summary>
@@ -454,14 +459,109 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             RingMasterServerInstrumentation.Instance.UpdateBulkWatcherCount(count);
         }
 
+        /// <summary>
+        /// Removes all bulk watchers in the session
+        /// </summary>
+        /// <param name="sessionId">Session ID that is removing the watchers</param>
         internal static void RemoveAllBulkWatchers(ulong sessionId)
         {
             int count = SbulkWatchers.RemoveAllWatchersForSession(sessionId);
             RingMasterServerInstrumentation.Instance.UpdateBulkWatcherCount(count);
         }
 
-        #endregion
+        /// <summary>
+        /// gets or creates a locklist
+        /// </summary>
+        /// <param name="req">the request this operation is for</param>
+        /// <param name="lockDownPaths">if not null, this is a list of paths that are in RW lockdown mode.</param>
+        /// <returns>the locklist for this thread</returns>
+        internal ILockListTransaction GetOrCreateLockList(IRingMasterBackendRequest req, LockDownSet lockDownPaths)
+        {
+            IOperationOverrides over = req.Overrides;
 
+            ILockListTransaction ll;
+
+            ISessionAuth auth = req.Auth;
+
+            if (auth == null)
+            {
+                auth = this.authenticationInfo;
+            }
+
+            if (this.ROInterfaceRequiresLocks || this.WritesAllowed || !useROLocks)
+            {
+                ll = new LockListForRW(lockDownPaths, this.OnlyEphemeralChangesAllowed);
+            }
+            else
+            {
+                ll = new LockListForRO();
+            }
+
+            try
+            {
+                ll.Initialize(auth, over);
+            }
+            catch (Exception)
+            {
+                ll.Dispose();
+                throw;
+            }
+
+            return ll;
+        }
+
+        /// <summary>
+        /// unlocks and close changes if needed (committing or aborting those)
+        /// </summary>
+        /// <param name="ll">the locklist to release</param>
+        /// <param name="task">async task to indicate the completion of lock list replication</param>
+        internal void IfNeededUnlockAllAndCloseChanges(ILockListTransaction ll, out Task task)
+        {
+            task = null;
+            if (ll != null && ll.Complete(out task))
+            {
+                ll.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Records an invocation has started.
+        /// </summary>
+        internal void BeginInvocation()
+        {
+            Interlocked.Increment(ref this.inflight);
+        }
+
+        /// <summary>
+        /// Set the digest of the client
+        /// </summary>
+        /// <param name="digest">Digest of the client</param>
+        internal void SetClientDigest(string digest)
+        {
+            this.authenticationInfo.ClientDigest = digest;
+        }
+
+        /// <summary>
+        /// Records an invocation has finished.
+        /// If we got to zero, runs "runOnFlush" action, if any
+        /// </summary>
+        internal void EndInvocation()
+        {
+            if (Interlocked.Decrement(ref this.inflight) == 0)
+            {
+                Action doRun = Interlocked.Exchange(ref this.runOnFlush, null);
+
+                if (doRun != null)
+                {
+                    doRun();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the timestamp of the last activity of the session
+        /// </summary>
+        /// <param name="time">Timestamp of the activity</param>
         protected void UpdateLastSessionActivity(DateTime time)
         {
             this.lastSessionActivity = time;
@@ -477,29 +577,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             try
             {
                 List<KeyValuePair<string, Action<bool>>> torun = null;
-                this._actionsOnTerminateLock.EnterWriteLock();
+                this.actionsOnTerminateLock.EnterWriteLock();
 
                 try
                 {
-                    if (this._actionsOnTerminate != null)
+                    if (this.actionsOnTerminate != null)
                     {
                         // we need a copy of the list because the actions can modify the collection itself
-                        torun = new List<KeyValuePair<string, Action<bool>>>(this._actionsOnTerminate);
+                        torun = new List<KeyValuePair<string, Action<bool>>>(this.actionsOnTerminate);
 
-                        this._actionsOnTerminate = null;
+                        this.actionsOnTerminate = null;
                     }
 
                     this.State = SessionState.Terminating;
                 }
                 finally
                 {
-                    this._actionsOnTerminateLock.ExitWriteLock();
+                    this.actionsOnTerminateLock.ExitWriteLock();
                 }
 
                 if (torun != null)
                 {
                     Trace.TraceInformation("ClientSession[{0}]: Running terminate actions. count={1}", this.SessionId, torun.Count);
                     int watcherTerminateActionsCount = 0;
+
                     // Run the watcher terminate actions first.
                     foreach (KeyValuePair<string, Action<bool>> item in torun)
                     {
@@ -537,27 +638,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             Trace.WriteLine(string.Format("ClientSession[{0}]: Terminated", this.SessionId));
         }
 
-        public virtual void Close()
-        {
-            this.CompleteTermination();
-        }
-
-        /// <summary>
-        /// this will close some sessions that are expired (not used for a long time)
-        /// </summary>
-        public static void CloseSomeExpiredSessions()
-        {
-            // for now, it is a no-op
-        }
-
-        /// <summary>
-        /// Records an invocation has started.
-        /// </summary>
-        internal void BeginInvocation()
-        {
-            Interlocked.Increment(ref inflight);
-        }
-
         /// <summary>
         /// Sets the action to run on flush. If we are flushed, run the method now.
         /// Note: this method can only be invoked once in the lifetime of a session
@@ -566,7 +646,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <exception cref="System.InvalidOperationException">if SetRunOnFlush is invoked more than once on this session</exception>
         private void SetRunOnFlush(Action action)
         {
-            Action prev = Interlocked.CompareExchange(ref runOnFlush, action, null);
+            Action prev = Interlocked.CompareExchange(ref this.runOnFlush, action, null);
 
             if (prev != null)
             {
@@ -578,64 +658,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.EndInvocation();
         }
 
-        public void SetClientInfo(string clientIP, string clientIdentity)
-        {
-            this._authenticationInfo.ClientIP = clientIP;
-            this._authenticationInfo.ClientIdentity = clientIdentity;
-        }
-
-        internal void SetClientDigest(string digest)
-        {
-            this._authenticationInfo.ClientDigest = digest;
-        }
-
-        /// <summary>
-        /// Records an invocation has finished.
-        /// If we got to zero, runs "runOnFlush" action, if any
-        /// </summary>
-        internal void EndInvocation()
-        {
-            if (0 == Interlocked.Decrement(ref inflight))
-            {
-                Action doRun = Interlocked.Exchange(ref runOnFlush, null);
-
-                if (doRun != null)
-                {
-                    doRun();
-                }
-            }
-        }
-
-        public void StartTimeoutIdleSessionTimer()
-        {
-            this.timeoutIdleSessionTimer = new Timer(TimeoutIdleSession, null, MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
-
-            this.AddOnTerminateAction("RemoveTimeoutIdleSessionTimer", _ =>
-            {
-                try
-                {
-                    lock (timeoutIdleSessionTimerLockObject)
-                    {
-                        if (this.timeoutIdleSessionTimer != null)
-                        {
-                            timeoutIdleSessionTimer.Dispose();
-                            this.timeoutIdleSessionTimer = null;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            });
-        }
-
         private void TimeoutIdleSession(object state)
         {
             if (this.lastSessionActivity < DateTime.UtcNow.Subtract(MaxSessionIdleTime))
             {
                 Trace.TraceWarning("ClientSession[{0}]: Closing idle session", this.SessionId);
 
-                RingMasterThreadPool.Instance.QueueUserWorkItem(__ =>
+                RingMasterThreadPool.Instance.QueueUserWorkItem(unused =>
                 {
                     try
                     {
@@ -649,11 +678,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
             else
             {
-                lock (timeoutIdleSessionTimerLockObject)
+                lock (this.timeoutIdleSessionTimerLockObject)
                 {
                     if (this.timeoutIdleSessionTimer != null)
                     {
-                        timeoutIdleSessionTimer.Change(MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
+                        this.timeoutIdleSessionTimer.Change(MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
                     }
                 }
             }

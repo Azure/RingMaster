@@ -1,4 +1,4 @@
-﻿// <copyright file="RMAssert.cs" company="Microsoft">
+﻿// <copyright file="RMAssert.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 

@@ -1,11 +1,11 @@
-// <copyright file="DelegateWatcher.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="DelegateWatcher.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
     using System;
-    
+
     /// <summary>
     /// Class DelegateWatcher.
     /// </summary>
@@ -17,20 +17,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         private Action<WatchedEvent> onProcess;
 
         /// <summary>
-        /// Initializes a new instance of the DelegateWatcher class.
+        /// Initializes a new instance of the <see cref="DelegateWatcher"/> class.
         /// </summary>
         /// <param name="onProcess">The on process.</param>
-        /// <param name="oneUse">if set to true the watcher is for one use (meaning it will be fired exactly once).</param>
+        /// <param name="kind">Kind of the watcher</param>
         /// <exception cref="System.ArgumentNullException">onProcess cannot be null</exception>
-        public DelegateWatcher(Action<WatchedEvent> onProcess, bool oneUse = true)
+        public DelegateWatcher(Action<WatchedEvent> onProcess, WatcherKind kind = WatcherKind.OneUse)
         {
-            if (onProcess == null)
-            {
-                throw new ArgumentNullException("onProcess");
-            }
-
-            this.OneUse = oneUse;
-            this.onProcess = onProcess;
+            this.onProcess = onProcess ?? throw new ArgumentNullException("onProcess");
+            this.Kind = kind;
         }
 
         /// <summary>
@@ -40,10 +35,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         public ulong Id { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this instance is a one use watcher or reusable.
+        /// Gets a value indicating whether the watcher is for a single use only.
         /// </summary>
-        /// <value><c>true</c> if [one use]; otherwise, <c>false</c>.</value>
-        public bool OneUse { get; set; }
+        public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+        /// <summary>
+        /// Gets or sets the kind of the watcher, if it is for single use and if the data is included on notification
+        /// </summary>
+        public WatcherKind Kind { get; set; }
 
         /// <summary>
         /// Processes the specified event.

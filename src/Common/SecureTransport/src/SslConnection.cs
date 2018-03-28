@@ -1,5 +1,5 @@
-﻿// <copyright file="SslConnection.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="SslConnection.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
@@ -330,7 +330,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 return false;
             }
 
-            IEnumerable<SecureTransport.SubjectRuleValidation> matches = configuration.SubjectValidations.Where((u) => { return u.Role == role || u.Role == AbstractCertificateRule.RoleToApply.AllCerts; });
+            IEnumerable<SecureTransport.SubjectRuleValidation> matches = configuration.SubjectValidations.Where(
+                    (u) =>
+                    {
+                        return u.Role == role || u.Role == AbstractCertificateRule.RoleToApply.AllCerts;
+                    });
+
             return matches != null && matches.Any();
         }
 
@@ -365,7 +370,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             public LocalCertificateSelectionCallback LocalCertificateSelectionCallback { get; set; }
 
             /// <summary>
-            /// Gets a value indicating whether the client is asked for a certificate for authentication.
+            /// Gets or sets a value indicating whether the client is asked for a certificate for authentication.
             /// </summary>
             public bool IsClientCertificateRequired { get; set; } = true;
 
@@ -380,27 +385,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             public bool MustCheckCertificateTrustChain { get; set; } = true;
 
             /// <summary>
-            /// If present, the additional validation certificateValidator to be used
+            /// Gets or sets if present, the additional validation certificateValidator to be used
             /// </summary>
             public AbstractCertificateRule ExplicitRule { get; set; } = null;
 
             /// <summary>
-            /// If present identities are processed from here instead of from the members ClientCertificates and ServerCertificates
+            /// Gets or sets if present identities are processed from here instead of from the members ClientCertificates and ServerCertificates
             /// </summary>
             public CertIdentities Identities { get; set; }
 
             /// <summary>
-            /// If it should start as client
+            /// Gets or sets a value indicating whether it should start as client
             /// </summary>
             public bool StartAsClient { get; set; }
 
             /// <summary>
-            /// blacklisted thumbprints
+            /// Gets or sets blacklisted thumbprints
             /// </summary>
             public IReadOnlyList<string> BlacklistedThumbprints { get; set; }
 
             /// <summary>
-            /// If present, it provides the subject validation rules
+            /// Gets or sets if present, it provides the subject validation rules
             /// </summary>
             public IReadOnlyList<SecureTransport.SubjectRuleValidation> SubjectValidations { get; set; }
         }

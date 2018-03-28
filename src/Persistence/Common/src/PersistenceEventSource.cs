@@ -1,5 +1,5 @@
-﻿// <copyright file="PersistenceEventSource.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="PersistenceEventSource.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
@@ -14,16 +14,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class PersistenceEventSource : EventSource
     {
-        public PersistenceEventSource()
-        {
-            this.TraceLevel = TraceLevel.Info;
-        }
-
         public static PersistenceEventSource Log { get; } = new PersistenceEventSource();
-
-        // Note: TraceLevel has EventId=1 as compiler will auto-generate a method for the property so we
-        // must start at 2. Pay attention to fix the event ids if more properties are added in future.
-        public TraceLevel TraceLevel { get; set; }
 
         [Event(2, Level = EventLevel.Informational, Version = 1)]
         public void PersistedDataDelete(ulong id, ulong parentId)
@@ -583,22 +574,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.WriteEvent(95, durationInMs);
         }
 
-        [Event(96, Level = EventLevel.Informational, Version = 1)]
-        public void GroupCommit_Started(ulong firstChangeListId, ulong lastChangeListId, int changeCount)
+        [Event(96, Level = EventLevel.LogAlways, Version = 1)]
+        public void GroupCommit_Started(ulong firstChangeListId, ulong lastChangeListId, int changeCount, int dataSize, string timeStamp)
         {
-            this.WriteEvent(96, firstChangeListId, lastChangeListId, changeCount);
+            this.WriteEvent(96, firstChangeListId, lastChangeListId, changeCount, dataSize, timeStamp);
         }
 
-        [Event(97, Level = EventLevel.Informational, Version = 1)]
-        public void GroupCommit_Succeeded(ulong firstChangeListId, ulong lastChangeListId, ulong replicationId, int changeCount, long elapsedMilliseconds)
+        [Event(97, Level = EventLevel.LogAlways, Version = 1)]
+        public void GroupCommit_Succeeded(ulong firstChangeListId, ulong lastChangeListId, ulong replicationId, double dictUpdateDurationMs, double commitMs, double totalDurationMs)
         {
-            this.WriteEvent(97, firstChangeListId, lastChangeListId, replicationId, changeCount, elapsedMilliseconds);
+            this.WriteEvent(97, firstChangeListId, lastChangeListId, replicationId, dictUpdateDurationMs, commitMs, totalDurationMs);
         }
 
         [Event(98, Level = EventLevel.Error, Version = 1)]
-        public void GroupCommit_Failed(ulong firstChangeListId, ulong lastChangeListId, int changeCount, long elapsedMilliseconds, string exception)
+        public void GroupCommit_Failed(ulong firstChangeListId, ulong lastChangeListId, int changeCount, double totalDurationMs, string exception)
         {
-            this.WriteEvent(98, firstChangeListId, lastChangeListId, changeCount, elapsedMilliseconds, exception);
+            this.WriteEvent(98, firstChangeListId, lastChangeListId, changeCount, totalDurationMs, exception);
         }
     }
 }

@@ -89,7 +89,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             backend.ProcessMessage(
                 new RequestCreate("$/gc", context: null, data: null, acl: null, createMode: CreateMode.Persistent, callback: (rc, path, ctx, name) => { }),
                 session,
-                response => response.ResultCode.Should().Be((int)Code.Ok));
+                (response, ex) => response.ResultCode.Should().Be((int)Code.Ok));
 
             auditConsumer.RequestCommandCount.Should().Be(1);
             auditConsumer.LastSessionId.Should().Be(session.SessionId);
@@ -117,7 +117,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             backend.ProcessMessage(
                 new RequestSetData("/$metadata/commands/$$<all>", context: null, data: Encoding.UTF8.GetBytes("$/gc"), version: -1, callback: (rc, path, ctx, name) => { }),
                 session,
-                response => response.ResultCode.Should().Be((int)Code.Ok));
+                (response, ex) => response.ResultCode.Should().Be((int)Code.Ok));
 
             auditConsumer.RequestCommandCount.Should().Be(1);
             auditConsumer.LastSessionId.Should().Be(session.SessionId);
@@ -177,7 +177,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             backend.ProcessMessage(
                 new RequestSetAuth(authDigest, null),
                 session,
-                response => response.ResultCode.Should().Be((int)Code.Ok));
+                (response, ex) => response.ResultCode.Should().Be((int)Code.Ok));
         }
 
         /// <summary>

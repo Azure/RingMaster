@@ -1,10 +1,9 @@
-﻿// <copyright file="ChainIsValidRule.cs" company="Microsoft">
+﻿// <copyright file="ChainIsValidRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -58,14 +57,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         {
             if (!this.validateChain)
             {
-                Trace.TraceWarning("ValidateSslPolicyErrors. ChainIsValidRule: Certificate trust chain validation skipped. Issuer={0} Subject={1} SerialNumber={2} Thumbprint={3}", CertAccessor.Instance.GetIssuer(certificate), CertAccessor.Instance.GetSubject(certificate), CertAccessor.Instance.GetSerialNumberString(certificate), CertAccessor.Instance.GetThumbprint(certificate));
+                CertificateRulesEventSource.Log.ChainIsValidRule_Skipped(
+                    CertAccessor.Instance.GetIssuer(certificate),
+                    CertAccessor.Instance.GetSubject(certificate),
+                    CertAccessor.Instance.GetSerialNumberString(certificate),
+                    CertAccessor.Instance.GetThumbprint(certificate));
                 return Behavior.Neutral;
             }
 
             // If the other party didn't provide a certificate, deny
             if (certificate == null || (sslPolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) == SslPolicyErrors.RemoteCertificateNotAvailable)
             {
-                Trace.TraceError("ValidateSslPolicyErrors: ChainIsValidRule: no remote certificate available. Certificate error: {0}", sslPolicyErrors);
+                CertificateRulesEventSource.Log.ChainIsValidRule_RemoteCertificateNotAvailable();
                 return Behavior.NotAllowed;
             }
 
@@ -77,7 +80,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             // the background download can succeed - it does not block.
             if (sslPolicyErrors == SslPolicyErrors.None || sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch)
             {
-                Trace.TraceWarning("ValidateSslPolicyErrors. ChainIsValidRule: Certificate trust chain validation not needed for Thumbprint={0}, since sslPolicyErrors resulted {1}", CertAccessor.Instance.GetThumbprint(certificate), sslPolicyErrors);
+                CertificateRulesEventSource.Log.ChainIsValidRule_CertificateTrustChainValidationNotNeeded(
+                    CertAccessor.Instance.GetThumbprint(certificate),
+                    sslPolicyErrors.ToString());
                 return Behavior.Neutral;
             }
 
@@ -90,7 +95,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (chainStatus == null || chainStatus.Length == 0)
             {
-                Trace.TraceError("ValidateSslPolicyErrors: ChainIsValidRule: ChainErrors but no ChainStatus available. Certificate error: {0}", sslPolicyErrors);
+                CertificateRulesEventSource.Log.ChainIsValidRule_ChainStatusNotAvailable(sslPolicyErrors.ToString());
                 return Behavior.NotAllowed;
             }
 
@@ -98,11 +103,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             {
                 if (this.IsStatePermitted(status.Status))
                 {
-                    Trace.TraceWarning("{0} ({1}). Skipping revocation check for cert with Issuer={2} Subject={3} SerialNumber={4} Thumbprint={5}", this.allowedString, status.Status, CertAccessor.Instance.GetIssuer(certificate), CertAccessor.Instance.GetSubject(certificate), CertAccessor.Instance.GetSerialNumberString(certificate), CertAccessor.Instance.GetThumbprint(certificate));
+                    CertificateRulesEventSource.Log.ChainIsValidRule_SkippingRevocationCheck(
+                        this.allowedString,
+                        status.Status.ToString(),
+                        CertAccessor.Instance.GetIssuer(certificate),
+                        CertAccessor.Instance.GetSubject(certificate),
+                        CertAccessor.Instance.GetSerialNumberString(certificate),
+                        CertAccessor.Instance.GetThumbprint(certificate));
                 }
                 else
                 {
-                    Trace.TraceError("ValidateSslPolicyErrors: ChainIsValidRule: Certificate error {0} for cert with Issuer={1} Subject={2} SerialNumber={3} Thumbprint={4}", status.Status, CertAccessor.Instance.GetIssuer(certificate), CertAccessor.Instance.GetSubject(certificate), CertAccessor.Instance.GetSerialNumberString(certificate), CertAccessor.Instance.GetThumbprint(certificate));
+                    CertificateRulesEventSource.Log.ChainIsValidRule_NotAllowed(
+                        status.Status.ToString(),
+                        CertAccessor.Instance.GetIssuer(certificate),
+                        CertAccessor.Instance.GetSubject(certificate),
+                        CertAccessor.Instance.GetSerialNumberString(certificate),
+                        CertAccessor.Instance.GetThumbprint(certificate));
+
                     return Behavior.NotAllowed;
                 }
             }

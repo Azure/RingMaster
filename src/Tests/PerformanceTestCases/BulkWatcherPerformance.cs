@@ -163,14 +163,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             public Watcher(ulong id, BulkWatcherPerformance.IInstrumentation instrumentation)
             {
                 this.Id = id;
-                this.OneUse = false;
+                this.Kind = default(WatcherKind);
                 this.instrumentation = instrumentation;
                 this.lifetime = Stopwatch.StartNew();
             }
 
             public ulong Id { get; private set; }
 
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            public WatcherKind Kind { get; private set; }
 
             /// <summary>
             /// Process a watcher notification.

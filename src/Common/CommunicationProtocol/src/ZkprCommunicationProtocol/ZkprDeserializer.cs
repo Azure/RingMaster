@@ -1,5 +1,5 @@
-﻿// <copyright file="ZkprDeserializer.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="ZkprDeserializer.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -96,10 +96,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 CallId = (ulong)callId,
                 Request = ringMasterRequest,
-                ProtocolRequest = zkprRequest
+                ProtocolRequest = zkprRequest,
             };
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.memoryStream.Dispose();
@@ -123,7 +124,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         }
 
         /// <summary>
-        /// Deserialize <see cref="IZookeeperRequest"/>
+        /// Deserialize <see cref="IZooKeeperRequest"/>
         /// </summary>
         /// <param name="xid">the callid</param>
         /// <param name="type">type of the call</param>
@@ -146,19 +147,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     return cs;
                 case ZooKeeperRequestType.Exists:
                     ZkprProtocolMessages.Exists ex = this.DeserializeExists(xid);
-                    ringMasterRequest = new RequestExists(ex.Path, ex.Watch == false ? null : new Watcher((ulong)xid, true));
+                    ringMasterRequest = new RequestExists(ex.Path, ex.Watch == false ? null : new Watcher((ulong)xid, WatcherKind.OneUse));
                     return ex;
                 case ZooKeeperRequestType.GetChildren:
                     ZkprProtocolMessages.GetChildren gc = this.DeserializeGetChildren(xid);
-                    ringMasterRequest = new RequestGetChildren(gc.Path, gc.Watch == false ? null : new Watcher((ulong)xid, true), null);
+                    ringMasterRequest = new RequestGetChildren(gc.Path, gc.Watch == false ? null : new Watcher((ulong)xid, WatcherKind.OneUse), null);
                     return gc;
                 case ZooKeeperRequestType.GetChildren2:
                     ZkprProtocolMessages.GetChildren2 gc2 = this.DeserializeGetChildren2(xid);
-                    ringMasterRequest = new RequestGetChildren(gc2.Path, gc2.Watch == false ? null : new Watcher((ulong)xid, true), null);
+                    ringMasterRequest = new RequestGetChildren(gc2.Path, gc2.Watch == false ? null : new Watcher((ulong)xid, WatcherKind.OneUse), null);
                     return gc2;
                 case ZooKeeperRequestType.GetData:
                     ZkprProtocolMessages.GetData gd = this.DeserializeGetData(xid);
-                    ringMasterRequest = new RequestGetData(gd.Path, RequestGetData.GetDataOptions.None, gd.Watch == false ? null : new Watcher((ulong)xid, true));
+                    ringMasterRequest = new RequestGetData(gd.Path, RequestGetData.GetDataOptions.None, gd.Watch == false ? null : new Watcher((ulong)xid, WatcherKind.OneUse));
                     return gd;
                 case ZooKeeperRequestType.Create:
                     ZkprProtocolMessages.Create cr = this.DeserializeCreate(xid);
@@ -595,11 +596,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             /// Initializes a new instance of the <see cref="Watcher"/> class.
             /// </summary>
             /// <param name="id">Id of the watcher</param>
-            /// <param name="oneUse"><c>true</c> if this watcher is a single use watcher</param>
-            public Watcher(ulong id, bool oneUse)
+            /// <param name="kind">Kind of the watcher</param>
+            public Watcher(ulong id, WatcherKind kind)
             {
                 this.Id = id;
-                this.OneUse = oneUse;
+                this.Kind = kind;
             }
 
             /// <summary>
@@ -608,9 +609,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             public ulong Id { get; private set; }
 
             /// <summary>
-            /// Gets a value indicating whether this watcher is single use.
+            /// Gets a value indicating whether the watcher is for a single use only.
             /// </summary>
-            public bool OneUse { get; private set; }
+            public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
+
+            /// <summary>
+            /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+            /// </summary>
+            public WatcherKind Kind { get; private set; }
 
             /// <summary>
             /// Process a watcher notification.

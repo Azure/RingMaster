@@ -1,5 +1,5 @@
-﻿// <copyright file="SerializationFormatVersions.cs" company="Microsoft">
-//     Copyright 2015
+﻿// <copyright file="SerializationFormatVersions.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <summary>
         /// The maximum supported serialization version.
         /// </summary>
-        public const uint MaximumSupportedVersion = Version22;
+        public const uint MaximumSupportedVersion = Version23;
 
         /// <summary>
         /// The very first protocol version.
@@ -140,5 +140,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Added nullable string on multi.create op.
         /// </summary>
         public const uint Version22 = 22;
+
+        /// <summary>
+        /// Added Data and Stat in WatchedEvent
+        /// </summary>
+        public const uint Version23 = 23;
     }
 }

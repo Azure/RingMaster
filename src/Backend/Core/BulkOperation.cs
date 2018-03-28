@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="BulkOperation.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="BulkOperation.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
@@ -18,37 +14,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     /// </summary>
     public class BulkOperation
     {
-        /// <summary>
-        /// Class MiniNode.
-        /// </summary>
-        public class MiniNode
-        {
-            /// <summary>
-            /// The name
-            /// </summary>
-            public string Name;
-            /// <summary>
-            /// The children
-            /// </summary>
-            public List<MiniNode> Children;
-            /// <summary>
-            /// The data
-            /// </summary>
-            public byte[] Data;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="MiniNode"/> class.
-            /// </summary>
-            /// <param name="name">The name.</param>
-            /// <param name="data">The data.</param>
-            public MiniNode(string name, byte[] data)
-            {
-                this.Name = name;
-                this.Data = data;
-                this.Children = null;
-            }
-        }
-
         /// <summary>
         /// Serializes all data.
         /// </summary>
@@ -66,16 +31,49 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Deserializes all data.
+        /// Determines whether the specified path represents a bulk watcher
         /// </summary>
-        /// <param name="bytes">The bytes.</param>
-        /// <returns>MiniNode.</returns>
-        public static MiniNode DeserializeAllData(byte[] bytes)
+        /// <param name="path">The path.</param>
+        /// <returns><c>true</c> if the specified path is a 'bulkwatcher' path; otherwise, <c>false</c>.</returns>
+        public static bool IsBulkWatcher(string path)
         {
-            using (BinaryReader br = new BinaryReader(new MemoryStream(bytes)))
+            return path != null && path.StartsWith("/$bulkwatcher/");
+        }
+
+        /// <summary>
+        /// Remove the bulk watcher specifier from the path (if any)
+        /// </summary>
+        /// <param name="path">The path to remove the specifier from</param>
+        /// <param name="wasRemoved">If the removal is successful</param>
+        /// <returns>The path with the bulkwatcher specifier removed</returns>
+        public static string RemoveBulkWatcherSpecifier(string path, out bool wasRemoved)
+        {
+            const string BulkWatcherSpecifier = "bulkwatcher:";
+            const int BulkWatcherSpecifierLength = 12;
+
+            if (path != null && path.StartsWith(BulkWatcherSpecifier))
             {
-                return DeserializeAllData(br);
+                wasRemoved = true;
+                return path.Substring(BulkWatcherSpecifierLength);
             }
+
+            wasRemoved = false;
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the name of the bulk watcher.
+        /// </summary>
+        /// <param name="id">The identifier.</param>
+        /// <returns>The path to the node where bulk watcher information is stored</returns>
+        public static string GetBulkWatcherName(string id)
+        {
+            if (id == null)
+            {
+                return "/$bulkwatcher";
+            }
+
+            return "/$bulkwatcher/" + id;
         }
 
         /// <summary>
@@ -86,10 +84,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private static MiniNode DeserializeAllData(BinaryReader br)
         {
             string name = br.ReadString();
-            if (name == String.Empty)
+            if (name == string.Empty)
             {
                 return null;
             }
+
             int dataL = br.ReadInt32();
             byte[] data = null;
             if (dataL >= 0)
@@ -107,16 +106,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     break;
                 }
+
                 if (children == null)
                 {
                     children = new List<MiniNode>();
                 }
+
                 children.Add(child);
             }
+
             if (children != null)
             {
                 node.Children = children;
             }
+
             return node;
         }
 
@@ -154,51 +157,40 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
             }
 
-            ms.Write(String.Empty);
+            ms.Write(string.Empty);
         }
 
         /// <summary>
-        /// Determines whether [is bulk watcher] [the specified path].
+        /// Class MiniNode.
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns><c>true</c> if the specified path is a 'bulkwatcher' path; otherwise, <c>false</c>.</returns>
-        public static bool IsBulkWatcher(string path)
+        private class MiniNode
         {
-            return path != null && path.StartsWith("/$bulkwatcher/");
-        }
-
-        /// <summary>
-        /// Remove the bulk watcher specifier from the path (if any)
-        /// </summary>
-        /// <param name="path">The path to remove the specifier from</param>
-        /// <returns>The path with the bulkwatcher specifier removed</returns>
-        public static string RemoveBulkWatcherSpecifier(string path, out bool wasRemoved)
-        {
-            const string BulkWatcherSpecifier = "bulkwatcher:";
-            const int BulkWatcherSpecifierLength = 12;
-
-            if (path != null && path.StartsWith(BulkWatcherSpecifier))
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MiniNode"/> class.
+            /// </summary>
+            /// <param name="name">The name.</param>
+            /// <param name="data">The data.</param>
+            public MiniNode(string name, byte[] data)
             {
-                wasRemoved = true;
-                return path.Substring(BulkWatcherSpecifierLength);
+                this.Name = name;
+                this.Data = data;
+                this.Children = null;
             }
 
-            wasRemoved = false;
-            return path;
-        }
+            /// <summary>
+            /// Gets or sets the node name
+            /// </summary>
+            public string Name { get; set; }
 
-        /// <summary>
-        /// Gets the name of the bulk watcher.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <returns>System.String.</returns>
-        public static string GetBulkWatcherName(string id)
-        {
-            if (id == null)
-            {
-                return "/$bulkwatcher";
-            }
-            return "/$bulkwatcher/" + id;
+            /// <summary>
+            /// Gets or sets the children
+            /// </summary>
+            public List<MiniNode> Children { get; set; }
+
+            /// <summary>
+            /// Gets or sets the node data
+            /// </summary>
+            public byte[] Data { get; set; }
         }
     }
 }

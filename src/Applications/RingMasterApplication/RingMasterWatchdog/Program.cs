@@ -1,5 +1,5 @@
-﻿// <copyright file="Program.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="Program.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdog
@@ -22,8 +22,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
         /// <summary>
         /// Entry point
         /// </summary>
-        /// <param name="args">Arguments provided to the program</param>
-        public static void Main(string[] args)
+        public static void Main()
         {
             RingMasterApplicationHelper.AttachDebugger();
 

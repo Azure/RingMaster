@@ -1,27 +1,11 @@
-﻿// ***********************************************************************
-// Assembly         : RingMaster
-// <copyright file="BulkWatcherSpec.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="BulkWatcherSpec.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
-    using System.Collections.Generic;
-    using System.Configuration;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Net;
     using System.Text;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.KeeperException;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Watcher.Event;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Class BulkWatcherSpec.
@@ -31,24 +15,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// The identifier
         /// </summary>
-        public readonly string Id;
-        /// <summary>
-        /// The subpath
-        /// </summary>
-        public string Subpath;
+        private readonly string id;
 
         /// <summary>
         /// The _watcher
         /// </summary>
-        private readonly IWatcher _watcher;
-
-        ulong IWatcher.Id { get { return 0; } }
-
-        /// <summary>
-        /// Gets a value indicating whether [one use].
-        /// </summary>
-        /// <value><c>true</c> if [one use]; otherwise, <c>false</c>.</value>
-        public bool OneUse { get { return this._watcher.OneUse; } }
+        private readonly IWatcher bulkWatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BulkWatcherSpec"/> class.
@@ -56,35 +28,43 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="specStr">The spec string.</param>
         /// <param name="id">The identifier.</param>
         /// <param name="watcher">The watcher.</param>
+        /// <exception cref="NotImplementedException">If subpath is undefined</exception>
         public BulkWatcherSpec(string specStr, string id, IWatcher watcher)
         {
-            this.Id = id;
-            this._watcher = watcher;
-            ProcessSpec(specStr);
+            this.id = id;
+            this.bulkWatcher = watcher;
+            this.ProcessSpec(specStr);
         }
 
         /// <summary>
-        /// Processes the spec.
+        /// Gets the identifier of the bulk watcher spec
         /// </summary>
-        /// <param name="specStr">The spec string.</param>
-        /// <exception cref="System.NotImplementedException">unknwon spec:  + specStr</exception>
-        public void ProcessSpec(string specStr)
+        public string Id => this.id;
+
+        /// <summary>
+        /// Gets or sets the subpath
+        /// </summary>
+        public string Subpath { get; set; }
+
+        /// <summary>
+        /// Gets the identifier of the watcher
+        /// </summary>
+        ulong IWatcher.Id
         {
-            string[] pieces = specStr.Split(',');
-            this.Subpath = null;
+            get { return 0; }
+        }
 
-            for (int i = 0; i < pieces.Length; i++)
-            {
-                if (pieces[i].StartsWith("$startswith:"))
-                {
-                    this.Subpath = pieces[i].Substring("$startswith:".Length);
-                }
-            }
+        /// <summary>
+        /// Gets a value indicating whether the watcher is for a single use only.
+        /// </summary>
+        public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
 
-            if (this.Subpath == null)
-            {
-                throw new NotImplementedException("unknwon spec: " + specStr);
-            }
+        /// <summary>
+        /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+        /// </summary>
+        public WatcherKind Kind
+        {
+            get { return this.bulkWatcher.Kind; }
         }
 
         /// <summary>
@@ -112,12 +92,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
+        /// Processes the spec.
+        /// </summary>
+        /// <param name="specStr">The spec string.</param>
+        /// <exception cref="System.NotImplementedException">unknwon spec:  + specStr</exception>
+        public void ProcessSpec(string specStr)
+        {
+            string[] pieces = specStr.Split(',');
+            this.Subpath = null;
+
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                if (pieces[i].StartsWith("$startswith:"))
+                {
+                    this.Subpath = pieces[i].Substring("$startswith:".Length);
+                }
+            }
+
+            if (this.Subpath == null)
+            {
+                throw new NotImplementedException("unknwon spec: " + specStr);
+            }
+        }
+
+        /// <summary>
         /// Processes the specified evt.
         /// </summary>
         /// <param name="evt">The evt.</param>
         public void Process(WatchedEvent evt)
         {
-            this._watcher.Process(evt);
+            this.bulkWatcher.Process(evt);
         }
 
         /// <summary>

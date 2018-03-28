@@ -1,4 +1,4 @@
-﻿// <copyright file="AllowIfAllAllowedRule.cs" company="Microsoft">
+﻿// <copyright file="AllowIfAllAllowedRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,8 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -60,7 +58,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
                 if (b != Behavior.Allowed && b != Behavior.BreakGlassUnlessBlackListed)
                 {
-                    Trace.TraceInformation("ValidateSslPolicyErrors: AllowIfAllAllowed: rule {0} returned {1} for {2}", rule.GetType(), b, CertAccessor.Instance.GetThumbprint(cert));
+                    CertificateRulesEventSource.Log.AllowIfAllAllowedRule_RuleResult(rule.GetType().ToString(), b.ToString(), CertAccessor.Instance.GetThumbprint(cert));
                     return b == Behavior.BlackListed ? b : Behavior.NotAllowed;
                 }
             }

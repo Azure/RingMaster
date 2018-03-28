@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterService.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterService.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Fabric;
     using System.Fabric.Description;
     using System.Net;
@@ -20,7 +21,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumentation;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Server;
     using Microsoft.ServiceFabric.Services.Communication.Runtime;
     using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -38,14 +42,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         private readonly CancellationTokenSource cancellationSource = new CancellationTokenSource();
         private readonly IZooKeeperServerInstrumentation zooKeeperServerInstrumentation;
         private readonly IRingMasterServerInstrumentation ringMasterServerInstrumentation;
-        private readonly PersistedDataFactory factory;
+        private readonly AbstractPersistedDataFactory factory;
         private readonly RingMasterBackendCore backend;
-        private readonly RingMasterRequestExecutor executor;
+        private readonly IRingMasterRequestExecutor executor;
+
+        private RingMasterServer ringMasterServer;
+
         private ushort port = 98;
         private ushort zkprPort = 100;
 
-        private ushort readOnlyPort = 88;
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RingMasterService"/> class.
+        /// </summary>
+        /// <param name="context">Service context</param>
+        /// <param name="ringMasterMetricsFactory">Metrics factory for MDM</param>
+        /// <param name="persistenceMetricsFactory">Metrics factory for persistence</param>
         public RingMasterService(StatefulServiceContext context, IMetricsFactory ringMasterMetricsFactory, IMetricsFactory persistenceMetricsFactory)
             : base(context, PersistedDataFactory.CreateStateManager(context))
         {
@@ -55,39 +66,52 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             this.ringMasterServerInstrumentation = new RingMasterServerInstrumentation(ringMasterMetricsFactory);
 
             var ringMasterInstrumentation = new RingMasterBackendInstrumentation(ringMasterMetricsFactory);
-            var executorInstrumentation = new ExecutorInstrumentation(ringMasterMetricsFactory);
             var persistenceInstrumentation = new ServiceFabricPersistenceInstrumentation(persistenceMetricsFactory);
 
             RingMasterBackendCoreInstrumentation.Instance = ringMasterInstrumentation;
 
             var persistenceConfiguration = new PersistedDataFactory.Configuration
             {
-                EnableActiveSecondary = true
+                EnableActiveSecondary = true,
             };
 
-            this.factory = new PersistedDataFactory(this.StateManager, factoryName, persistenceConfiguration, persistenceInstrumentation, this.cancellationSource.Token);
+            bool useInMemoryPersistence;
+            if (bool.TryParse(GetSetting("InMemoryPersistence"), out useInMemoryPersistence) && useInMemoryPersistence)
+            {
+                this.factory = new InMemoryFactory();
+            }
+            else
+            {
+                this.factory = new PersistedDataFactory(
+                    this.StateManager,
+                    factoryName,
+                    persistenceConfiguration,
+                    persistenceInstrumentation,
+                    this.cancellationSource.Token);
+            }
+
             this.backend = new RingMasterBackendCore(this.factory);
 
             this.factory.SetBackend(this.backend);
 
-            var executorConfiguration = new RingMasterRequestExecutor.Configuration
-            {
-                DefaultRequestTimeout = TimeSpan.FromMilliseconds(2500)
-            };
-
-            RingMasterRequestExecutor.TraceLevel = TraceLevel.Info; // Change this to Verbose for debugging.
-
-            this.executor = new RingMasterRequestExecutor(this.backend, executorConfiguration, executorInstrumentation, this.cancellationSource.Token);
+            this.executor = this.backend;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.backend.Dispose();
-            this.executor.Dispose();
             this.factory.Dispose();
             this.cancellationSource.Dispose();
+
+            if (this.ringMasterServer != null)
+            {
+                this.ringMasterServer.Dispose();
+                this.ringMasterServer = null;
+            }
         }
 
+        /// <inheritdoc />
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             var uptime = Stopwatch.StartNew();
@@ -95,7 +119,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             {
                 RingMasterServiceEventSource.Log.RunAsync();
 
-                this.executor.Start(threadCount: Environment.ProcessorCount * 2);
                 this.backend.Start();
                 this.backend.OnBecomePrimary();
 
@@ -103,19 +126,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                 FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
                 string version = fvi.FileVersion;
 
+                var sfFactory = this.factory as PersistedDataFactory;
+
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    int totalSessionCount = 0;
-                    this.factory.ReportStatus();
-                    RingMasterServiceEventSource.Log.ReportServiceStatus(version, (long)uptime.Elapsed.TotalSeconds, totalSessionCount);
-                    RingMasterBackendCoreInstrumentation.Instance.OnUpdateStatus(version, uptime.Elapsed, true, totalSessionCount);
+                    var totalSessionCount = 0L;
+                    var activeSessionCount = 0L;
+                    if (this.ringMasterServer != null)
+                    {
+                        totalSessionCount = this.ringMasterServer.TotalSessionCout;
+                        activeSessionCount = this.ringMasterServer.ActiveSessionCout;
+                    }
+
+                    sfFactory?.ReportStatus();
+                    RingMasterServiceEventSource.Log.ReportServiceStatus(version, (long)uptime.Elapsed.TotalSeconds, (int)totalSessionCount);
+                    RingMasterBackendCoreInstrumentation.Instance.OnUpdateStatus(version, uptime.Elapsed, true, (int)activeSessionCount);
 
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
                 }
             }
             catch (TaskCanceledException)
             {
-
             }
             catch (Exception ex)
             {
@@ -130,6 +161,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             }
         }
 
+        /// <inheritdoc />
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
             try
@@ -137,7 +169,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                 RingMasterServiceEventSource.Log.OnCloseAsync();
                 this.cancellationSource.Cancel();
                 this.backend.Stop();
-                this.executor.Stop();
             }
             catch (Exception ex)
             {
@@ -147,6 +178,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             return Task.FromResult(0);
         }
 
+        /// <inheritdoc />
         protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
             return new[]
@@ -156,6 +188,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             };
         }
 
+        /// <inheritdoc />
         protected override Task OnChangeRoleAsync(ReplicaRole newRole, CancellationToken cancellationToken)
         {
             return Task.FromResult(true);
@@ -196,43 +229,62 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             return returnedValue;
         }
 
+        [SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
+            Scope = "method",
+            Target = "Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService.RingMasterService.CreateListener()",
+            Justification = "TCP listener will be disposed when the service is stopped")]
         private ICommunicationListener CreateListener(StatefulServiceContext context)
         {
             // Partition replica's URL is the node's IP, port, PartitionId, ReplicaId, Guid
-            EndpointResourceDescription internalEndpoint = null;
-            EndpointProtocol protocol = EndpointProtocol.Tcp;
+            var protocol = EndpointProtocol.Tcp;
 
             try
             {
-                internalEndpoint = context.CodePackageActivationContext.GetEndpoint("ServiceEndpoint");
+                var internalEndpoint = context.CodePackageActivationContext.GetEndpoint("ServiceEndpoint");
                 this.port = Convert.ToUInt16(internalEndpoint.Port);
-
-                internalEndpoint = context.CodePackageActivationContext.GetEndpoint("ReadOnlyEndpoint");
-                this.readOnlyPort = Convert.ToUInt16(internalEndpoint.Port);
 
                 protocol = internalEndpoint.Protocol;
 
-                RingMasterServiceEventSource.Log.CreateListener("RingMasterProtocol", this.port, this.readOnlyPort);
+                RingMasterServiceEventSource.Log.CreateListener("RingMasterProtocol", this.port, 0);
             }
             catch (Exception ex)
             {
-                RingMasterServiceEventSource.Log.CreateListener_GetEndpointFailed(string.Format("Listener:{0}, Exception:{1}", "RingMasterProtocol", ex.ToString()));
+                RingMasterServiceEventSource.Log.CreateListener_GetEndpointFailed($"Failed to get ServiceEndpoint for RingMasterProtocol: {ex}");
                 throw;
             }
 
-            string uri = $"{protocol}://+:{this.port}/";
+            var communicationProtocol = new RingMasterCommunicationProtocol();
+            this.ringMasterServer = new RingMasterServer(
+                communicationProtocol,
+                this.ringMasterServerInstrumentation,
+                CancellationToken.None);
 
             string nodeIp = context.NodeContext.IPAddressOrFQDN;
 
-            if (nodeIp.Equals("LocalHost", StringComparison.InvariantCultureIgnoreCase))
+            if (nodeIp.Equals("LocalHost", StringComparison.OrdinalIgnoreCase))
             {
                 nodeIp = GetHostIp(Dns.GetHostName());
             }
 
-            uri = uri.Replace("+", nodeIp);
-            return new TcpCommunicationListener(this.port, uri, this.executor, this.ringMasterServerInstrumentation, new RingMasterCommunicationProtocol(), RingMasterCommunicationProtocol.MaximumSupportedVersion);
+            string uri = $"{protocol}://{nodeIp}:{this.port}/";
+            return new TcpCommunicationListener(
+                this.ringMasterServer,
+                this.port,
+                uri,
+                this.backend,
+                this.ringMasterServerInstrumentation,
+                communicationProtocol,
+                RingMasterCommunicationProtocol.MaximumSupportedVersion);
         }
 
+        [SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
+            Scope = "method",
+            Target = "Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService.RingMasterService.CreateListener()",
+            Justification = "ZK TCP listener will be disposed when the service is stopped")]
         private ICommunicationListener CreateZkprListener(StatefulServiceContext context)
         {
             // Partition replica's URL is the node's IP, port, PartitionId, ReplicaId, Guid
@@ -264,80 +316,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             }
 
             uri = uri.Replace("+", nodeIp);
-            return new ZooKeeperTcpListener(this.zkprPort, uri, this.executor, this.zooKeeperServerInstrumentation, new ZkprCommunicationProtocol(), ZkprCommunicationProtocol.MaximumSupportedVersion);
-        }
-
-        private sealed class ExecutorInstrumentation : RingMasterRequestExecutor.IInstrumentation
-        {
-            private readonly IMetric0D requestExecutionCompleted;
-            private readonly IMetric0D requestExecutionTimeMs;
-            private readonly IMetric0D requestExecutionCancelled;
-            private readonly IMetric0D requestExecutionFailed;
-            private readonly IMetric0D requestExecutionTimedout;
-            private readonly IMetric0D requestQueueLength;
-            private readonly IMetric0D requestQueueOverflow;
-            private readonly IMetric0D requestExecutionsActive;
-            private readonly IMetric0D requestTimeInQueueMs;
-            private readonly IMetric0D requestQueueCapacity;
-            private readonly IMetric0D requestExecutionThreadCount;
-
-            public ExecutorInstrumentation(IMetricsFactory metricsFactory)
-            {
-                this.requestExecutionCompleted = metricsFactory.Create0D(nameof(this.requestExecutionCompleted));
-                this.requestExecutionTimeMs = metricsFactory.Create0D(nameof(this.requestExecutionTimeMs));
-                this.requestExecutionCancelled = metricsFactory.Create0D(nameof(this.requestExecutionCancelled));
-                this.requestExecutionFailed = metricsFactory.Create0D(nameof(this.requestExecutionFailed));
-                this.requestExecutionTimedout = metricsFactory.Create0D(nameof(this.requestExecutionTimedout));
-                this.requestQueueLength = metricsFactory.Create0D(nameof(this.requestQueueLength));
-                this.requestQueueOverflow = metricsFactory.Create0D(nameof(this.requestQueueOverflow));
-                this.requestExecutionsActive = metricsFactory.Create0D(nameof(this.requestExecutionsActive));
-                this.requestTimeInQueueMs = metricsFactory.Create0D(nameof(this.requestTimeInQueueMs));
-                this.requestQueueCapacity = metricsFactory.Create0D(nameof(this.requestQueueCapacity));
-                this.requestExecutionThreadCount = metricsFactory.Create0D(nameof(this.requestExecutionThreadCount));
-            }
-
-            public void OnExecutionScheduled(int queueLength, int queueCapacity)
-            {
-                this.requestQueueLength.LogValue(queueLength);
-                this.requestQueueCapacity.LogValue(queueCapacity);
-            }
-
-            public void OnQueueOverflow(int queueLength, int queueCapacity)
-            {
-                this.requestQueueOverflow.LogValue(1);
-                this.requestQueueLength.LogValue(queueLength);
-                this.requestQueueCapacity.LogValue(queueCapacity);
-            }
-
-            public void OnExecutionStarted(int currentlyActiveCount, int availableThreads, TimeSpan elapsedInQueue)
-            {
-                this.requestExecutionsActive.LogValue(currentlyActiveCount);
-                this.requestTimeInQueueMs.LogValue((long)elapsedInQueue.TotalMilliseconds);
-                this.requestExecutionThreadCount.LogValue(availableThreads);
-            }
-
-            public void OnExecutionTimedout(TimeSpan elapsed)
-            {
-                this.requestExecutionTimedout.LogValue(1);
-                this.requestTimeInQueueMs.LogValue((long)elapsed.TotalMilliseconds);
-            }
-
-            public void OnExecutionCancelled()
-            {
-                this.requestExecutionCancelled.LogValue(1);
-            }
-
-            public void OnExecutionCompleted(TimeSpan elapsed, int currentlyActiveCount)
-            {
-                this.requestExecutionCompleted.LogValue(1);
-                this.requestExecutionTimeMs.LogValue((long)elapsed.TotalMilliseconds);
-                this.requestExecutionsActive.LogValue(currentlyActiveCount);
-            }
-
-            public void OnExecutionFailed()
-            {
-                this.requestExecutionFailed.LogValue(1);
-            }
+            return new ZooKeeperTcpListener(
+                this.zkprPort,
+                uri,
+                this.executor,
+                this.zooKeeperServerInstrumentation,
+                new ZkprCommunicationProtocol(),
+                ZkprCommunicationProtocol.MaximumSupportedVersion);
         }
     }
 }

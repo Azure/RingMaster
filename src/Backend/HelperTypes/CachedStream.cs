@@ -1,4 +1,4 @@
-﻿// <copyright file="CachedStream.cs" company="Microsoft">
+﻿// <copyright file="CachedStream.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -16,6 +16,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// </summary>
     public class CachedStream : Stream, ICloneableStream
     {
+        /// <summary>
+        /// a function we can use to generate a clone to the base readStream.
+        /// </summary>
+        private readonly Func<Stream> getStream;
+
+        /// <summary>
+        /// The size of blocks to read from the base readStream
+        /// </summary>
+        private readonly int chunkSize;
+
         /// <summary>
         /// The mapstream used for filesystem cache.
         /// </summary>
@@ -42,16 +52,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         private ExecutionQueue asyncWriteInFsQueue;
 
         /// <summary>
-        /// a function we can use to generate a clone to the base readStream.
-        /// </summary>
-        private readonly Func<Stream> getStream;
-
-        /// <summary>
-        /// The size of blocks to read from the base readStream
-        /// </summary>
-        private readonly int chunkSize;
-
-        /// <summary>
         /// Current position in the stream as exposed to the class users
         /// </summary>
         private long position;
@@ -65,82 +65,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// thrird level cache, where we remember what is the last block accessed, and the last block required by Read
         /// </summary>
         private Block lastBlock;
-
-        /// <summary>
-        /// Gets the size of the chunk.
-        /// </summary>
-        /// <value>The size of the chunk.</value>
-        public int ChunkSize => this.chunkSize;
-
-        /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports reading.
-        /// </summary>
-        /// <value><c>true</c> if this instance can read; otherwise, <c>false</c>.</value>
-        public override bool CanRead => true;
-
-        /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports seeking.
-        /// </summary>
-        /// <value><c>true</c> if this instance can seek; otherwise, <c>false</c>.</value>
-        public override bool CanSeek => true;
-
-        /// <summary>
-        /// When overridden in a derived class, gets a value indicating whether the current stream supports writing.
-        /// </summary>
-        /// <value><c>true</c> if this instance can write; otherwise, <c>false</c>.</value>
-        public override bool CanWrite => false;
-
-        /// <summary>
-        /// When overridden in a derived class, gets the length in bytes of the stream.
-        /// </summary>
-        /// <value>The length.</value>
-        public override long Length => this.readStream.Length;
-
-        /// <summary>
-        /// When overridden in a derived class, gets or sets the position within the current stream.
-        /// </summary>
-        /// <value>The position.</value>
-        public override long Position
-        {
-            get
-            {
-                return this.position;
-            }
-
-            set
-            {
-                this.Seek(value, SeekOrigin.Begin);
-            }
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CachedStream"/> class.
-        /// This is a constructor for cloning a cachedStream
-        /// </summary>
-        /// <param name="originalStream">The original cached stream.</param>
-        private CachedStream(CachedStream originalStream)
-        {
-            this.blocksInLocalFs = originalStream.blocksInLocalFs;
-            this.blocksInMemory = originalStream.blocksInMemory;
-
-            originalStream.mapstream?.AddRef();
-
-            this.mapstream = originalStream.mapstream;
-
-            this.getStream = originalStream.getStream;
-            this.readStream = this.getStream();
-
-            if (this.readStream == null)
-            {
-                throw new ArgumentException("getStream cannot return null");
-            }
-
-            this.chunkSize = originalStream.chunkSize;
-            this.asyncWriteInFsQueue = originalStream.asyncWriteInFsQueue;
-            this.position = 0;
-            this.lastPos = -1;
-            this.lastBlock = null;
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CachedStream"/> class.
@@ -214,20 +138,63 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// When overridden in a derived class, clears all buffers for this stream and causes any buffered data to be written to the underlying device.
+        /// Initializes a new instance of the <see cref="CachedStream"/> class.
+        /// This is a constructor for cloning a cachedStream
         /// </summary>
-        public override void Flush()
+        /// <param name="originalStream">The original cached stream.</param>
+        private CachedStream(CachedStream originalStream)
         {
+            this.blocksInLocalFs = originalStream.blocksInLocalFs;
+            this.blocksInMemory = originalStream.blocksInMemory;
+
+            originalStream.mapstream?.AddRef();
+
+            this.mapstream = originalStream.mapstream;
+
+            this.getStream = originalStream.getStream;
+            this.readStream = this.getStream();
+
+            if (this.readStream == null)
+            {
+                throw new ArgumentException("getStream cannot return null");
+            }
+
+            this.chunkSize = originalStream.chunkSize;
+            this.asyncWriteInFsQueue = originalStream.asyncWriteInFsQueue;
+            this.position = 0;
+            this.lastPos = -1;
+            this.lastBlock = null;
         }
 
         /// <summary>
-        /// Clones the stream. The local filesystem cache file and the in-memory cache file are both shared by all clones.
+        /// Gets the size of the chunk.
         /// </summary>
-        /// <returns>cloned Stream</returns>
-        public Stream CloneStream()
-        {
-            return new CachedStream(this);
-        }
+        /// <value>The size of the chunk.</value>
+        public int ChunkSize => this.chunkSize;
+
+        /// <summary>
+        /// Gets a value indicating whether the current stream supports reading when overridden in a derived class
+        /// </summary>
+        /// <value><c>true</c> if this instance can read; otherwise, <c>false</c>.</value>
+        public override bool CanRead => true;
+
+        /// <summary>
+        /// Gets a value indicating whether the current stream supports seeking when overridden in a derived class
+        /// </summary>
+        /// <value><c>true</c> if this instance can seek; otherwise, <c>false</c>.</value>
+        public override bool CanSeek => true;
+
+        /// <summary>
+        /// Gets a value indicating whether the current stream supports writing when overridden in a derived class
+        /// </summary>
+        /// <value><c>true</c> if this instance can write; otherwise, <c>false</c>.</value>
+        public override bool CanWrite => false;
+
+        /// <summary>
+        /// Gets when overridden in a derived class, gets the length in bytes of the stream.
+        /// </summary>
+        /// <value>The length.</value>
+        public override long Length => this.readStream.Length;
 
         /// <summary>
         /// Gets the number clones existing in memory
@@ -244,6 +211,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
 
                 return this.mapstream.NumRefs + 1;
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the position within the current stream when overridden in a derived class
+        /// </summary>
+        /// <value>The position.</value>
+        public override long Position
+        {
+            get
+            {
+                return this.position;
+            }
+
+            set
+            {
+                this.Seek(value, SeekOrigin.Begin);
+            }
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, clears all buffers for this stream and causes any buffered data to be written to the underlying device.
+        /// </summary>
+        public override void Flush()
+        {
+        }
+
+        /// <summary>
+        /// Clones the stream. The local filesystem cache file and the in-memory cache file are both shared by all clones.
+        /// </summary>
+        /// <returns>cloned Stream</returns>
+        public Stream CloneStream()
+        {
+            return new CachedStream(this);
         }
 
         /// <summary>
@@ -322,6 +322,56 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         public void FlushFileSystemCache()
         {
             this.asyncWriteInFsQueue?.Drain(ExecutionQueue.DrainMode.AllowEnqueuesAfterDrainPoint);
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, sets the length of the current stream.
+        /// </summary>
+        /// <param name="value">The desired length of the current stream in bytes.</param>
+        /// <exception cref="System.NotSupportedException">Not supported, must override in derived class</exception>
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Writes the specified buffer.
+        /// </summary>
+        /// <param name="buffer">The buffer.</param>
+        /// <param name="offset">The offset.</param>
+        /// <param name="count">The count.</param>
+        /// <exception cref="System.NotSupportedException">Not supported, must override in derived class</exception>
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Closes the current stream and releases any resources (such as sockets and file handles) associated with the current stream. Instead of calling this method, ensure that the stream is properly disposed.
+        /// </summary>
+        public override void Close()
+        {
+            if (this.mapstream != null)
+            {
+                if (this.mapstream.NumRefs == 1)
+                {
+                    // we are the last ones, so we should cancel all async writes
+                    this.asyncWriteInFsQueue.Drain(ExecutionQueue.DrainMode.DisallowAllFurtherEnqueuesAndRemoveAllElements);
+                }
+
+                this.mapstream.Close();
+            }
+
+            this.readStream?.Close();
+
+            this.readStream = null;
+            this.mapstream = null;
+            this.blocksInLocalFs = null;
+            this.asyncWriteInFsQueue = null;
+            this.blocksInMemory = null;
+            this.asyncWriteInFsQueue = null;
+
+            base.Close();
         }
 
         /// <summary>
@@ -406,7 +456,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
 
         /// <summary>
         /// Asynchronously the copy in fs.
-        /// This method assumes that (this.mapstream != null && this.asyncWriteInFSQueue != null)
+        /// This method assumes that (this.mapstream != null and this.asyncWriteInFSQueue != null)
         /// </summary>
         /// <param name="pos">The position.</param>
         /// <param name="block">The block.</param>
@@ -425,56 +475,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             {
                 this.blocksInLocalFs.Add(pos);
             }
-        }
-
-        /// <summary>
-        /// When overridden in a derived class, sets the length of the current stream.
-        /// </summary>
-        /// <param name="value">The desired length of the current stream in bytes.</param>
-        /// <exception cref="System.NotSupportedException"></exception>
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Writes the specified buffer.
-        /// </summary>
-        /// <param name="buffer">The buffer.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <exception cref="System.NotSupportedException"></exception>
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Closes the current stream and releases any resources (such as sockets and file handles) associated with the current stream. Instead of calling this method, ensure that the stream is properly disposed.
-        /// </summary>
-        public override void Close()
-        {
-            if (this.mapstream != null)
-            {
-                if (this.mapstream.NumRefs == 1)
-                {
-                    // we are the last ones, so we should cancel all async writes
-                    this.asyncWriteInFsQueue.Drain(ExecutionQueue.DrainMode.DisallowAllFurtherEnqueuesAndRemoveAllElements);
-                }
-
-                this.mapstream.Close();
-            }
-
-            this.readStream?.Close();
-
-            this.readStream = null;
-            this.mapstream = null;
-            this.blocksInLocalFs = null;
-            this.asyncWriteInFsQueue = null;
-            this.blocksInMemory = null;
-            this.asyncWriteInFsQueue = null;
-
-            base.Close();
         }
 
         /// <summary>

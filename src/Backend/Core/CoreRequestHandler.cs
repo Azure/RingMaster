@@ -1,21 +1,23 @@
+// <copyright file="CoreRequestHandler.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
+// </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Threading;
     using System.Threading.Tasks;
-    using Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
-    using IRingMasterRequestHandler = Microsoft.Azure.Networking.Infrastructure.RingMaster.IRingMasterRequestHandler;
-    using RedirectionPolicy = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit.RedirectionPolicy;
-    using CommonRequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit;
     using BackendRequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.RequestInit;
+    using CommonRequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit;
+    using IRingMasterRequestHandlerOverlapped = Microsoft.Azure.Networking.Infrastructure.RingMaster.IRingMasterRequestHandlerOverlapped;
+    using RedirectionPolicy = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit.RedirectionPolicy;
 
     /// <summary>
-    /// CoreRequestHandler class implements <see cref="IRingMasterRequestHandler"/> interface
+    /// CoreRequestHandler class implements <see cref="IRingMasterRequestHandlerOverlapped"/> interface
     /// for a <see cref="ClientSession"/>.
     /// </summary>
-    public class CoreRequestHandler : IRingMasterRequestHandler
+    public class CoreRequestHandler : IRingMasterRequestHandlerOverlapped
     {
         private readonly IRingMasterRequestExecutor executor;
         private readonly ClientSession session;
@@ -31,52 +33,68 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="initRequest">Init request</param>
         public CoreRequestHandler(IRingMasterRequestExecutor executor, CommonRequestInit initRequest = null)
         {
-            if (executor == null)
-            {
-                throw new ArgumentNullException(nameof(executor));
-            }
-
-            this.executor = executor;
+            this.executor = executor ?? throw new ArgumentNullException(nameof(executor));
             this.session = new ClientSession((requestCall, clientSession, responseAction) =>
             {
                 this.executor.ProcessMessage(requestCall.Request, clientSession, responseAction);
             });
 
-            BackendRequestInit backendInitRequest = (initRequest != null) 
+            BackendRequestInit backendInitRequest = (initRequest != null)
                 ? new BackendRequestInit(initRequest, null)
                 : new BackendRequestInit(0, Guid.NewGuid().ToString(), null, true, RedirectionPolicy.RedirectPreferred);
 
-            InitResponse = this.executor.ProcessSessionInitialization(
+            this.InitResponse = this.executor.ProcessSessionInitialization(
                  new RequestCall
                  {
                      CallId = 0,
-                     Request = backendInitRequest
+                     Request = backendInitRequest,
                  },
-                this.session);
+                 this.session);
         }
 
         /// <summary>
-        /// The init Response.
+        /// Gets the init Response.
         /// </summary>
         public RequestResponse InitResponse { get; private set; }
 
         /// <summary>
-        /// Gets the timeout value in milliseconds.
+        /// Gets or sets gets the timeout value in milliseconds.
         /// </summary>
         public int Timeout { get; set; }
+
+        /// <inheritdoc />
+        public Task<RequestResponse> Request(IRingMasterRequest request)
+        {
+            var tcs = new TaskCompletionSource<RequestResponse>();
+            this.RequestOverlapped(
+                request,
+                (response, ex) =>
+                {
+                    if (ex != null)
+                    {
+                        tcs.SetException(ex);
+                    }
+                    else
+                    {
+                        tcs.SetResult(response);
+                    }
+                });
+
+            return tcs.Task;
+        }
 
         /// <summary>
         /// Handles ringmaster requests.
         /// </summary>
         /// <param name="request">RingMaster request</param>
-        /// <returns>Response for the request</returns>
+        /// <param name="onCompletion">Action to execute when the replication is completed</param>
         /// <remarks>
-        /// Implementing the <see cref="IRingMasterRequestHandler"/> makes it possible for
+        /// Implementing the <see cref="IRingMasterRequestHandlerOverlapped"/> makes it possible for
         /// several libraries to work directly with the RingMasterBackendCore. This class
         /// is being implemented here to avoid having to expose internal classes outside of
         /// this library.
         /// </remarks>
-        public Task<RequestResponse> Request(IRingMasterRequest request)
+        public void RequestOverlapped(IRingMasterRequest request, Action<RequestResponse, Exception> onCompletion)
         {
             if (request == null)
             {
@@ -86,15 +104,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             RequestCall call = this.marshaller.LocalRequest(request);
             call.CallId = (ulong)Interlocked.Increment(ref this.lastAssignedCallId);
 
-            var taskCompletionSource = new TaskCompletionSource<RequestResponse>();
-
-            this.executor.ProcessMessage(call.Request, this.session, response =>
-            {
-                response.CallId = call.CallId;
-                taskCompletionSource.SetResult(response);
-            });
-
-            return taskCompletionSource.Task;
+            this.executor.ProcessMessage(
+                call.Request,
+                this.session,
+                (response, ex) =>
+                {
+                    response.CallId = call.CallId;
+                    onCompletion?.Invoke(response, ex);
+                });
         }
 
         /// <summary>

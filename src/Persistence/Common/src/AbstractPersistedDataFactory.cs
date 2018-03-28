@@ -1,5 +1,5 @@
-﻿// <copyright file="AbstractPersistedDataFactory.cs" company="Microsoft">
-//   Copyright ©  2016
+﻿// <copyright file="AbstractPersistedDataFactory.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
@@ -18,7 +18,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
 
     /// <summary>
-    /// Implements functionality that is common to all implementations of <see cref="IPersistedDataFactory"/>.
+    /// Implements functionality that is common to all implementations of <see cref="IPersistedDataFactory{T}"/>.
     /// </summary>
     public abstract class AbstractPersistedDataFactory : IPersistedDataFactory<Node>, IDisposable
     {
@@ -56,15 +56,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         private readonly ConcurrentQueue<ChangeListReplicationTask> changeListQueue = new ConcurrentQueue<ChangeListReplicationTask>();
 
         /// <summary>
-        /// Measure the time starting from the last replication to now. This is used to detect the increasing backlog
-        /// and throttle the incoming change list.
+        /// Measure the replication time in <see cref="DequeueAsync"/>.
         /// </summary>
-        private readonly Stopwatch replicationDuration = Stopwatch.StartNew();
+        private readonly Stopwatch replicationClock = Stopwatch.StartNew();
 
         /// <summary>
         /// Indicates the amount of free space in the <see cref="changeListQueue"/> for enqueueing
         /// </summary>
-        private readonly SemaphoreSlim changeListQueueAvailable;
+        private readonly Semaphore changeListQueueAvailable;
 
         /// <summary>
         /// Indicates the number of change list in the <see cref="changeListQueue"/> for dequeueing
@@ -129,7 +128,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.cancellationToken = cancellationToken;
             this.RequiresCallsForEachDelete = true;
 
-            this.changeListQueueAvailable = new SemaphoreSlim(changeListQueueSize, changeListQueueSize);
+            this.changeListQueueAvailable = new Semaphore(changeListQueueSize, changeListQueueSize);
             this.newChangeListAvailable = new SemaphoreSlim(0, changeListQueueSize);
             this.replicationGroupDataSizeThreshold = replicationGroupDataSizeThreshold;
 
@@ -138,6 +137,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.replicationTask = Task.Run(this.DequeueAsync, this.cancellationToken);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbstractPersistedDataFactory"/> class.
+        /// </summary>
+        /// <param name="name">Name of this instance</param>
+        /// <param name="instrumentation">Instrumentation consumer</param>
+        /// <param name="cancellationToken">Token that will be observed for cancellation signal</param>
         protected AbstractPersistedDataFactory(string name, IPersistenceInstrumentation instrumentation, CancellationToken cancellationToken)
             : this(name, instrumentation, cancellationToken, DefaultReplicationQueueSize, DefaultReplicationGroupDataSize)
         {
@@ -149,7 +154,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         public string Name { get; private set; }
 
         /// <summary>
-        /// Get or sets the Root node.
+        /// Gets or sets the Root node.
         /// </summary>
         public IPersistedData Root { get; set; }
 
@@ -179,7 +184,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         public bool IsBackendPrimary => this.backend?.IsPrimary() ?? false;
 
         /// <summary>
-        /// Gets or sets whether this instance requires calls for each delete.
+        /// Gets or sets a value indicating whether this instance requires calls for each delete.
         /// </summary>
         public bool RequiresCallsForEachDelete { get; protected set; }
 
@@ -214,18 +219,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <param name="client">Interface to the client</param>
         public void Activate(RingMasterBackendCore backend, IPersistedDataFactoryClient client)
         {
-            if (backend == null)
-            {
-                throw new ArgumentNullException(nameof(backend));
-            }
-
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            this.backend = backend;
-            this.client = client;
+            this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
+            this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.IsActive = true;
 
             PersistenceEventSource.Log.Activate(Process.GetCurrentProcess().Id);
@@ -255,7 +250,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 
                 // Initiate the data load process and wait until
                 // root is available.
-                Task _ = this.StartLoadingData();
+                Task unused = this.StartLoadingData();
 
                 while (!this.dataAvailable.Wait(DataLoadWaitIntervalMs, this.cancellationToken))
                 {
@@ -272,7 +267,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                         Name = "/",
                         Acl = null,
                         Data = null,
-                        Stat = new MutableStat()
+                        Stat = new MutableStat(),
                     };
 
                     this.backend.DoNodeForCreate(root);
@@ -447,6 +442,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             return false;
         }
 
+        /// <inheritdoc />
         public bool TakeCheckpoint(IPersistedData topNode, string filename, int version)
         {
             return false;
@@ -471,6 +467,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             return false;
         }
 
+        /// <summary>
+        /// Tries to get value of a persisted data by ID
+        /// </summary>
+        /// <param name="id">ID as the key</param>
+        /// <param name="item">Retrieved data on output</param>
+        /// <returns>If the data is retrieved</returns>
         public bool TryGetValue(ulong id, out IPersistedData item)
         {
             PersistedData data;
@@ -486,12 +488,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             return false;
         }
 
+        /// <summary>
+        /// Gets all persisted data items
+        /// </summary>
+        /// <returns>Enumerable of all data items</returns>
         public IEnumerable<IPersistedData> GetAllItems()
         {
             PersistenceEventSource.Log.GetAllItems(this.TotalNodes);
             return this.dataById.Values;
         }
 
+        /// <summary>
+        /// Loads the specified collection of persisted data to rebuild the in-memory tree
+        /// </summary>
+        /// <param name="dataSequence">Persisted data items to reload</param>
+        /// <param name="ignoreErrors">If to ignore errors during reload</param>
         public void Load(IEnumerable<PersistedData> dataSequence, bool ignoreErrors = false)
         {
             if (dataSequence == null)
@@ -509,6 +520,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.CompleteRebuild(ignoreErrors);
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.Dispose(true);
@@ -557,7 +569,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             }
 
             // Regulate the change list queue size
-            this.changeListQueueAvailable.Wait(this.cancellationToken);
+            WaitHandle.WaitAny(new[] { this.changeListQueueAvailable, this.cancellationToken.WaitHandle, });
+            this.cancellationToken.ThrowIfCancellationRequested();
             this.changeListQueue.Enqueue(it);
 
             // Signal the dequeue task that new change is coming if it is waiting
@@ -576,6 +589,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             {
                 await this.newChangeListAvailable.WaitAsync(this.cancellationToken);
 
+                var startTime = this.replicationClock.Elapsed;
+
                 // List of (change list ID, changes) to be replicated
                 var changeListSnapshot = new List<Tuple<ulong, ChangeList.Change>>();
 
@@ -584,16 +599,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 var taskCompletionSnapshot = new List<TaskCompletionSource<bool>>();
 
                 // Takes all the change lists in the queue, but don't wait for any additional one
-                ChangeListReplicationTask it;
                 int dataSize = 0;
-                while (dataSize < this.replicationGroupDataSizeThreshold && this.changeListQueue.TryDequeue(out it))
+                while (dataSize < this.replicationGroupDataSizeThreshold && this.changeListQueue.TryDequeue(out var it))
                 {
-                    // Make sure the number of wait matches the number of release in Enqueue method.
-                    if (taskCompletionSnapshot.Any())
-                    {
-                        this.newChangeListAvailable.Wait(0, this.cancellationToken);
-                    }
-
                     var cid = it.Change.Id;
                     changeListSnapshot.AddRange(it.Change.Changes.Select(
                         c =>
@@ -608,27 +616,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                     taskCompletionSnapshot.Add(it.TaskCompletion);
                 }
 
-                // Don't do anything if there is no change to replicate.
-                if (taskCompletionSnapshot.Count == 0)
+                Debug.Assert(
+                    taskCompletionSnapshot.Count > 0,
+                    "taskCompletionSnapshot should be greater 0 since new change list is available");
+
+                // Make sure the number of wait matches the number of release in Enqueue method.
+                for (int i = 0; i < taskCompletionSnapshot.Count - 1; i++)
                 {
-                    continue;
+                    // Since enqueue of changeListQueue and release of newChangeListAvailable are not atomic, there
+                    // may be a small chance when the items in the queue is greater than the semaphore, and the
+                    // following wait will return false. In this case we just retry to keep two semaphores in sync
+                    // precisely.
+                    SpinWait.SpinUntil(() => this.newChangeListAvailable.Wait(0, this.cancellationToken));
                 }
-                else
-                {
-                    this.changeListQueueAvailable.Release(taskCompletionSnapshot.Count);
-                }
+
+                this.changeListQueueAvailable.Release(taskCompletionSnapshot.Count);
 
                 var firstChangeListId = changeListSnapshot[0].Item1;
                 var lastChangeListId = changeListSnapshot[changeListSnapshot.Count - 1].Item1;
 
-                PersistenceEventSource.Log.GroupCommit_Started(firstChangeListId, lastChangeListId, changeListSnapshot.Count);
-                this.replicationDuration.Restart();
+                PersistenceEventSource.Log.GroupCommit_Started(
+                    firstChangeListId,
+                    lastChangeListId,
+                    changeListSnapshot.Count,
+                    dataSize,
+                    startTime.ToString());
 
                 try
                 {
                     // Start the transaction of replication
                     using (IReplication replication = this.StartReplication(lastChangeListId))
                     {
+                        var beforeUpdateDict = this.replicationClock.Elapsed;
+
                         foreach (var change in changeListSnapshot)
                         {
                             switch (change.Item2.ChangeType)
@@ -645,22 +665,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                             }
                         }
 
+                        var afterUpdateDict = this.replicationClock.Elapsed;
+
                         // Commit the replication
                         await replication.Commit();
 
-                       // Tell the upper layer that the replication is completed, all responses can be sent back now.
+                        var commitDuration = this.replicationClock.Elapsed - afterUpdateDict;
+                        var dictUpdateDuration = afterUpdateDict - beforeUpdateDict;
+
+                        // Tell the upper layer that the replication is completed, all responses can be sent back now.
                         foreach (var taskCompletion in taskCompletionSnapshot)
                         {
                             taskCompletion.SetResult(true);
                         }
 
-                        this.instrumentation?.ChangeListCommitted(this.replicationDuration.Elapsed);
+                        var duration = this.replicationClock.Elapsed - startTime;
+
+                        this.instrumentation?.ChangeListCommitted(duration);
                         PersistenceEventSource.Log.GroupCommit_Succeeded(
                             firstChangeListId,
                             lastChangeListId,
                             replication.Id,
-                            changeListSnapshot.Count,
-                            this.replicationDuration.ElapsedMilliseconds);
+                            dictUpdateDuration.TotalMilliseconds,
+                            commitDuration.TotalMilliseconds,
+                            duration.TotalMilliseconds);
                     }
                 }
                 catch (Exception ex)
@@ -676,8 +704,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                         firstChangeListId,
                         lastChangeListId,
                         changeListSnapshot.Count,
-                        this.replicationDuration.ElapsedMilliseconds,
-                        ex.ToString());
+                        (this.replicationClock.Elapsed - startTime).TotalMilliseconds,
+                        ex.Message);
+
                     this.ReportFatalError("Commit Failed", ex);
                     throw;
                 }
@@ -719,6 +748,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         protected abstract void OnDeactivate();
 
+        /// <summary>
+        /// Disposes this object
+        /// </summary>
+        /// <param name="isDisposing">If to dispose from managed or native code</param>
         protected virtual void Dispose(bool isDisposing)
         {
             if (isDisposing)

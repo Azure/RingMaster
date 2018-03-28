@@ -1,5 +1,5 @@
-﻿// <copyright file="Serializer.cs" company="Microsoft">
-//     Copyright 2015
+﻿// <copyright file="Serializer.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -9,7 +9,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using System.Diagnostics;
     using System.IO;
     using System.Runtime.Serialization.Formatters.Binary;
-    using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
@@ -111,6 +110,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             return this.memoryStream.ToArray();
         }
 
+        /// <summary>
+        /// Disposes the object
+        /// </summary>
         public void Dispose()
         {
             this.memoryStream.Dispose();
@@ -182,10 +184,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     break;
                 case RingMasterRequestType.SetAcl:
                     this.SerializeRequestSetAcl((RequestSetAcl)ringMasterRequest);
-                break;
+                    break;
                 case RingMasterRequestType.SetData:
                     this.SerializeRequestSetData((RequestSetData)ringMasterRequest);
-                break;
+                    break;
 
                 case RingMasterRequestType.None:
                 default:
@@ -392,7 +394,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         }
 
         /// <summary>
-        /// Serialize <see cref="RequestAuth"/>.
+        /// Serialize <see cref="RequestSetAuth"/>.
         /// </summary>
         /// <param name="request">Request to serialize</param>
         private void SerializeRequestSetAuth(RequestSetAuth request)
@@ -535,11 +537,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                         if (createResult.Path == null)
                         {
                             // even though this is not what the contract says, if we don't do this, an exception will be thrown on the server.
-                            this.SerializeString(string.Empty);
+                            this.binaryWriter.Write(string.Empty);
                         }
                         else
                         {
-                            this.SerializeString(createResult.Path);
+                            this.binaryWriter.Write(createResult.Path);
                         }
                     }
 
@@ -550,7 +552,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 {
                     var moveResult = (OpResult.MoveResult)operationResult;
                     this.SerializeStat(moveResult.Stat);
-                    this.SerializeString(moveResult.DstPath);
+                    this.binaryWriter.Write(moveResult.DstPath);
                     return;
                 }
 
@@ -623,17 +625,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.Write((int)stringList.Count);
             for (int i = 0; i < stringList.Count; i++)
             {
-                this.SerializeString(stringList[i]);
+                this.binaryWriter.Write(stringList[i]);
             }
-        }
-
-        /// <summary>
-        /// Serialize a string.
-        /// </summary>
-        /// <param name="stringValue">String to serialize</param>
-        private void SerializeString(string stringValue)
-        {
-            this.binaryWriter.Write(stringValue);
         }
 
         /// <summary>
@@ -646,15 +639,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
             // ReSharper disable once PossibleNullReferenceException
             this.binaryWriter.Write(watcherCall.WatcherId);
-            this.binaryWriter.Write(watcherCall.OneUse);
+            this.binaryWriter.Write((byte)watcherCall.Kind);
 
-            bool nullwatcher = watcherCall.WatcherEvt == null;
-            this.binaryWriter.Write((bool)nullwatcher);
-            if (!nullwatcher)
+            var evt = watcherCall.WatcherEvt;
+            this.binaryWriter.Write(evt == null);
+            if (evt != null)
             {
-                this.binaryWriter.Write((int)watcherCall.WatcherEvt.EventType);
-                this.binaryWriter.Write((int)watcherCall.WatcherEvt.KeeperState);
-                this.binaryWriter.Write((string)watcherCall.WatcherEvt.Path);
+                this.binaryWriter.Write((int)evt.EventType);
+                this.binaryWriter.Write((int)evt.KeeperState);
+                this.binaryWriter.Write(evt.Path);
+
+                if (this.versionToUse >= SerializationFormatVersions.Version23)
+                {
+                    this.SerializeData(evt.Data);
+                    this.SerializeStat(evt.Stat);
+                }
             }
         }
 
@@ -669,11 +668,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.Write(id);
             if (watcher != null)
             {
-                this.binaryWriter.Write((bool)watcher.OneUse);
+                this.binaryWriter.Write((byte)watcher.Kind);
             }
             else
             {
-                this.binaryWriter.Write((bool)true);
+                // OneUse watcher by default
+                this.binaryWriter.Write((byte)WatcherKind.OneUse);
             }
         }
 
@@ -731,7 +731,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.Write((int)stat.Version);
             this.binaryWriter.Write((int)stat.NumChildren);
             this.binaryWriter.Write((int)stat.DataLength);
-            this.binaryWriter.Write((long)0); // EphemeralOwner legacy field is set to zero always
+            this.binaryWriter.Write(0L); // EphemeralOwner legacy field is set to zero always
             this.binaryWriter.Write((long)stat.Czxid);
             this.binaryWriter.Write((long)stat.Mzxid);
             this.binaryWriter.Write((long)stat.Pzxid);
@@ -812,7 +812,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     this.SerializeOpResultList((IReadOnlyList<OpResult>)content);
                     return;
                 case ContentType.String:
-                    this.SerializeString((string)content);
+                    this.binaryWriter.Write((string)content);
                     return;
                 case ContentType.AclList:
                     this.SerializeAclList((IReadOnlyList<Acl>)content);
@@ -827,7 +827,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     this.SerializeRedirectSuggested((RedirectSuggested)content);
                     return;
                 case ContentType.ListOfString:
-                    case ContentType.StringArray:
+                case ContentType.StringArray:
                     this.SerializeStringList((IReadOnlyList<string>)content);
                     return;
                 case ContentType.WatcherCall:

@@ -1,5 +1,5 @@
-// <copyright file="RingMasterRequestExecutor.cs" company="Microsoft">
-//     Copyright 2017
+// <copyright file="RingMasterRequestExecutor.cs" company="Microsoft Corporation">
+//   Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
@@ -19,7 +19,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     /// </summary>
     public sealed class RingMasterRequestExecutor : IRingMasterRequestExecutor, IDisposable
     {
-        private static readonly Action<RequestResponse> NoAction = response => { };
+        private static readonly Action<RequestResponse, Exception> NoAction = (response, ex) => { };
 
         private readonly CancellationToken parentCancellationToken;
         private readonly RingMasterBackendCore backend;
@@ -56,18 +56,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.configuration = configuration;
             this.instrumentation = instrumentation;
             this.parentCancellationToken = cancellationToken;
-        }
-
-        public static TraceLevel TraceLevel
-        {
-            get
-            {
-                return RingMasterEventSource.Log.TraceLevel;
-            }
-            set
-            {
-                RingMasterEventSource.Log.TraceLevel = value;
-            }
         }
 
         /// <summary>
@@ -124,7 +112,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Start the executor.
         /// </summary>
-        /// <params>Number of threads</params>
+        /// <param name="threadCount">Number of threads</param>
         public void Start(int threadCount)
         {
             RingMasterEventSource.Log.Executor_Start(threadCount);
@@ -164,7 +152,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="request">Request that must be processed</param>
         /// <param name="session">Client session associtated with the request</param>
         /// <param name="onCompletion">Action that must be invoked when the request is completed</param>
-        public void ProcessMessage(IRingMasterBackendRequest request, ClientSession session, Action<RequestResponse> onCompletion)
+        public void ProcessMessage(
+            IRingMasterBackendRequest request,
+            ClientSession session,
+            Action<RequestResponse, Exception> onCompletion)
         {
             if (request == null)
             {
@@ -182,7 +173,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 Lifetime = Stopwatch.StartNew(),
                 Request = request,
                 Session = session,
-                OnCompletion = onCompletion ?? NoAction
+                OnCompletion = onCompletion ?? NoAction,
             };
 
             if (this.requestQueue.TryAdd(pendingRequest))
@@ -193,7 +184,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             else
             {
                 RingMasterEventSource.Log.Executor_RequestQueueOverflow(pendingRequest.SequenceNumber, session.SessionId, request.Uid);
-                pendingRequest.OnCompletion(new RequestResponse { ResponsePath = request.Path, ResultCode = (int)RingMasterException.Code.ServerOperationTimeout });
+                pendingRequest.OnCompletion(
+                    new RequestResponse
+                    {
+                        ResponsePath = request.Path,
+                        ResultCode = (int)RingMasterException.Code.ServerOperationTimeout,
+                    },
+                    null);
                 this.instrumentation?.OnQueueOverflow(this.requestQueue.Count, this.requestQueue.BoundedCapacity);
             }
         }
@@ -203,7 +200,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         public void Stop()
         {
-            if (this.requestProcessingThreads != null)
+            // This will be called twice. Check to avoid the null reference in the second stop.
+            if (this.requestProcessingThreads != null &&
+                this.cancellationSource != null &&
+                !this.cancellationSource.IsCancellationRequested)
             {
                 RingMasterEventSource.Log.Executor_Stopping(this.requestProcessingThreads.Count);
                 this.cancellationSource.Cancel();
@@ -254,14 +254,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         {
                             RingMasterEventSource.Log.Executor_ProcessRequestCancelled(pendingRequest.SequenceNumber);
                             response.ResultCode = (int)RingMasterException.Code.OperationCancelled;
-                            pendingRequest.OnCompletion(response);
+                            pendingRequest.OnCompletion(response, null);
                             this.instrumentation?.OnExecutionCancelled();
                         }
                         else if (pendingRequest.Lifetime.Elapsed > this.configuration.DefaultRequestTimeout)
                         {
                             RingMasterEventSource.Log.Executor_ProcessRequestTimedout(pendingRequest.SequenceNumber);
                             response.ResultCode = (int)RingMasterException.Code.ServerOperationTimeout;
-                            pendingRequest.OnCompletion(response);
+                            pendingRequest.OnCompletion(response, null);
                             this.instrumentation?.OnExecutionTimedout(pendingRequest.Lifetime.Elapsed);
                         }
                         else
@@ -293,7 +293,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
         }
 
+        private struct PendingRequest
+        {
+            public long SequenceNumber;
+            public Stopwatch Lifetime;
+            public IRingMasterBackendRequest Request;
+            public ClientSession Session;
+            public Action<RequestResponse, Exception> OnCompletion;
+        }
 
+        /// <summary>
+        /// Configuration of the request executor
+        /// </summary>
         public sealed class Configuration
         {
             /// <summary>
@@ -305,15 +316,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// Gets or sets the default request timeout value.
             /// </summary>
             public TimeSpan DefaultRequestTimeout { get; set; } = TimeSpan.FromMilliseconds(2500);
-        }
-
-        private struct PendingRequest
-        {
-            public long SequenceNumber;
-            public Stopwatch Lifetime;
-            public IRingMasterBackendRequest Request;
-            public ClientSession Session;
-            public Action<RequestResponse> OnCompletion;
         }
     }
 }

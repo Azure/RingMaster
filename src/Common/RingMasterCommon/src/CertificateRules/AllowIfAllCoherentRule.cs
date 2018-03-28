@@ -1,4 +1,4 @@
-﻿// <copyright file="AllowIfAllCoherentRule.cs" company="Microsoft">
+﻿// <copyright file="AllowIfAllCoherentRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,8 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -68,7 +66,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
                 if (baseBeh == Behavior.BlackListed)
                 {
-                    Trace.TraceInformation("ValidateSslPolicyErrors: AllowIfAllCoherent: rule {0} returned {1}", rule.GetType(), b);
+                    CertificateRulesEventSource.Log.AllowIfAllCoherentRule_RuleResult(rule.GetType().ToString(), b.ToString());
                     return Behavior.NotAllowed;
                 }
             }
@@ -82,7 +80,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
                     return Behavior.Neutral;
                 case Behavior.BlackListed:
                 case Behavior.NotAllowed:
-                    Trace.TraceInformation("ValidateSslPolicyErrors: AllowIfAllCoherent: rules returned {0}", baseBeh);
+                    CertificateRulesEventSource.Log.AllowIfAllCoherentRule_Result(baseBeh.ToString());
                     return Behavior.NotAllowed;
                 default:
                     return Behavior.NotAllowed;

@@ -1,10 +1,6 @@
-﻿// ***********************************************************************
-// Assembly         : RingMasterCommon
-// <copyright file="CachedKind.cs" company="Microsoft">
-//     Copyright ©  2017
+﻿// <copyright file="CachedKind.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
-// <summary></summary>
-// ***********************************************************************
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
@@ -39,6 +35,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <summary>
         /// node ACLs
         /// </summary>
-        NodeAcls = 8
+        NodeAcls = 8,
     }
 }

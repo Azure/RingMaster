@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterClient.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterClient.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
@@ -98,7 +98,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     SecureTransport.SubjectValidation subjectA = new SecureTransport.SubjectValidation()
                     {
                         CertificateSubject = serverSpec.CertValidationASubject,
-                        SigningCertThumbprints = serverSpec.CertValidationASigningThumbprints
+                        SigningCertThumbprints = serverSpec.CertValidationASigningThumbprints,
                     };
                     subjectRules.Add(new SecureTransport.SubjectRuleValidation(CertificateRules.AbstractCertificateRule.RoleToApply.ServerCert, subjectA));
                 }
@@ -108,7 +108,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     SecureTransport.SubjectValidation subjectB = new SecureTransport.SubjectValidation()
                     {
                         CertificateSubject = serverSpec.CertValidationBSubject,
-                        SigningCertThumbprints = serverSpec.CertValidationBSigningThumbprints
+                        SigningCertThumbprints = serverSpec.CertValidationBSigningThumbprints,
                     };
                     subjectRules.Add(new SecureTransport.SubjectRuleValidation(CertificateRules.AbstractCertificateRule.RoleToApply.ServerCert, subjectB));
                 }
@@ -396,22 +396,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             ITransport transport)
             : this(communicationProtocol, transport, CancellationToken.None)
         {
-        }
-
-        /// <summary>
-        /// Gets or sets the <see cref="TraceLevel"/> that selects which trace messages are logged by the <see cref="RingMasterClient"/>.
-        /// </summary>
-        public static TraceLevel TraceLevel
-        {
-            get
-            {
-                return RingMasterClientEventSource.Log.TraceLevel;
-            }
-
-            set
-            {
-                RingMasterClientEventSource.Log.TraceLevel = value;
-            }
         }
 
         /// <summary>

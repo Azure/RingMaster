@@ -1,4 +1,4 @@
-﻿// <copyright file="PoolOf.cs" company="Microsoft">
+﻿// <copyright file="PoolOf.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -28,17 +28,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     ///    // now e is null as a proof that cannot be used anymore
     /// </summary>
     /// <typeparam name="T">the disposable class to build the pool for</typeparam>
-    public class PoolOf<T> : IDisposable where T : IDisposable
+    public class PoolOf<T> : IDisposable
+        where T : IDisposable
     {
         private readonly Queue<T> pool = new Queue<T>();
         private readonly ReaderWriterLockSlim poolLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-        private SemaphoreSlim semaphore;
-        private int numPrepopulate;
-
-        public int MaxCachedElements { get; private set; }
-
         private readonly Func<T> createOne;
         private readonly Action<T> reset;
+        private SemaphoreSlim semaphore;
+        private int numPrepopulate;
+        private bool disposedValue = false; // To detect redundant calls
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PoolOf{T}"/> class.
@@ -63,78 +62,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// sets the max number of elements handed over before blocking
+        /// Gets the maximum number of cached items
         /// </summary>
-        /// <param name="maxCachedElements">The max number of cached elements</param>
-        /// <param name="blockOnCacheEmpty">Whether to block when the cache is empty</param>
-        /// <param name="numPrepopulate">Number of elements to pre-populate</param>
-        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Semaphore is stored in field")]
-        internal void SetMaxPoolSize(int maxCachedElements, bool blockOnCacheEmpty, int numPrepopulate = 0)
-        {
-            if (maxCachedElements < 0)
-            {
-                throw new ArgumentException("maxCachedElements cannot be <0");
-            }
-
-            if (numPrepopulate < 0)
-            {
-                throw new ArgumentException("numPrepopulate cannot be <0");
-            }
-
-            if (numPrepopulate > maxCachedElements)
-            {
-                throw new ArgumentException("numPrepopulate cannot be > maxCachedElements");
-            }
-
-            this.poolLock.EnterWriteLock();
-            try
-            {
-                if (this.pool.Count != 0)
-                {
-                    throw new InvalidOperationException("cannot change the pool configuration after use.");
-                }
-
-                this.MaxCachedElements = maxCachedElements;
-
-                this.semaphore =
-                    blockOnCacheEmpty
-                    ? new SemaphoreSlim((int)maxCachedElements, (int)maxCachedElements)
-                    : null;
-            }
-            finally
-            {
-                this.poolLock.ExitWriteLock();
-            }
-
-            this.numPrepopulate = numPrepopulate;
-        }
-
-        private void PrepopulateIfNeeded()
-        {
-            if (this.numPrepopulate == 0)
-            {
-                return;
-            }
-
-            if (this.numPrepopulate > this.MaxCachedElements)
-            {
-                this.numPrepopulate = (int)this.MaxCachedElements;
-            }
-
-            List<T> list = new List<T>();
-            while (this.numPrepopulate > 0)
-            {
-                T res = this.createOne();
-                list.Add(res);
-                this.numPrepopulate--;
-            }
-
-            foreach (T el in list)
-            {
-                this.reset?.Invoke(el);
-                this.pool.Enqueue(el);
-            }
-        }
+        public int MaxCachedElements { get; private set; }
 
         /// <summary>
         /// retrieve one T from the pool (reset may be invoked at this point), or create a new one
@@ -236,8 +166,68 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
-        private bool disposedValue = false; // To detect redundant calls
+        /// <inheritdoc />
+        /// <remarks>
+        /// This code added to correctly implement the disposable pattern.
+        /// </remarks>
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
+        /// <summary>
+        /// sets the max number of elements handed over before blocking
+        /// </summary>
+        /// <param name="maxCachedElements">The max number of cached elements</param>
+        /// <param name="blockOnCacheEmpty">Whether to block when the cache is empty</param>
+        /// <param name="numPrepopulate">Number of elements to pre-populate</param>
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Semaphore is stored in field")]
+        internal void SetMaxPoolSize(int maxCachedElements, bool blockOnCacheEmpty, int numPrepopulate = 0)
+        {
+            if (maxCachedElements < 0)
+            {
+                throw new ArgumentException("maxCachedElements cannot be <0");
+            }
+
+            if (numPrepopulate < 0)
+            {
+                throw new ArgumentException("numPrepopulate cannot be <0");
+            }
+
+            if (numPrepopulate > maxCachedElements)
+            {
+                throw new ArgumentException("numPrepopulate cannot be > maxCachedElements");
+            }
+
+            this.poolLock.EnterWriteLock();
+            try
+            {
+                if (this.pool.Count != 0)
+                {
+                    throw new InvalidOperationException("cannot change the pool configuration after use.");
+                }
+
+                this.MaxCachedElements = maxCachedElements;
+
+                this.semaphore =
+                    blockOnCacheEmpty
+                    ? new SemaphoreSlim((int)maxCachedElements, (int)maxCachedElements)
+                    : null;
+            }
+            finally
+            {
+                this.poolLock.ExitWriteLock();
+            }
+
+            this.numPrepopulate = numPrepopulate;
+        }
+
+        /// <summary>
+        /// Disposing this object
+        /// </summary>
+        /// <param name="disposing">If disposing from managed code or native code</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!this.disposedValue)
@@ -265,12 +255,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
+        private void PrepopulateIfNeeded()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
+            if (this.numPrepopulate == 0)
+            {
+                return;
+            }
+
+            if (this.numPrepopulate > this.MaxCachedElements)
+            {
+                this.numPrepopulate = (int)this.MaxCachedElements;
+            }
+
+            List<T> list = new List<T>();
+            while (this.numPrepopulate > 0)
+            {
+                T res = this.createOne();
+                list.Add(res);
+                this.numPrepopulate--;
+            }
+
+            foreach (T el in list)
+            {
+                this.reset?.Invoke(el);
+                this.pool.Enqueue(el);
+            }
         }
     }
 }

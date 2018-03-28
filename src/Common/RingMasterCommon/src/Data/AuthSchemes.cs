@@ -1,13 +1,14 @@
-// <copyright file="AuthSchemes.cs" company="Microsoft">
-//     Copyright ©  2015
+// <copyright file="AuthSchemes.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
+#pragma warning disable CS1591, SA1600 // TODO: document every enum items
+
     /// <summary>
     /// Ways in which the identity of an actor can be specified.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "Simple declaration of AuthSchemes")]
     public static class AuthSchemes
     {
         public const string World = "world";
@@ -16,4 +17,5 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         public const string Host = "host";
         public const string Ip = "ip";
     }
+#pragma warning restore
 }

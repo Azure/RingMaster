@@ -1,4 +1,4 @@
-﻿// <copyright file="ObjectTracker.cs" company="Microsoft">
+﻿// <copyright file="ObjectTracker.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -12,8 +12,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// Class ObjectTracker.
     /// </summary>
     /// <typeparam name="T">The type of the objects to track</typeparam>
-    public sealed class ObjectTracker<T> : IDisposable where T : class
+    public sealed class ObjectTracker<T> : IDisposable
+        where T : class
     {
+        /// <summary>
+        /// The identifier for null
+        /// </summary>
+        public const ulong IdForNull = 0;
+
+        /// <summary>
+        /// The _default object ids
+        /// </summary>
+        private static readonly UIdProvider DefaultObjIds = new UIdProvider(1);
+
         /// <summary>
         /// The _objects by identifier
         /// </summary>
@@ -26,12 +37,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             new DictionaryOfCollection<T, ulong, HashSet<ulong>>();
 
         /// <summary>
-        /// The _rwlock
-        /// </summary>
-        private ReaderWriterLockSlim rwlock =
-            new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-
-        /// <summary>
         /// The _obj identifier provider
         /// </summary>
         private readonly UIdProvider objIdProvider;
@@ -42,14 +47,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         private readonly bool requireUniqueIds;
 
         /// <summary>
-        /// The _default object ids
+        /// The _rwlock
         /// </summary>
-        private static readonly UIdProvider DefaultObjIds = new UIdProvider(1);
-
-        /// <summary>
-        /// The identifier for null
-        /// </summary>
-        public const ulong IdForNull = 0;
+        private ReaderWriterLockSlim rwlock =
+            new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObjectTracker{T}"/> class.
@@ -135,82 +136,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
-        /// Gets the or create identifier for object.
-        /// </summary>
-        /// <param name="watcher">The watcher.</param>
-        /// <param name="alwayscreate">if set to <c>true</c> [alwayscreate].</param>
-        /// <returns>System.UInt64.</returns>
-        /// <exception cref="System.InvalidOperationException">
-        /// CreateIdForObject was called, requireUniqueIds is true and the object is already in the tracker
-        /// or
-        /// GetOrCreateIdForObject was called, requireUniqueIds is false and the object is already in the tracker
-        /// </exception>
-        private ulong GetOrCreateIdForObject(T watcher, bool alwayscreate)
-        {
-            ulong id = 0;
-
-            if (watcher == null)
-            {
-                return IdForNull;
-            }
-
-            this.rwlock.EnterUpgradeableReadLock();
-            try
-            {
-                if (alwayscreate)
-                {
-                    if (this.requireUniqueIds && this.idsByObject.ContainsAny(watcher))
-                    {
-                        throw new InvalidOperationException("CreateIdForObject was called, requireUniqueIds is true and the object is already in the tracker");
-                    }
-                }
-                else
-                {
-                    if (this.idsByObject.ContainsAny(watcher))
-                    {
-                        if (!this.requireUniqueIds)
-                        {
-                            throw new InvalidOperationException("GetOrCreateIdForObject was called, requireUniqueIds is false and the object is already in the tracker");
-                        }
-
-                        using (IEnumerator<ulong> enume = this.idsByObject.GetValues(watcher).GetEnumerator())
-                        {
-                            enume.MoveNext();
-                            return enume.Current;
-                        }
-                    }
-                }
-
-                do
-                {
-                    id = this.objIdProvider.NextUniqueId();
-                    if (!this.objectsById.ContainsKey(id))
-                    {
-                        this.rwlock.EnterWriteLock();
-                        try
-                        {
-                            this.objectsById.Add(id, watcher);
-                            this.idsByObject.Add(watcher, id);
-                        }
-                        finally
-                        {
-                            this.rwlock.ExitWriteLock();
-                        }
-
-                        break;
-                    }
-                }
-                while (true);
-            }
-            finally
-            {
-                this.rwlock.ExitUpgradeableReadLock();
-            }
-
-            return id;
-        }
-
-        /// <summary>
         /// Gets the ids for object.
         /// </summary>
         /// <param name="watcher">The watcher.</param>
@@ -244,7 +169,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// <param name="id">The identifier.</param>
         /// <param name="forgetIfFound">if set to <c>true</c> [forget if found].</param>
         /// <returns>T.</returns>
-        /// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
+        /// <exception cref="System.Collections.Generic.KeyNotFoundException">If the object is not found</exception>
         public T GetObjectForId(ulong id, bool forgetIfFound = false)
         {
             T obj;
@@ -426,6 +351,82 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         {
             this.rwlock?.Dispose();
             this.rwlock = null;
+        }
+
+        /// <summary>
+        /// Gets the or create identifier for object.
+        /// </summary>
+        /// <param name="watcher">The watcher.</param>
+        /// <param name="alwayscreate">if set to <c>true</c> [alwayscreate].</param>
+        /// <returns>System.UInt64.</returns>
+        /// <exception cref="System.InvalidOperationException">
+        /// CreateIdForObject was called, requireUniqueIds is true and the object is already in the tracker
+        /// or
+        /// GetOrCreateIdForObject was called, requireUniqueIds is false and the object is already in the tracker
+        /// </exception>
+        private ulong GetOrCreateIdForObject(T watcher, bool alwayscreate)
+        {
+            ulong id = 0;
+
+            if (watcher == null)
+            {
+                return IdForNull;
+            }
+
+            this.rwlock.EnterUpgradeableReadLock();
+            try
+            {
+                if (alwayscreate)
+                {
+                    if (this.requireUniqueIds && this.idsByObject.ContainsAny(watcher))
+                    {
+                        throw new InvalidOperationException("CreateIdForObject was called, requireUniqueIds is true and the object is already in the tracker");
+                    }
+                }
+                else
+                {
+                    if (this.idsByObject.ContainsAny(watcher))
+                    {
+                        if (!this.requireUniqueIds)
+                        {
+                            throw new InvalidOperationException("GetOrCreateIdForObject was called, requireUniqueIds is false and the object is already in the tracker");
+                        }
+
+                        using (IEnumerator<ulong> enume = this.idsByObject.GetValues(watcher).GetEnumerator())
+                        {
+                            enume.MoveNext();
+                            return enume.Current;
+                        }
+                    }
+                }
+
+                do
+                {
+                    id = this.objIdProvider.NextUniqueId();
+                    if (!this.objectsById.ContainsKey(id))
+                    {
+                        this.rwlock.EnterWriteLock();
+                        try
+                        {
+                            this.objectsById.Add(id, watcher);
+                            this.idsByObject.Add(watcher, id);
+                        }
+                        finally
+                        {
+                            this.rwlock.ExitWriteLock();
+                        }
+
+                        break;
+                    }
+                }
+                while (true);
+            }
+            finally
+            {
+                this.rwlock.ExitUpgradeableReadLock();
+            }
+
+            return id;
         }
     }
 }

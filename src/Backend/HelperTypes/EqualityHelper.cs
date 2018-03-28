@@ -1,4 +1,4 @@
-﻿// <copyright file="EqualityHelper.cs" company="Microsoft">
+﻿// <copyright file="EqualityHelper.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -12,22 +12,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     /// </summary>
     public class EqualityHelper
     {
-        /// <summary>
-        /// Class NativeMethods.
-        /// </summary>
-        internal static class NativeMethods
-        {
-            /// <summary>
-            /// Memcmps the specified b1.
-            /// </summary>
-            /// <param name="b1">The b1.</param>
-            /// <param name="b2">The b2.</param>
-            /// <param name="count">The count.</param>
-            /// <returns>System.Int32.</returns>
-            [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
-            internal static extern int memcmp(byte[] b1, byte[] b2, long count);
-        }
-
         /// <summary>
         /// Computes equality between the specified objects.
         /// </summary>
@@ -117,7 +101,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                 return false;
             }
 
-            return 0 == NativeMethods.memcmp(p1, p2, p1.Length);
+            return NativeMethods.memcmp(p1, p2, p1.Length) == 0;
         }
 
         /// <summary>
@@ -172,6 +156,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
 
             return (int)hash;
+        }
+
+        /// <summary>
+        /// Class NativeMethods.
+        /// </summary>
+        internal static class NativeMethods
+        {
+            /// <summary>
+            /// Memcmps the specified b1.
+            /// </summary>
+            /// <param name="b1">The b1.</param>
+            /// <param name="b2">The b2.</param>
+            /// <param name="count">The count.</param>
+            /// <returns>System.Int32.</returns>
+            [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+            internal static extern int memcmp(byte[] b1, byte[] b2, long count);
         }
     }
 }

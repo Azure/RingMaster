@@ -1,5 +1,5 @@
-﻿// <copyright file="PersistedData.cs" company="Microsoft">
-//     Copyright ©  2016
+﻿// <copyright file="PersistedData.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
@@ -125,10 +125,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         internal int ChildrenCount { get; set; }
 
         /// <summary>
-        /// Gets or sets the <see cref="AbstractPersistedDataFactory"/> associated with this data.
+        /// Gets the <see cref="AbstractPersistedDataFactory"/> associated with this data.
         /// </summary>
         internal AbstractPersistedDataFactory Factory { get; private set; }
 
+        /// <summary>
+        /// Clones this object for persistence
+        /// </summary>
+        /// <returns>Cloned object</returns>
         public PersistedData Clone()
         {
             byte[] copiedData = null;

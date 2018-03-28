@@ -1,5 +1,5 @@
-﻿// <copyright file="ZkprSerializer.cs" company="Microsoft">
-//     Copyright 2015
+﻿// <copyright file="ZkprSerializer.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -68,6 +68,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter = new BinaryWriter(this.memoryStream);
         }
 
+        /// <summary>
+        /// Serializes a response object
+        /// </summary>
+        /// <param name="response">Response object</param>
         public void SerializeWatcherResponse(RequestResponse response)
         {
             if (response == null)
@@ -75,7 +79,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 throw new ArgumentNullException("response");
             }
 
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, (int)this.watcherNotificationId); // Watcher has 'special id'
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, (int)this.watcherNotificationId); // Watcher has 'special id'
             WatcherCall wc = response.Content as WatcherCall;
             this.binaryWriter.WriteBE((int)wc.WatcherEvt.EventType);
             this.binaryWriter.WriteBE((int)wc.WatcherEvt.KeeperState);
@@ -181,6 +185,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             return this.memoryStream.ToArray();
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.memoryStream.Dispose();
@@ -224,14 +229,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         {
             Stat stat = (Stat)response.Content;
 
-            this.SerializeReplyHeader(stat == null ? (long)0 : stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(stat == null ? 0L : stat.Mzxid, response.ResultCode, request.Xid);
 
             this.SerializeStat(stat);
         }
 
         private void SerializeResponseGetACL(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             IEnumerable<Acl> theAcls = response.Content as IEnumerable<Acl>;
             IReadOnlyList<Acl> zkprAcls = this.TranslateRingMasterAclListToZkprAclList(theAcls);
 
@@ -254,13 +259,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
         private void SerializeResponseSetACL(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             this.SerializeStat(response.Stat);
         }
 
         private void SerializeResponseCreate(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             if (((response.ResultCode == (int)RingMasterException.Code.Ok) || (response.ResultCode == (int)RingMasterException.Code.Nodeexists)) && (response.Content != null))
             {
                 this.binaryWriter.WriteString32BitPrefixLengthBE(response.Content as string);
@@ -277,12 +282,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
         private void SerializeResponseDelete(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
         }
 
         private void SerializeResponseGetChildren(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
 
             if (response.Content != null)
             {
@@ -314,20 +319,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
         private void SerializeResponseGetData(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             this.binaryWriter.WriteByteArray32BitPrefixLengthBE((byte[])response.Content);
             this.SerializeStat(response.Stat);
         }
 
         private void SerializeResponseSetData(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             this.SerializeStat(response.Stat);
         }
 
         private void SerializeResponseMulti(RequestResponse response, IZooKeeperRequest request)
         {
-            this.SerializeReplyHeader(response.Stat == null ? (long)0 : response.Stat.Mzxid, response.ResultCode, request.Xid);
+            this.SerializeReplyHeader(response.Stat == null ? 0L : response.Stat.Mzxid, response.ResultCode, request.Xid);
             List<OpResult> results = response.Content as List<OpResult>;
             foreach (OpResult or in results)
             {
@@ -411,173 +416,119 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             ZooKeeperErrorCodes eCode = ZooKeeperErrorCodes.ZOK;
             switch (resultCode)
             {
-                /// <summary>
-                /// An API was not used correctly.
-                /// </summary>
+                // An API was not used correctly.
                 case (int)RingMasterException.Code.Apierror:
                     eCode = ZooKeeperErrorCodes.ZAPIERROR;
                     break;
 
-                /// <summary>
-                /// Client authentication failed.
-                /// </summary>
+                // Client authentication failed.
                 case (int)RingMasterException.Code.Authfailed:
                     eCode = ZooKeeperErrorCodes.ZAUTHFAILED;
                     break;
 
-                /// <summary>
-                /// Invalid arguments.
-                /// </summary>
+                // Invalid arguments.
                 case (int)RingMasterException.Code.Badarguments:
                     eCode = ZooKeeperErrorCodes.ZBADARGUMENTS;
                     break;
 
-                /// <summary>
-                /// Version conflict.
-                /// </summary>
+                // Version conflict.
                 case (int)RingMasterException.Code.Badversion:
                     eCode = ZooKeeperErrorCodes.ZBADVERSION;
                     break;
 
-                /// <summary>
-                /// Connection to the server has been lost.
-                /// </summary>
+                // Connection to the server has been lost.
                 case (int)RingMasterException.Code.Connectionloss:
                     eCode = ZooKeeperErrorCodes.ZCONNECTIONLOSS;
                     break;
 
-                /// <summary>
-                /// A data inconsistency was found.
-                /// </summary>
+                // A data inconsistency was found.
                 case (int)RingMasterException.Code.Datainconsistency:
                     eCode = ZooKeeperErrorCodes.ZDATAINCONSISTENCY;
                     break;
 
-                /// <summary>
-                /// Invalid <see cref="Acl"/> was specified.
-                /// </summary>
+                // Invalid <see cref="Acl"/> was specified.
                 case (int)RingMasterException.Code.Invalidacl:
                     eCode = ZooKeeperErrorCodes.ZINVALIDACL;
                     break;
 
-                /// <summary>
-                /// Invalid callback specified
-                /// </summary>
+                // Invalid callback specified
                 case (int)RingMasterException.Code.Invalidcallback:
                     eCode = ZooKeeperErrorCodes.ZINVALIDCALLBACK;
                     break;
 
-                /// <summary>
-                /// Error while marshaling or un-marshaling data.
-                /// </summary>
+                // Error while marshaling or un-marshaling data.
                 case (int)RingMasterException.Code.Marshallingerror:
                     eCode = ZooKeeperErrorCodes.ZMARSHALLINGERROR;
                     break;
 
-                /// <summary>
-                /// Not authenticated.
-                /// </summary>
+                // Not authenticated.
                 case (int)RingMasterException.Code.Noauth:
                     eCode = ZooKeeperErrorCodes.ZNOAUTH;
                     break;
 
-                /// <summary>
-                /// Ephemeral nodes are not allowed to have children.
-                /// </summary>
+                // Ephemeral nodes are not allowed to have children.
                 case (int)RingMasterException.Code.Nochildrenforephemerals:
                     eCode = ZooKeeperErrorCodes.ZNOCHILDRENFOREPHEMERALS;
                     break;
 
-                /// <summary>
-                /// The node already exists.
-                /// </summary>
+                // The node already exists.
                 case (int)RingMasterException.Code.Nodeexists:
                     eCode = ZooKeeperErrorCodes.ZNODEEXISTS;
                     break;
 
-                /// <summary>
-                /// Node does not exist.
-                /// </summary>
+                // Node does not exist.
                 case (int)RingMasterException.Code.Nonode:
                     eCode = ZooKeeperErrorCodes.ZNONODE;
                     break;
 
-                /// <summary>
-                /// The node has children.
-                /// </summary>
+                // The node has children.
                 case (int)RingMasterException.Code.Notempty:
                     eCode = ZooKeeperErrorCodes.ZNOTEMPTY;
                     break;
 
-                /// <summary>
-                /// Everything is OK.
-                /// </summary>
+                // Everything is OK.
                 case (int)RingMasterException.Code.Ok:
                     eCode = ZooKeeperErrorCodes.ZOK;
                     break;
 
-                /// <summary>
-                /// Operation timeout.
-                /// </summary>
+                // Operation timeout.
                 case (int)RingMasterException.Code.Operationtimeout:
                     eCode = ZooKeeperErrorCodes.ZOPERATIONTIMEOUT;
                     break;
 
-                /// <summary>
-                /// A runtime inconsistency was found.
-                /// </summary>
+                // A runtime inconsistency was found.
                 case (int)RingMasterException.Code.Runtimeinconsistency:
                     eCode = ZooKeeperErrorCodes.ZRUNTIMEINCONSISTENCY;
                     break;
 
-                /// <summary>
-                /// The session has been expired by the server.
-                /// </summary>
+                // The session has been expired by the server.
                 case (int)RingMasterException.Code.Sessionexpired:
                     eCode = ZooKeeperErrorCodes.ZSESSIONEXPIRED;
                     break;
 
-                /// <summary>
-                /// Session moved to another server, so operation is ignored.
-                /// </summary>
+                // Session moved to another server, so operation is ignored.
                 case (int)RingMasterException.Code.Sessionmoved:
                     eCode = ZooKeeperErrorCodes.ZSESSIONMOVED;
                     break;
 
-                /// <summary>
-                /// Operation is unimplemented.
-                /// </summary>
+                // Operation is unimplemented.
                 case (int)RingMasterException.Code.Unimplemented:
                     eCode = ZooKeeperErrorCodes.ZUNIMPLEMENTED;
                     break;
 
-                /// <summary>
-                /// System and server-side errors.
-                /// </summary>
+                // System and server-side errors.
                 case (int)RingMasterException.Code.Systemerror:
-                /// <summary>
-                /// Unknown error.
-                /// </summary>
+                // Unknown error.
                 case (int)RingMasterException.Code.Unknown:
-                /// <summary>
-                /// Participants did not agree on the transaction.
-                /// </summary>
+                // Participants did not agree on the transaction.
                 case (int)RingMasterException.Code.TransactionNotAgreed:
-                /// <summary>
-                /// Operation timeout on server (the request comes with a max timeout for the execution queue at the server that was not met).
-                /// </summary>
+                // Operation timeout on server (the request comes with a max timeout for the execution queue at the server that was not met).
                 case (int)RingMasterException.Code.Waitqueuetimeoutonserver:
-                /// <summary>
-                /// The server is in lockdown
-                /// </summary>
+                // The server is in lockdown
                 case (int)RingMasterException.Code.InLockDown:
-                /// <summary>
-                /// The requested node has too many children to be enumerated in a single request.
-                /// </summary>
+                // The requested node has too many children to be enumerated in a single request.
                 case (int)RingMasterException.Code.TooManyChildren:
-                /// <summary>
-                /// The operation was cancelled.
-                /// </summary>
+                // The operation was cancelled.
                 case (int)RingMasterException.Code.OperationCancelled:
                 default:
                     eCode = ZooKeeperErrorCodes.ZSYSTEMERROR;
@@ -664,7 +615,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.WriteBE(s.Version);
             this.binaryWriter.WriteBE(s.Cversion);
             this.binaryWriter.WriteBE(s.Aversion);
-            this.binaryWriter.WriteBE((long)0);  // EphemeralOwner legacy field is set to zero always
+            this.binaryWriter.WriteBE(0L);  // EphemeralOwner legacy field is set to zero always
             this.binaryWriter.WriteBE(s.DataLength);
             this.binaryWriter.WriteBE(s.NumChildren);
             this.binaryWriter.WriteBE(s.Pzxid);

@@ -1,11 +1,10 @@
-﻿// <copyright file="IsCertificateTimeValidRule.cs" company="Microsoft">
+﻿// <copyright file="IsCertificateTimeValidRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -37,7 +36,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (certificate == null)
             {
-                Trace.TraceError("ValidateSslPolicyErrors. IsValidCertificateRule: Certificate {0} is not a valid X509Certificate2", CertAccessor.Instance.GetSerialNumberString(cert));
+                CertificateRulesEventSource.Log.IsCertificateTimeValidRule_InvalidX509Certificate2(CertAccessor.Instance.GetSerialNumberString(cert));
                 return false;
             }
 
@@ -46,7 +45,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if ((CertAccessor.Instance.NotBefore(certificate) > now) || (CertAccessor.Instance.NotAfter(certificate) < now))
             {
-                Trace.TraceError("ValidateSslPolicyErrors. IsValidCertificateRule: Certificate {0} is not valid before {1} or after {2}", CertAccessor.Instance.GetSerialNumberString(cert), CertAccessor.Instance.NotBefore(certificate), CertAccessor.Instance.NotAfter(certificate));
+                CertificateRulesEventSource.Log.IsCertificateTimeValidRule_NotValid(
+                     CertAccessor.Instance.GetSerialNumberString(cert),
+                     CertAccessor.Instance.NotBefore(certificate).ToString(),
+                     CertAccessor.Instance.NotAfter(certificate).ToString());
                 return false;
             }
 

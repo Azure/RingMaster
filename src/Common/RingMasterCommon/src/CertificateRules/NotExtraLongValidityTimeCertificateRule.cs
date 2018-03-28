@@ -1,11 +1,10 @@
-﻿// <copyright file="NotExtraLongValidityTimeCertificateRule.cs" company="Microsoft">
+﻿// <copyright file="NotExtraLongValidityTimeCertificateRule.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
-    using System.Diagnostics;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
 
@@ -66,7 +65,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             if (certificate == null)
             {
-                Trace.TraceError("ValidateSslPolicyErrors. NotExtraLongValidityTimeCertificateRule: Certificate {0} is not a valid X509Certificate2", CertAccessor.Instance.GetSerialNumberString(cert));
+                CertificateRulesEventSource.Log.NotExtraLongValidityTimeCertificateRule_InvalidX509Certificate2(CertAccessor.Instance.GetSerialNumberString(cert));
                 return false;
             }
 
@@ -74,13 +73,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
             {
                 if (CertAccessor.Instance.NotAfter(certificate) > CertAccessor.Instance.NotBefore(certificate).Add(this.maxValidity))
                 {
-                    Trace.TraceError("ValidateSslPolicyErrors. NotExtraLongValidityTimeCertificateRule: Certificate {0} is not valid because validity period in days ({1}) exceeds {2}", CertAccessor.Instance.GetSerialNumberString(cert), (CertAccessor.Instance.NotAfter(certificate) - CertAccessor.Instance.NotBefore(certificate)).TotalDays, this.maxValidity.TotalDays);
+                    CertificateRulesEventSource.Log.NotExtraLongValidityTimeCertificateRule_ValidityPeriodExceedsLimit(
+                        CertAccessor.Instance.GetSerialNumberString(cert),
+                        (CertAccessor.Instance.NotAfter(certificate) - CertAccessor.Instance.NotBefore(certificate)).TotalDays,
+                        this.maxValidity.TotalDays);
                     return false;
                 }
             }
             catch (Exception e)
             {
-                Trace.TraceError("Certificate {0} is not valid because we couldn't compute validity time properly: {1}", CertAccessor.Instance.GetSerialNumberString(cert), e);
+                CertificateRulesEventSource.Log.NotExtraLongValidityTimeCertificateRule_FailedToCalculateValidityTime(
+                    CertAccessor.Instance.GetSerialNumberString(cert),
+                    e.ToString());
                 return false;
             }
 

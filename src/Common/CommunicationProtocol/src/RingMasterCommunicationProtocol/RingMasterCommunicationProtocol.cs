@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterCommunicationProtocol.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterCommunicationProtocol.cs" company="Microsoft Corporation">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         public const uint MinimumSupportedVersion = SerializationFormatVersions.MinimumSupportedVersion;
 
         /// <summary>
-        /// Gets a function that recieves a packet from the wire. return null if you want to use the default reciever
+        /// Gets a function that receives a packet from the wire. return null if you want to use the default receiver
         /// </summary>
         public PacketReceiveDelegate PacketReciever { get; } = null;
 
@@ -34,7 +34,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         public ProtocolNegotiatorDelegate ProtocolNegotiator { get; } = null;
 
         /// <summary>
-        /// Gets a value that indicates whether to read using network byte order
+        /// Gets a value indicating whether to read using network byte order
         /// </summary>
         public bool UseNetworkByteOrderFlag { get; } = false;
 

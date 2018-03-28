@@ -1,4 +1,4 @@
-﻿// <copyright file="ProducerConsumer.cs" company="Microsoft">
+﻿// <copyright file="ProducerConsumer.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -9,10 +9,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
     using System.Diagnostics.CodeAnalysis;
     using System.Threading;
 
+#pragma warning disable SA1600, CS1591
+
     public sealed class ProducerConsumer<T> : IDisposable
     {
-        public delegate void RunDelegate(T obj);
-
         private readonly RunDelegate runFunction;
         private readonly int maxThreads;
         private readonly SemaphoreSlim queueFullSemaphore;
@@ -31,9 +31,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                 : null;
         }
 
+        public delegate void RunDelegate(T obj);
+
         public int MaxQueueLength { get; }
 
         public uint MaxSpins { get; set; } = 50;
+
+        public bool IsEmpty => this.pendingRequests.Count == 0;
+
+        public int Inflight => this.numStarted;
 
         public void EnqueueBatch(IList<T> calls)
         {
@@ -114,6 +120,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             }
         }
 
+        public void Clear()
+        {
+            this.pendingRequestsLock.EnterWriteLock();
+            try
+            {
+                this.pendingRequests.Clear();
+            }
+            finally
+            {
+                this.pendingRequestsLock.ExitWriteLock();
+            }
+        }
+
+        public void Dispose()
+        {
+            this.pendingRequestsLock?.Dispose();
+            this.pendingRequestsLock = null;
+        }
+
         private void LaunchConsumer()
         {
             RingMasterThreadPool.Instance.QueueUserWorkItem(this.DoConsumer);
@@ -151,28 +176,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
                 this.pendingRequestsLock.EnterWriteLock();
             }
         }
-
-        public void Clear()
-        {
-            this.pendingRequestsLock.EnterWriteLock();
-            try
-            {
-                this.pendingRequests.Clear();
-            }
-            finally
-            {
-                this.pendingRequestsLock.ExitWriteLock();
-            }
-        }
-
-        public bool IsEmpty => this.pendingRequests.Count == 0;
-
-        public int Inflight => this.numStarted;
-
-        public void Dispose()
-        {
-            this.pendingRequestsLock?.Dispose();
-            this.pendingRequestsLock = null;
-        }
     }
+#pragma warning restore
 }

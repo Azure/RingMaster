@@ -1,5 +1,5 @@
-﻿// <copyright file="EventSourceTraceAdapter.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="EventSourceTraceAdapter.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation
@@ -21,15 +21,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation
         /// Enable listening for events from an event source.
         /// </summary>
         /// <param name="name">Name of the event source</param>
-        /// <param name="level"></param>
-        /// <param name="friendlyName"></param>
+        /// <param name="level">At which level to listen the events</param>
+        /// <param name="friendlyName">Friendly name used in the tracing</param>
         public void Enable(string name, EventLevel level, string friendlyName)
         {
             var trackedEventSource = new TrackedEventSource
             {
                 Name = name,
                 Level = level,
-                FriendlyName = friendlyName
+                FriendlyName = friendlyName,
             };
 
             this.trackedEventSources.Add(name, trackedEventSource);
@@ -45,6 +45,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation
             }
         }
 
+        /// <inheritdoc />
         protected override void OnEventWritten(EventWrittenEventArgs args)
         {
             if (args == null)
@@ -99,6 +100,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation
             }
         }
 
+        /// <inheritdoc />
         protected override void OnEventSourceCreated(EventSource source)
         {
             if (source == null)

@@ -1,5 +1,5 @@
-﻿// <copyright file="RingMasterBackendTool.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="RingMasterBackendTool.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.RingMaster.Tools
@@ -7,13 +7,10 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
     using System;
     using System.Configuration;
     using System.Diagnostics;
-    using System.IO;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Server;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
 
@@ -21,8 +18,13 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
     /// RingMasterBackend tool hosts an instance RingMasterServerBackend and acts
     /// as a standalone ringmaster server.
     /// </summary>
-    public class RingMasterBackendTool
+    public sealed class RingMasterBackendTool : IDisposable
     {
+        private InMemoryFactory factory;
+        private RingMasterBackendCore backend;
+        private RingMasterServer ringMasterServer;
+        private bool disposed = false;
+
         /// <summary>
         /// Defines the entry point of the application.
         /// </summary>
@@ -42,29 +44,35 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            var protocol = new RingMasterCommunicationProtocol();
-            using (var backend = CreateBackend())
-            using (var ringMasterServer = new RingMasterServer(protocol, null, CancellationToken.None))
+            using (var p = new RingMasterBackendTool())
             {
-                var transportConfig = new SecureTransport.Configuration
+                p.Run(port);
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            if (!this.disposed)
+            {
+                this.disposed = true;
+
+                if (this.factory != null)
                 {
-                    UseSecureConnection = false,
-                    IsClientCertificateRequired = false,
-                    CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion
-                };
+                    this.factory.Dispose();
+                    this.factory = null;
+                }
 
-                using (var serverTransport = new SecureTransport(transportConfig))
+                if (this.backend != null)
                 {
-                    ringMasterServer.RegisterTransport(serverTransport);
-                    ringMasterServer.OnInitSession = initRequest =>
-                    {
-                        return new CoreRequestHandler(backend, initRequest);
-                    };
+                    this.backend.Dispose();
+                    this.backend = null;
+                }
 
-                    serverTransport.StartServer(port);
-
-                    Console.WriteLine("Press ENTER to exit...");
-                    Console.ReadLine();
+                if (this.ringMasterServer != null)
+                {
+                    this.ringMasterServer.Dispose();
+                    this.ringMasterServer = null;
                 }
             }
         }
@@ -105,43 +113,73 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
             }
         }
 
+        private void Run(int port)
+        {
+            var protocol = new RingMasterCommunicationProtocol();
+            this.CreateBackend();
+
+            using (var cancel = new CancellationTokenSource())
+            {
+                this.ringMasterServer = new RingMasterServer(protocol, null, cancel.Token);
+
+                var transportConfig = new SecureTransport.Configuration
+                {
+                    UseSecureConnection = false,
+                    IsClientCertificateRequired = false,
+                    CommunicationProtocolVersion = RingMasterCommunicationProtocol.MaximumSupportedVersion,
+                };
+
+                using (var serverTransport = new SecureTransport(transportConfig))
+                {
+                    this.ringMasterServer.RegisterTransport(serverTransport);
+                    this.ringMasterServer.OnInitSession = initRequest =>
+                    {
+                        return new CoreRequestHandler(this.backend, initRequest);
+                    };
+
+                    serverTransport.StartServer(port);
+
+                    Console.WriteLine("Press ENTER to exit...");
+                    Console.ReadLine();
+                    cancel.Cancel();
+                }
+            }
+        }
+
         /// <summary>
         /// Creates a new backend with an in-memory store
         /// </summary>
-        /// <returns>Backend instance</returns>
-        private static RingMasterBackendCore CreateBackend()
+        private void CreateBackend()
         {
-            RingMasterBackendCore backend = null;
-            try
+            var backendStarted = new ManualResetEventSlim();
+            Trace.TraceInformation("CreateBackend");
+
+            RingMasterBackendCore.GetSettingFunction = GetSetting;
+            this.factory = new InMemoryFactory();
+            this.backend = new RingMasterBackendCore(this.factory);
+            this.backend.StartService = (p1, p2) => { backendStarted.Set(); };
+            this.backend.Start();
+            this.backend.OnBecomePrimary();
+
+            if (!backendStarted.Wait(30000))
             {
-                var backendStarted = new ManualResetEventSlim();
-                Trace.TraceInformation("CreateBackend");
-
-                var factory = new InMemoryFactory();
-                RingMasterBackendCore.GetSettingFunction = GetSetting;
-                backend = new RingMasterBackendCore(factory);
-
-                backend.StartService = (p1, p2) => { backendStarted.Set(); };
-                backend.Start();
-                backend.OnBecomePrimary();
-
-                if (backendStarted.Wait(30000))
-                {
-                    var backendToReturn = backend;
-                    backend = null;
-                    return backendToReturn;
-                }
-                else
-                {
-                    throw new ApplicationException("Backend failed to start");
-                }
+                throw new RingMasterBackendException("Backend failed to start");
             }
-            finally
+        }
+
+        /// <summary>
+        /// General exception related to the backend
+        /// </summary>
+        [Serializable]
+        public class RingMasterBackendException : Exception
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="RingMasterBackendException"/> class.
+            /// </summary>
+            /// <param name="message">Exception message</param>
+            public RingMasterBackendException(string message)
+                : base(message)
             {
-                if (backend != null)
-                {
-                    backend.Dispose();
-                }
             }
         }
     }
