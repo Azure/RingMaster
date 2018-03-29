@@ -39,7 +39,7 @@
     <Compile Include="VegaTracingPerf.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

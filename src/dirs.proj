@@ -5,6 +5,7 @@
     <ProjectReference Include="Binplace\dirs.proj" />
     <ProjectReference Include="Applications\dirs.proj" />
     <ProjectReference Include="Backend\dirs.proj" />
+    <ProjectReference Include="CloudUnitTests\CloudUnitTests.proj" Condition="'$(OSSBUILD)' == ''" />
     <ProjectReference Include="Common\dirs.proj" />
     <ProjectReference Include="Infrastructure\dirs.proj" />
     <ProjectReference Include="PackageDefinitions\dirs.proj" />

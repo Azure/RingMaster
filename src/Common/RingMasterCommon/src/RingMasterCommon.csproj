@@ -108,10 +108,7 @@
     <Compile Include="WatcherKind.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Backend\HelperTypes\HelperTypes.csproj">
-      <Project>{0f4fadd2-3470-4a24-bdf5-4db7e9679bd9}</Project>
-      <Name>HelperTypes</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />

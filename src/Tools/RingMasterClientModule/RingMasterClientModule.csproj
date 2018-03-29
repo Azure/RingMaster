@@ -42,9 +42,12 @@
     <Compile Include= "SetRingMasterNodeData.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SrcRoot)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
-    <ProjectReference Include="$(SrcRoot)\Common\RingMasterClient\src\RingMasterClient.csproj" />
-    <ProjectReference Include="$(SrcRoot)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
 </Project>

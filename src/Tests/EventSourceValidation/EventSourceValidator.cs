@@ -35,15 +35,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
         private static List<string> baseClassMethods = EventSourceType.GetMethods().Select(m => m.Name).ToList();
 
         /// <summary>
+        /// Gets or sets test context for logging
+        /// </summary>
+        public TestContext TestContext { get; set; }
+
+        /// <summary>
         /// Checks all events are unique in same event source.
         /// </summary>
         [TestMethod]
         public void CheckAllEventsAreUniqueInSameEventSource()
         {
-            var allAssemblies = LoadAllAssemblies();
+            var allAssemblies = this.LoadAllAssemblies();
             var customEventSources = new List<Type>();
             foreach (var assembly in allAssemblies)
             {
+                this.TestContext.WriteLine($"Loading {assembly.FullName}");
                 customEventSources.AddRange(assembly.GetTypes().Where(t => t.IsSubclassOf(EventSourceType)));
             }
 
@@ -51,8 +57,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
 
             foreach (var eventSourceType in customEventSources)
             {
-                Assert.IsTrue(IsValidEventSource(eventSourceType), $"{eventSourceType.FullName} is not valid event source type.");
-                Console.WriteLine($"validated {eventSourceType.FullName}");
+                Assert.IsTrue(this.IsValidEventSource(eventSourceType), $"{eventSourceType.FullName} is not valid event source type.");
+                this.TestContext.WriteLine($"validated {eventSourceType.FullName}");
             }
         }
 
@@ -63,11 +69,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
         /// <returns>
         ///   <c>true</c> if the given event source type is valid; otherwise, <c>false</c>.
         /// </returns>
-        private static bool IsValidEventSource(Type eventSourceType)
+        private bool IsValidEventSource(Type eventSourceType)
         {
             var methods = eventSourceType.GetMethods().Where(m => !baseClassMethods.Contains(m.Name)).ToArray();
 
-            if (IsEventIdUnique(eventSourceType, methods) && IsEventNameUnique(eventSourceType, methods))
+            if (this.IsEventIdUnique(eventSourceType, methods) && this.IsEventNameUnique(eventSourceType, methods))
             {
                 return true;
             }
@@ -83,17 +89,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
         /// <returns>
         ///   <c>true</c> if [is event name unique] [the specified event source type]; otherwise, <c>false</c>.
         /// </returns>
-        private static bool IsEventNameUnique(Type eventSourceType, MethodInfo[] methods)
+        private bool IsEventNameUnique(Type eventSourceType, MethodInfo[] methods)
         {
             var eventNames = new HashSet<string>();
             foreach (var method in methods)
             {
-                var attribute = method.GetCustomAttribute<EventAttribute>();
+                var attribute = CustomAttributeData.GetCustomAttributes(method)
+                    .FirstOrDefault(a => a.AttributeType.Name == "EventAttribute");
                 if (attribute != null)
                 {
                     if (eventNames.Contains(method.Name))
                     {
-                        Console.WriteLine($"{eventSourceType.FullName} has duplicate event name {method.Name}");
+                        this.TestContext.WriteLine($"{eventSourceType.FullName} has duplicate event name {method.Name}");
                         return false;
                     }
 
@@ -112,21 +119,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
         /// <returns>
         ///   <c>true</c> if [is event identifier unique] [the specified event source type]; otherwise, <c>false</c>.
         /// </returns>
-        private static bool IsEventIdUnique(Type eventSourceType, MethodInfo[] methods)
+        private bool IsEventIdUnique(Type eventSourceType, MethodInfo[] methods)
         {
             var eventIds = new HashSet<int>();
             foreach (var method in methods)
             {
-                var attribute = method.GetCustomAttribute<EventAttribute>();
+                var attribute = CustomAttributeData.GetCustomAttributes(method)
+                    .FirstOrDefault(a => a.AttributeType.Name == "EventAttribute");
                 if (attribute != null)
                 {
-                    if (eventIds.Contains(attribute.EventId))
+                    var eventId = (int)attribute.ConstructorArguments.FirstOrDefault().Value;
+
+                    this.TestContext.WriteLine($"  Checking {eventId} {method.Name}");
+
+                    if (eventIds.Contains(eventId))
                     {
-                        Console.WriteLine($"{eventSourceType.FullName} has duplicate event id {attribute.EventId}");
+                        this.TestContext.WriteLine($"{eventSourceType.FullName} has duplicate event id {eventId}");
                         return false;
                     }
-
-                    eventIds.Add(attribute.EventId);
+                    else
+                    {
+                        eventIds.Add(eventId);
+                    }
                 }
             }
 
@@ -137,14 +151,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
         /// Loads all assemblies.
         /// </summary>
         /// <returns>A list of Assemblies the project referenced.</returns>
-        private static IEnumerable<Assembly> LoadAllAssemblies()
+        private IEnumerable<Assembly> LoadAllAssemblies()
         {
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             var assemblyFiles = Directory.GetFiles(path, $"{RingMasterAssemblyPrefix}*.dll").ToList();
             assemblyFiles.AddRange(Directory.GetFiles(path, $"{RingMasterAssemblyPrefix}*.exe"));
 
-            return assemblyFiles.Select(Assembly.LoadFile);
+            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += (sender, args) =>
+            {
+                this.TestContext.WriteLine($"  Loading {args.Name}");
+                try
+                {
+                    return Assembly.ReflectionOnlyLoad(args.Name);
+                }
+                catch (Exception)
+                {
+                    var name = Path.Combine(path, args.Name.Split(',')[0] + ".dll");
+                    return Assembly.ReflectionOnlyLoadFrom(name);
+                }
+            };
+
+            return assemblyFiles.Select(Assembly.ReflectionOnlyLoadFrom);
         }
     }
 }

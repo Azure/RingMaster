@@ -17,6 +17,7 @@
     <Compile Include="TestSerializeDeserialize.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\src\Common\Common.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
   </ItemGroup>

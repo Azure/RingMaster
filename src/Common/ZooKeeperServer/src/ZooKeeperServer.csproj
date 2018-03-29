@@ -25,14 +25,11 @@
     <Compile Include="ZooKeeperSession.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
-    <ProjectReference Include="..\..\..\Backend\Core\RingMasterBackendCore.csproj">
-      <Project>{5899ce51-48e8-46ea-a12a-4206688cdcba}</Project>
-      <Name>RingMasterBackendCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />

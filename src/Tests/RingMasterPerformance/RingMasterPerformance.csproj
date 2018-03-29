@@ -19,23 +19,13 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj">
-      <Project>{2F20991A-04B8-4305-9325-E8A3395A7BB7}</Project>
-      <Name>RingMasterClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Tests\PerformanceTestCases\PerformanceTestCases.csproj">
-      <Project>{8AC71971-FAE7-4528-8A5B-590F30DF93FA}</Project>
-      <Name>Performance</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj">
-      <Project>{f43d5ceb-344b-4a7c-93ed-953238ed9239}</Project>
-      <Name>SecureTransport</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\PerformanceTestCases\PerformanceTestCases.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="RingMasterPerformance.cs" />

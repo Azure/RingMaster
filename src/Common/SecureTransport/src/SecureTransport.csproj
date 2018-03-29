@@ -27,10 +27,7 @@
     <Compile Include="SslConnection.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />

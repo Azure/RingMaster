@@ -17,29 +17,33 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
     <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" />
     <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\stress\RingMasterBackendCoreStress.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\ZooKeeperServer\src\ZooKeeperServer.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Infrastructure\IfxInstrumentation\IfxInstrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Infrastructure\LogStream\src\LogStream.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
     <ProjectReference Include="$(SRCROOT)\Persistence\ServiceFabric\src\ServiceFabricPersistence.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\PerformanceTestCases\PerformanceTestCases.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
       <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.ServiceFabric.Services">
+      <HintPath>$(PkgMicrosoft_ServiceFabric_Services)\lib\net45\Microsoft.ServiceFabric.Services.dll</HintPath>
+    </Reference>  
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />

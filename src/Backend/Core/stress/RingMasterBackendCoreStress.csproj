@@ -23,14 +23,15 @@
     <Compile Include="DictionaryTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RingMasterBackendCore.csproj">
-      <Project>{5899CE51-48E8-46EA-A12A-4206688CDCBA}</Project>
-      <Name>RingMasterBackendCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj">
-      <Project>{236C5829-F892-44EE-9FC1-2D964221CB61}</Project>
-      <Name>Native</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+    <ProjectReference Include="..\RingMasterBackendCore.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />

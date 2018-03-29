@@ -28,7 +28,11 @@
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />

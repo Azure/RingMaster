@@ -19,14 +19,8 @@
     <Compile Include="RequestTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Backend\Common\RingMasterBackendCommon.csproj">
-      <Project>{22ac66a6-3e79-49d4-b896-e5e3c15d7158}</Project>
-      <Name>RingMasterBackendCommon</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">

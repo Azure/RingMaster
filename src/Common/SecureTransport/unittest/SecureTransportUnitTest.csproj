@@ -41,18 +41,18 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
-  <ItemGroup>
-    <Robocopy Include="$(CoreXTTools)\amd64\makecert.exe">
-      <DestinationFolder>$(OutDir)</DestinationFolder>
-    </Robocopy>
-  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
   -->
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  <Target Name="AfterBuild">
+    <ItemGroup>
+      <makecert Condition="'$(OSSBUILD)' == ''" Include="$(CoreXTTools)\amd64\makecert.exe" />
+      <makecert Condition="'$(OSSBUILD)' != ''" Include="$(WindowsSdkVerBinPath)\x64\makecert.exe" />
+    </ItemGroup>
+    <Copy SourceFiles="@(makecert)" DestinationFolder="$(OutDir)" />
+  </Target>
 </Project>
