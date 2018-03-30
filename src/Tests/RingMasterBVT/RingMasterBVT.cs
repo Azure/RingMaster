@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// Starts the ring master backend tool
         /// </summary>
         [AssemblyInitialize]
-        public static void StartBackendTool()
+        public static void StartBackendTool(TestContext context)
         {
             // Only start the backend tool on CloudBuild. In other environment, start it manually.
             if (Environment.GetEnvironmentVariable("TestEnvironment") == "QTEST")
