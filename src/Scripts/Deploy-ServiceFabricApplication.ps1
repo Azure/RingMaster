@@ -1,16 +1,17 @@
-Param
-(
-[Parameter(Mandatory=$true)]
-[String]
-$ApplicationPackagePath,
+[CmdletBinding()]
+Param (
+    [Parameter(Mandatory=$true)]
+    [ValidateScript({Test-Path -PathType Container $_})]
+    [String] $ApplicationPackagePath,
 
-[Parameter(Mandatory=$true)]
-[String]
-$ApplicationParametersFile,
+    [Parameter(Mandatory=$true)]
+    [ValidateScript({Test-Path -PathType Leaf $_})]
+    [String] $ApplicationParametersFile,
 
-[Switch]
-$Force = $false
+    [Switch] $Force = $false
 )
+
+Set-StrictMode -Version latest
 
 [xml]$manifest = (Get-Content -Path "$ApplicationPackagePath\ApplicationManifest.xml")
 [xml]$parameters = (Get-Content -Path $ApplicationParametersFile)
@@ -35,8 +36,7 @@ while ($true) {
             break
         }
     }
-    catch [System.NullReferenceException] 
-    {
+    catch [System.NullReferenceException] {
         Write-Host -ForegroundColor Cyan "$([DateTime]::Now) Connecting to local cluster"
         Connect-ServiceFabricCluster @connParams
     }
@@ -56,15 +56,20 @@ function GetImageStoreConnectionString
 
 $ImageStoreConnectionString = GetImageStoreConnectionString
 
-if ($Force)
-{
+if ($Force) {
     Remove-ServiceFabricApplication -ApplicationName $applicationName -Force
-    Unregister-ServiceFabricApplicationType -ApplicationTypeName $applicationTypeName -ApplicationTypeVersion $applicationTypeVersion -Force
+    Unregister-ServiceFabricApplicationType -ApplicationTypeName $applicationTypeName `
+        -ApplicationTypeVersion $applicationTypeVersion -Force
 }
 
 # Copy the application package to the Service Fabric Image Store and register it
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $ApplicationPackagePath -ImageStoreConnectionString $ImageStoreConnectionString -ApplicationPackagePathInImageStore $applicationTypeName -Compress
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $ApplicationPackagePath `
+    -ImageStoreConnectionString $ImageStoreConnectionString `
+    -ApplicationPackagePathInImageStore $applicationTypeName
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore $applicationTypeName
 
 # Create a new application in the cluster
-New-ServiceFabricApplication -ApplicationName $applicationName -ApplicationTypeName $applicationTypeName -ApplicationTypeVersion $applicationTypeVersion -ApplicationParameter $applicationParameter
+New-ServiceFabricApplication -ApplicationName $applicationName `
+    -ApplicationTypeName $applicationTypeName `
+    -ApplicationTypeVersion $applicationTypeVersion `
+    -ApplicationParameter $applicationParameter

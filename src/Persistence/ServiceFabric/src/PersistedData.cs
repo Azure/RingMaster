@@ -1,8 +1,8 @@
-﻿// <copyright file="ServiceFabricPersistedData.cs" company="Microsoft Corporation">
+﻿// <copyright file="PersistedData.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
-namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric
+namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.WinFabPersistence
 {
     /// <summary>
     /// PersistedData class is the type that is serialized to the reliable dictionary managed by Service Fabric.
@@ -13,13 +13,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     /// This typename and assembly name are recorded in the backing files maintained by ServiceFabric for the ReliableDictionary
     /// and when that dictionary is instantiated, it expects to find a type with the above name in an assembly with the above name.
     /// </remarks>
-    public sealed class ServiceFabricPersistedData
+    public sealed class PersistedData
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ServiceFabricPersistedData"/> class.
+        /// Initializes a new instance of the <see cref="PersistedData"/> class.
         /// </summary>
         /// <param name="data">persisted data object</param>
-        public ServiceFabricPersistedData(PersistedData data)
+        public PersistedData(Persistence.PersistedData data)
         {
             this.Data = data;
         }
@@ -27,6 +27,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <summary>
         /// Gets the persisted data.
         /// </summary>
-        public PersistedData Data { get; private set; }
+        public Persistence.PersistedData Data { get; private set; }
     }
 }

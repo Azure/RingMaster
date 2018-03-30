@@ -9,9 +9,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     using Microsoft.ServiceFabric.Data;
 
     /// <summary>
-    /// Custom serializer for <see cref="PersistedData"/>.
+    /// Custom serializer for <see cref="WinFabPersistence.PersistedData"/>.
     /// </summary>
-    internal sealed class PersistedDataSerializer : IStateSerializer<ServiceFabricPersistedData>
+    internal sealed class PersistedDataSerializer : IStateSerializer<WinFabPersistence.PersistedData>
     {
         /// <summary>
         /// Gets or sets the persisted data factory instance
@@ -19,30 +19,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         internal PersistedDataFactory Factory { get; set; }
 
         /// <summary>
-        /// Deserializes a <see cref="PersistedData"/> from the given <see cref="BinaryReader"/>.
+        /// Deserializes a <see cref="WinFabPersistence.PersistedData"/> from the given <see cref="BinaryReader"/>.
         /// </summary>
         /// <param name="binaryReader">The <see cref="BinaryReader"/> to deserialize from</param>
-        /// <returns>The deserialized <see cref="PersistedData"/></returns>
-        public ServiceFabricPersistedData Read(BinaryReader binaryReader)
+        /// <returns>The deserialized <see cref="WinFabPersistence.PersistedData"/></returns>
+        public WinFabPersistence.PersistedData Read(BinaryReader binaryReader)
         {
             if (binaryReader == null)
             {
                 throw new ArgumentNullException(nameof(binaryReader));
             }
 
-            PersistedData pd = new PersistedData(0, this.Factory);
+            var pd = new PersistedData(0, this.Factory);
             pd.ReadFrom(binaryReader);
             ServiceFabricPersistenceEventSource.Log.PersistedDataSerializer_Read(pd.Id, pd.Name);
 
-            return new ServiceFabricPersistedData(pd);
+            return new WinFabPersistence.PersistedData(pd);
         }
 
         /// <summary>
-        /// Serializes a <see cref="PersistedData"/> and writes it to the given <see cref="BinaryWriter"/>.
+        /// Serializes a <see cref="Persistence.PersistedData"/> and writes it to the given <see cref="BinaryWriter"/>.
         /// </summary>
         /// <param name="value">The value to serialize</param>
         /// <param name="binaryWriter">The <see cref="BinaryWriter"/> to serialize to</param>
-        public void Write(ServiceFabricPersistedData value, BinaryWriter binaryWriter)
+        public void Write(WinFabPersistence.PersistedData value, BinaryWriter binaryWriter)
         {
             if (value == null)
             {
@@ -60,14 +60,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         }
 
         /// <summary>
-        /// Deserializes <see cref="PersistedData"/> from the given <see cref="BinaryReader"/>.
+        /// Deserializes <see cref="WinFabPersistence.PersistedData"/> from the given <see cref="BinaryReader"/>.
         /// </summary>
         /// <param name="baseValue">The base value for the deserialization</param>
         /// <param name="binaryReader">The <see cref="BinaryReader"/> to deserialize from</param>
-        /// <returns>The deserialized <see cref="PersistedData"/></returns>
-        public ServiceFabricPersistedData Read(ServiceFabricPersistedData baseValue, BinaryReader binaryReader)
+        /// <returns>The deserialized <see cref="WinFabPersistence.PersistedData"/></returns>
+        public WinFabPersistence.PersistedData Read(WinFabPersistence.PersistedData baseValue, BinaryReader binaryReader)
         {
-            ServiceFabricPersistedData pd = this.Read(binaryReader);
+            var pd = this.Read(binaryReader);
             if (baseValue != null)
             {
                 ServiceFabricPersistenceEventSource.Log.PersistedDataSerializer_ReadDifferential(baseValue.Data.Id, baseValue.Data.Name, pd.Data.Id, pd.Data.Name);
@@ -77,12 +77,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         }
 
         /// <summary>
-        /// Serializes the given <see cref="PersistedData"/> and writes it to the given <see cref="BinaryWriter"/>.
+        /// Serializes the given <see cref="WinFabPersistence.PersistedData"/> and writes it to the given <see cref="BinaryWriter"/>.
         /// </summary>
         /// <param name="baseValue">The base value for the serialization</param>
         /// <param name="targetValue">The value to serialize</param>
         /// <param name="binaryWriter">The <see cref="BinaryWriter"/> to serialize to</param>
-        public void Write(ServiceFabricPersistedData baseValue, ServiceFabricPersistedData targetValue, BinaryWriter binaryWriter)
+        public void Write(WinFabPersistence.PersistedData baseValue, WinFabPersistence.PersistedData targetValue, BinaryWriter binaryWriter)
         {
             if (baseValue != null && targetValue != null)
             {

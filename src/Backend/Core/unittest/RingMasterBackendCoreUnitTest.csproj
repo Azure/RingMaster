@@ -61,8 +61,4 @@
   </ItemGroup>
   <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <PropertyGroup>
-    <QTestType>MsTest_Latest</QTestType>
-    <QTestDirToDeploy>$(OutputPath)</QTestDirToDeploy>
-  </PropertyGroup>
 </Project>

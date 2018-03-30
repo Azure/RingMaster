@@ -221,7 +221,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             }
             else
             {
-                // Dont know what to do in case of error return error?
+                // Dont know what to do in case of error return error
             }
         }
 

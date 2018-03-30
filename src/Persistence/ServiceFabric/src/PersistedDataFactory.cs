@@ -111,9 +111,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         }
 
         /// <summary>
-        /// Gets the serializer that must be used to serialize an instance of <see cref="ServiceFabricPersistedData"/>.
+        /// Gets the serializer that must be used to serialize an instance of <see cref="PersistedData"/>.
         /// </summary>
-        public static IStateSerializer<ServiceFabricPersistedData> Serializer
+        public static IStateSerializer<WinFabPersistence.PersistedData> Serializer
         {
             get
             {
@@ -198,7 +198,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         {
             ServiceFabricPersistenceEventSource.Log.StartLoadingData();
 
-            var result = await this.stateManager.TryGetAsync<IReliableDictionary<long, ServiceFabricPersistedData>>(DataByIdDictionaryName);
+            var result = await this.stateManager.TryGetAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
             if (result.HasValue)
             {
                 var dataById = result.Value;
@@ -222,7 +222,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             else
             {
                 ServiceFabricPersistenceEventSource.Log.CreatingDataByIdDictionary();
-                await this.stateManager.GetOrAddAsync<IReliableDictionary<long, ServiceFabricPersistedData>>(DataByIdDictionaryName);
+                await this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
                 this.Load(new PersistedData[0]);
             }
         }
@@ -263,9 +263,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             ServiceFabricPersistenceEventSource.Log.OnDeactivate();
         }
 
-        private Task<IReliableDictionary<long, ServiceFabricPersistedData>> GetDataById(ITransaction transaction)
+        private Task<IReliableDictionary<long, WinFabPersistence.PersistedData>> GetDataById(ITransaction transaction)
         {
-            return this.stateManager.GetOrAddAsync<IReliableDictionary<long, ServiceFabricPersistedData>>(transaction, DataByIdDictionaryName);
+            return this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(transaction, DataByIdDictionaryName);
         }
 
         private void OnStateManagerTransactionChangedHandler(object sender, NotifyTransactionChangedEventArgs e)
@@ -305,9 +305,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                 while (await enumerator.MoveNextAsync(this.cancellationToken))
                 {
                     enumerated++;
-                    if (enumerator.Current is IReliableDictionary<long, ServiceFabricPersistedData>)
+                    if (enumerator.Current is IReliableDictionary<long, WinFabPersistence.PersistedData>)
                     {
-                        var dictionary = (IReliableDictionary<long, ServiceFabricPersistedData>)enumerator.Current;
+                        var dictionary = (IReliableDictionary<long, WinFabPersistence.PersistedData>)enumerator.Current;
                         this.SetFlagsForReliableDictionary(dictionary);
 
                         dictionary.RebuildNotificationAsyncCallback = this.OnDictionaryRebuildNotificationHandlerAsync;
@@ -332,9 +332,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
 
             // Register OnDictionaryChangedHandler when dictionary is added so that no notification is missed.
             if (operation.Action == NotifyStateManagerChangedAction.Add &&
-                operation.ReliableState is IReliableDictionary<long, ServiceFabricPersistedData>)
+                operation.ReliableState is IReliableDictionary<long, WinFabPersistence.PersistedData>)
             {
-                var dictionary = (IReliableDictionary<long, ServiceFabricPersistedData>)operation.ReliableState;
+                var dictionary = (IReliableDictionary<long, WinFabPersistence.PersistedData>)operation.ReliableState;
                 this.SetFlagsForReliableDictionary(dictionary);
 
                 // Ensure that the handler is registered only once by doing -= followed by +=
@@ -349,13 +349,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
 
         private async Task OnDictionaryRebuildNotificationHandlerAsync(
             object sender,
-            NotifyDictionaryRebuildEventArgs<long, ServiceFabricPersistedData> rebuildNotification)
+            NotifyDictionaryRebuildEventArgs<long, WinFabPersistence.PersistedData> rebuildNotification)
         {
             var enumerator = rebuildNotification.State.GetAsyncEnumerator();
             await this.ProcessDictionaryRebuild(enumerator);
         }
 
-        private void OnDictionaryChangedHandler(object sender, NotifyDictionaryChangedEventArgs<long, ServiceFabricPersistedData> e)
+        private void OnDictionaryChangedHandler(object sender, NotifyDictionaryChangedEventArgs<long, WinFabPersistence.PersistedData> e)
         {
             lock (this)
             {
@@ -366,17 +366,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                         throw new InvalidOperationException("Unexpected notification: " + e.ToString());
 
                     case NotifyDictionaryChangedAction.Add:
-                        var addEvent = e as NotifyDictionaryItemAddedEventArgs<long, ServiceFabricPersistedData>;
+                        var addEvent = e as NotifyDictionaryItemAddedEventArgs<long, WinFabPersistence.PersistedData>;
                         this.ProcessAdd((ulong)addEvent.Transaction.TransactionId, addEvent.Value.Data);
                         return;
 
                     case NotifyDictionaryChangedAction.Update:
-                        var updateEvent = e as NotifyDictionaryItemUpdatedEventArgs<long, ServiceFabricPersistedData>;
+                        var updateEvent = e as NotifyDictionaryItemUpdatedEventArgs<long, WinFabPersistence.PersistedData>;
                         this.ProcessUpdate((ulong)updateEvent.Transaction.TransactionId, updateEvent.Value.Data);
                         return;
 
                     case NotifyDictionaryChangedAction.Remove:
-                        var deleteEvent = e as NotifyDictionaryItemRemovedEventArgs<long, ServiceFabricPersistedData>;
+                        var deleteEvent = e as NotifyDictionaryItemRemovedEventArgs<long, WinFabPersistence.PersistedData>;
                         this.ProcessRemove((ulong)deleteEvent.Transaction.TransactionId, (ulong)deleteEvent.Key);
                         return;
 
@@ -386,7 +386,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             }
         }
 
-        private void SetFlagsForReliableDictionary(IReliableDictionary<long, ServiceFabricPersistedData> dictionary)
+        private void SetFlagsForReliableDictionary(IReliableDictionary<long, WinFabPersistence.PersistedData> dictionary)
         {
             Type distributedDicType = dictionary.GetType();
 
@@ -408,7 +408,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// </summary>
         /// <param name="enumerator">Enumerator for the list of nodes</param>
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        private async Task ProcessDictionaryRebuild(IAsyncEnumerator<KeyValuePair<long, ServiceFabricPersistedData>> enumerator)
+        private async Task ProcessDictionaryRebuild(IAsyncEnumerator<KeyValuePair<long, WinFabPersistence.PersistedData>> enumerator)
         {
             Stopwatch timer = Stopwatch.StartNew();
             var dataList = new List<PersistedData>();
@@ -448,7 +448,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="dataById">Dictionary to load</param>
         /// <param name="transaction">Transaction to use</param>
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        private async Task LoadDictionary(IReliableDictionary<long, ServiceFabricPersistedData> dataById, ITransaction transaction)
+        private async Task LoadDictionary(IReliableDictionary<long, WinFabPersistence.PersistedData> dataById, ITransaction transaction)
         {
             ServiceFabricPersistenceEventSource.Log.LoadDictionaryStarted();
             Stopwatch timer = Stopwatch.StartNew();
@@ -456,7 +456,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             try
             {
                 ServiceFabricPersistenceEventSource.Log.LoadDictionaryStartEnumeration(transaction.TransactionId);
-                IAsyncEnumerable<KeyValuePair<long, ServiceFabricPersistedData>> enumerable = await dataById.CreateEnumerableAsync(transaction);
+                IAsyncEnumerable<KeyValuePair<long, WinFabPersistence.PersistedData>> enumerable = await dataById.CreateEnumerableAsync(transaction);
                 using (var enumerator = enumerable.GetAsyncEnumerator())
                 {
                     while (await enumerator.MoveNextAsync(CancellationToken.None))
@@ -499,7 +499,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             private readonly PersistedDataFactory factory;
             private readonly ITransaction transaction;
 
-            private IReliableDictionary<long, ServiceFabricPersistedData> dataById;
+            private IReliableDictionary<long, WinFabPersistence.PersistedData> dataById;
 
             public Replication(PersistedDataFactory factory, ITransaction transaction)
             {
@@ -517,7 +517,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
 
                 ServiceFabricPersistenceEventSource.Log.Add(this.transaction.TransactionId, key, value?.Name);
                 var timer = Stopwatch.StartNew();
-                await this.dataById.AddAsync(this.transaction, key, new ServiceFabricPersistedData(value));
+                await this.dataById.AddAsync(this.transaction, key, new WinFabPersistence.PersistedData(value));
                 this.factory.instrumentation?.AddRequested(timer.Elapsed);
             }
 
@@ -529,7 +529,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
 
                 ServiceFabricPersistenceEventSource.Log.Update(this.transaction.TransactionId, key, value?.Name);
                 var timer = Stopwatch.StartNew();
-                await this.dataById.SetAsync(this.transaction, key, new ServiceFabricPersistedData(value));
+                await this.dataById.SetAsync(this.transaction, key, new WinFabPersistence.PersistedData(value));
                 this.factory.instrumentation?.UpdateRequested(timer.Elapsed);
             }
 
@@ -562,7 +562,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
 
             public Task OnSerializerSetupAsync()
             {
-                this.StateManager.TryAddStateSerializer<ServiceFabricPersistedData>(PersistedDataFactory.Serializer);
+                this.StateManager.TryAddStateSerializer<WinFabPersistence.PersistedData>(PersistedDataFactory.Serializer);
                 return Task.FromResult(true);
             }
         }
