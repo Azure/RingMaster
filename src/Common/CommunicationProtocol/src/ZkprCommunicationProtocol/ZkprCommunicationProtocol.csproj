@@ -1,37 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{27BE8F2C-381A-4080-8A4D-48853D65A221}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.ZkprCommunicationProtocol</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="ZkprDeserializer.cs" />
-    <Compile Include="ZkprCommunicationProtocol.cs" />
-    <Compile Include="ZkprPerSessionState.cs" />
-    <Compile Include="ZkprProtocolMessages.cs" />
-    <Compile Include="ZkprSerializationFormatVersions.cs" />
-    <Compile Include="ZkprSerializer.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Common\Common.csproj">
-      <Project>{a4c22b96-28b0-4275-bb5d-b1259754a749}</Project>
-      <Name>Common</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  
+  <Import Project="$(StyleCopProps)" />
 </Project>

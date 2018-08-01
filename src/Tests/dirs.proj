@@ -1,22 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="Common\Common.csproj" />
-    <ProjectReference Include="EndToEndTests\EndToEndTests.csproj" />
-    <ProjectReference Include="EventSourceValidation\EventSourceValidation.csproj" />
-    <ProjectReference Include="PerformanceTestCases\PerformanceTestCases.csproj" />
-    <ProjectReference Include="RingMasterBVT\RingMasterBVT.csproj" />
-    <ProjectReference Include="RingMasterPerformance\RingMasterPerformance.csproj" />
-    <ProjectReference Include="RingMasterTestApplication\AppPublish\AppPublish.proj" />
-    <ProjectReference Include="VegaInMemoryPerf\VegaInMemoryPerf.csproj" />
-    <ProjectReference Include="VegaTracingPerf\VegaTracingPerf.csproj" />
-    <ProjectReference Include="VegaServiceFabricPerf\VegaServiceFabricPerf.csproj" />
+    <ProjectFile Include="Common\TestCommon.csproj" />
+    <ProjectFile Include="EndToEndTests\EndToEndTests.csproj" />
+    <ProjectFile Include="EventSourceValidation\EventSourceValidation.csproj" />
+    <ProjectFile Include="FakeFluentAssertions\FakeFluentAssertions.csproj" />
+    <ProjectFile Include="MiscellaneousTests\MiscellaneousTests.csproj" />
+    <ProjectFile Include="PerformanceTestCases\PerformanceTestCases.csproj" />
+    <ProjectFile Include="RSLValidation\RSLValidation.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectFile Include="RingMasterBVT\RingMasterBVT.csproj" />
+    <ProjectFile Include="RingMasterPerformance\RingMasterPerformance.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\RingMasterTestApplication.sfproj" />
+    <ProjectFile Include="RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
+    <ProjectFile Include="RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
+    <ProjectFile Include="TestHelpers\TestHelpers.csproj" />
+    <ProjectFile Include="VegaCodeBenchmark\VegaCodeBenchmark.csproj" />
+    <ProjectFile Include="VegaDistributedTest\dirs.proj" />
+    <ProjectFile Include="VegaFailoverCorrectness\VegaFailoverCorrectness.csproj" />
+    <ProjectFile Include="VegaInMemoryPerf\VegaInMemoryPerf.csproj" />
+    <ProjectFile Include="VegaServiceFabricPerf\VegaServiceFabricPerf.csproj" />
+    <ProjectFile Include="VegaTracingPerf\VegaTracingPerf.csproj" />
+    <ProjectFile Include="VegaUpgradeTest\VegaUpgradeTest.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

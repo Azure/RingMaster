@@ -337,6 +337,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether to log AcquireLock operation. This is high frequency!
+        /// </summary>
+        public bool LogAcquireLock { get; set; } = false;
+
+        /// <summary>
         /// Notifies that a bad request was received from the client.
         /// </summary>
         /// <param name="sid">Id of the client session that sent the request</param>
@@ -767,11 +772,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
         /// <inheritdoc />
         public void OnAcquireLock(bool readOnly, bool succeeded, int level, TimeSpan elapsed)
         {
-            this.acquireLock.LogValue(
-                elapsed.Ticks / (TimeSpan.TicksPerMillisecond / 1000),
-                readOnly ? "ReadOnly" : "ReadWrite",
-                succeeded ? "Succeeded" : "Failed",
-                level.ToString());
+            if (this.LogAcquireLock)
+            {
+                this.acquireLock.LogValue(
+                    elapsed.Ticks / (TimeSpan.TicksPerMillisecond / 1000),
+                    readOnly ? "ReadOnly" : "ReadWrite",
+                    succeeded ? "Succeeded" : "Failed",
+                    level.ToString());
+            }
         }
 
         /// <inheritdoc />

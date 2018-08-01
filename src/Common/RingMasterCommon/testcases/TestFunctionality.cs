@@ -915,16 +915,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 ulong numCreated = 1;
                 ulong dataCreated = 0;
 
-                foreach (string childNodeName in this.GeneratePaths(nodePath, 4, 10, false))
+                byte[] data = new byte[] { 1, 2 };
+                var childNodeNames = this.GeneratePaths(nodePath, 4, 10, false).ToArray();
+                var ops = childNodeNames.Select(n => Op.Create(n, data, null, CreateMode.Persistent)).ToArray();
+                var creationResult = await ringMaster.Multi(ops);
+                Assert.AreEqual(ops.Length, creationResult.Count);
+                for (int i = 0; i < ops.Length; i++)
                 {
-                    byte[] data = new byte[] { 1, 2 };
-                    string createdChildNodeName = await ringMaster.Create(childNodeName, data, null, CreateMode.Persistent);
-                    Assert.AreEqual(createdChildNodeName, childNodeName.Split('/').Last());
+                    var createResult = (OpResult.CreateResult)creationResult[i];
+                    Assert.IsTrue(childNodeNames[i].EndsWith(createResult.Path));
+                    VerifyStatForFreshlyCreatedNode(createResult.Stat, data.Length);
 
                     numCreated++;
                     dataCreated += (ulong)data.Length;
-                    stat = await ringMaster.Exists(childNodeName, watcher: null);
-                    VerifyStatForFreshlyCreatedNode(stat, data.Length);
+                }
+
+                foreach (var childNodeName in childNodeNames)
+                {
+                    Assert.IsNotNull(await ringMaster.Exists(childNodeName, watcher: null));
                 }
 
                 await ringMaster.Sync("/");
@@ -1514,6 +1522,310 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         }
 
         /// <summary>
+        /// Verifies GetSubtree operation returns nodes in depth-first order and that continuations work as expected.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestGetSubtree(bool includeStat)
+        {
+            var parentName = $"$bvt_TestGetSubtree_{Guid.NewGuid()}";
+            var parentPath = $"{TestFunctionality.TestPrefix}/{parentName}";
+            var requestOptions = includeStat ? RequestGetSubtree.GetSubtreeOptions.IncludeStats : RequestGetSubtree.GetSubtreeOptions.None;
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await ringMaster.Create(parentPath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1", Encoding.UTF8.GetBytes("b1"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1/c1", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1/c2", Encoding.UTF8.GetBytes("b1c2"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b2", Encoding.UTF8.GetBytes("b2"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b4", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b4/c1", Encoding.UTF8.GetBytes("b4c1"), null, CreateMode.Persistent);
+
+                // for the first response, we expect /p, /p/b1, and /p/b1/c1
+                var response = await ringMaster.GetSubtree(parentPath, ">:3:", requestOptions);
+                var treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be($"{parentPath}/b1/c1");
+
+                // /p
+                treeRoot.Name.Should().Be(parentName);
+                Encoding.UTF8.GetString(treeRoot.Data).Should().Be("p");
+                Assert.AreEqual(includeStat, treeRoot.Stat != null);
+                treeRoot.Children.Count.Should().Be(1);
+
+                // /p/b1
+                treeRoot.Children[0].Name.Should().Be("b1");
+                Encoding.UTF8.GetString(treeRoot.Children[0].Data).Should().Be("b1");
+                Assert.AreEqual(includeStat, treeRoot.Children[0].Stat != null);
+                treeRoot.Children[0].Children.Count.Should().Be(1);
+
+                // /p/b1/c1
+                treeRoot.Children[0].Children[0].Name.Should().Be("c1");
+                treeRoot.Children[0].Children[0].Data.Should().Be(null);
+                Assert.AreEqual(includeStat, treeRoot.Children[0].Children[0].Stat != null);
+                treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
+
+                // second response we expect /p, /p/b1, /p/b1/c1 (from continuation, without data/stats), plus /p/b1/c2, /p/b2, /p/b4
+                response = await ringMaster.GetSubtree(parentPath, $">:3:{response.ContinuationPath}", requestOptions);
+                treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be($"{parentPath}/b4");
+
+                // /p
+                treeRoot.Name.Should().Be(parentName);
+                treeRoot.Data.Should().Be(null);
+                treeRoot.Stat.Should().Be(null);
+                treeRoot.Children.Count.Should().Be(3);
+
+                // /p/b1
+                treeRoot.Children[0].Name.Should().Be("b1");
+                treeRoot.Children[0].Data.Should().Be(null);
+                treeRoot.Children[0].Stat.Should().Be(null);
+                treeRoot.Children[0].Children.Count.Should().Be(2);
+
+                // /p/b1/c1
+                treeRoot.Children[0].Children[0].Name.Should().Be("c1");
+                treeRoot.Children[0].Children[0].Data.Should().Be(null);
+                treeRoot.Children[0].Children[0].Stat.Should().Be(null);
+                treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
+
+                // /p/b1/c2
+                treeRoot.Children[0].Children[1].Name.Should().Be("c2");
+                Encoding.UTF8.GetString(treeRoot.Children[0].Children[1].Data).Should().Be("b1c2");
+                Assert.AreEqual(includeStat, treeRoot.Children[0].Children[1].Stat != null);
+                treeRoot.Children[0].Children[1].Children.Should().BeNullOrEmpty();
+
+                // /p/b2
+                treeRoot.Children[1].Name.Should().Be("b2");
+                Encoding.UTF8.GetString(treeRoot.Children[1].Data).Should().Be("b2");
+                Assert.AreEqual(includeStat, treeRoot.Children[1].Stat != null);
+                treeRoot.Children[1].Children.Should().BeNullOrEmpty();
+
+                // /p/b4
+                treeRoot.Children[2].Name.Should().Be("b4");
+                treeRoot.Children[2].Data.Should().Be(null);
+                Assert.AreEqual(includeStat, treeRoot.Children[2].Stat != null);
+                treeRoot.Children[2].Children.Should().BeNullOrEmpty();
+
+                // third response we expect /p and /p/b4 (from continuation, without data), plus /p/b4/c1
+                // and the continuation should now be null since we are at the end
+                response = await ringMaster.GetSubtree(parentPath, $">:3:{response.ContinuationPath}", requestOptions);
+                treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be(null);
+
+                // /p
+                treeRoot.Name.Should().Be(parentName);
+                treeRoot.Data.Should().Be(null);
+                treeRoot.Stat.Should().Be(null);
+                treeRoot.Children.Count.Should().Be(1);
+
+                // /p/b4
+                treeRoot.Children[0].Name.Should().Be("b4");
+                treeRoot.Children[0].Data.Should().Be(null);
+                treeRoot.Children[0].Stat.Should().Be(null);
+                treeRoot.Children[0].Children.Count.Should().Be(1);
+
+                // /p/b4/c1
+                treeRoot.Children[0].Children[0].Name.Should().Be("c1");
+                Encoding.UTF8.GetString(treeRoot.Children[0].Children[0].Data).Should().Be("b4c1");
+                Assert.AreEqual(includeStat, treeRoot.Children[0].Children[0].Stat != null);
+                treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
+            }
+        }
+
+        /// <summary>
+        /// Verifies that GetSubtree request returns proper results if continuation path does not exist (e.g. has been deleted)
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestGetSubtreeContinuationContainsNonExistentPath()
+        {
+            string parentName = $"$bvt_GetSubtreeContinuationContainsNonExistentPath_{Guid.NewGuid()}";
+            string parentPath = $"{TestFunctionality.TestPrefix}/{parentName}";
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await ringMaster.Create(parentPath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1/c1", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b2", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b4", Encoding.UTF8.GetBytes("b4"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b4/c1", Encoding.UTF8.GetBytes("b4c1"), null, CreateMode.Persistent);
+
+                var response = await ringMaster.GetSubtree(parentPath, $">:1:{parentPath}/b3/c1");
+                var treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be($"{parentPath}/b4");
+
+                treeRoot.Name.Should().Be(parentName);
+                treeRoot.Data.Should().Be(null);
+                treeRoot.Children.Count.Should().Be(1);
+
+                treeRoot.Children[0].Name.Should().Be("b4");
+                Encoding.UTF8.GetString(treeRoot.Children[0].Data).Should().Be("b4");
+                treeRoot.Children[0].Children.Should().BeNullOrEmpty();
+            }
+        }
+
+        /// <summary>
+        /// Verifies that GetSubtree request case of asking for single node where continuation path will match the node path.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestGetSubtreeContinuationPathEqualsNodePath()
+        {
+            string parentName = $"$bvt_GetSubtreeContinuationPathEqualsNodePath_{Guid.NewGuid()}";
+            string parentPath = $"{TestFunctionality.TestPrefix}/{parentName}";
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await ringMaster.Create(parentPath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1", Encoding.UTF8.GetBytes("b1"), null, CreateMode.Persistent);
+
+                var response = await ringMaster.GetSubtree(parentPath, $">:1:");
+                var treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be($"{parentPath}");
+
+                treeRoot.Name.Should().Be(parentName);
+                Encoding.UTF8.GetString(treeRoot.Data).Should().Be("p");
+                treeRoot.Children.Should().BeNullOrEmpty();
+
+                response = await ringMaster.GetSubtree(parentPath, $">:1:{response.ContinuationPath}");
+                treeRoot = response.Subtree;
+
+                treeRoot.Name.Should().Be(parentName);
+                treeRoot.Data.Should().Be(null);
+                treeRoot.Children.Count.Should().Be(1);
+
+                treeRoot.Children[0].Name.Should().Be("b1");
+                Encoding.UTF8.GetString(treeRoot.Children[0].Data).Should().Be("b1");
+                treeRoot.Children[0].Children.Should().BeNullOrEmpty();
+            }
+        }
+
+        /// <summary>
+        /// Verifies that GetSubtree request on the root node handles continuations properly.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestGetSubtreeOfRoot()
+        {
+            string nodeName = $"$bvt_GetSubtreeContinuationPathEqualsNodePath_{Guid.NewGuid()}";
+            string nodePath = $"{TestFunctionality.TestPrefix}/{nodeName}";
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                // ensure we have at least one node under the root
+                await ringMaster.Create(nodePath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
+
+                var response = await ringMaster.GetSubtree("/", ">:1:");
+                var treeRoot = response.Subtree;
+                response.ContinuationPath.Should().Be("/");
+
+                treeRoot.Name.Should().Be("/");
+                treeRoot.Children.Should().BeNullOrEmpty();
+
+                response = await ringMaster.GetSubtree("/", $">:1:{response.ContinuationPath}");
+                treeRoot = response.Subtree;
+
+                treeRoot.Name.Should().Be("/");
+                treeRoot.Children.Count.Should().Be(1);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that Exists, Sync, and GetSubtree work correctly in batch requests.
+        /// </summary>
+        public async Task TestExistsSyncGetSubtreeBatch()
+        {
+            string nodeName = $"$bvt_ExistsSyncGetSubtreeBatch_{Guid.NewGuid()}";
+            string nodePath = $"{TestFunctionality.TestPrefix}/{nodeName}";
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                // ensure we have at least one node under the root
+                await ringMaster.Create(nodePath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{nodePath}/c1", Encoding.UTF8.GetBytes("c1data"), null, CreateMode.Persistent);
+
+                var operations = new List<Op>();
+                operations.Add(Op.Exists(nodePath));
+                operations.Add(Op.Sync(nodePath));
+                operations.Add(Op.GetSubtree(nodePath, ">:1:", RequestGetSubtree.GetSubtreeOptions.None));
+                operations.Add(Op.GetSubtree(nodePath, $">:5:{nodePath}", RequestGetSubtree.GetSubtreeOptions.IncludeStats));
+
+                var batchResults = await ringMaster.Batch(operations, true);
+                batchResults.Count.Should().Be(4);
+
+                batchResults[0].ErrCode.Should().Be(RingMasterException.Code.Ok);
+                batchResults[0].ResultType.Should().Be(OpCode.Exists);
+
+                var existsStat = ((OpResult.ExistsResult)batchResults[0]).Stat;
+                Assert.IsNotNull(existsStat);
+
+                batchResults[1].ErrCode.Should().Be(RingMasterException.Code.Ok);
+                batchResults[1].ResultType.Should().Be(OpCode.Sync);
+                batchResults[1].Should().BeOfType<OpResult.SyncResult>();
+
+                batchResults[2].ErrCode.Should().Be(RingMasterException.Code.Ok);
+                batchResults[2].ResultType.Should().Be(OpCode.GetSubtree);
+
+                var getSubtreeResult = (OpResult.GetSubtreeResult)batchResults[2];
+                var treeNode = TreeNode.Deserialize(getSubtreeResult.SerializedSubtree);
+                treeNode.Name.Should().Be(nodeName);
+                Encoding.UTF8.GetString(treeNode.Data).Should().Be("p");
+                treeNode.Stat.Should().Be(null);
+                treeNode.Children.Should().BeNullOrEmpty();
+                getSubtreeResult.ContinuationPath.Should().Be(nodePath);
+
+                batchResults[3].ErrCode.Should().Be(RingMasterException.Code.Ok);
+                batchResults[3].ResultType.Should().Be(OpCode.GetSubtree);
+
+                getSubtreeResult = (OpResult.GetSubtreeResult)batchResults[3];
+                treeNode = TreeNode.Deserialize(getSubtreeResult.SerializedSubtree);
+                treeNode.Name.Should().Be(nodeName);
+                treeNode.Data.Should().Be(null);
+                treeNode.Stat.Should().Be(null);
+                treeNode.Children.Count.Should().Be(1);
+                treeNode.Children[0].Name.Should().Be("c1");
+                Encoding.UTF8.GetString(treeNode.Children[0].Data).Should().Be("c1data");
+                Assert.IsNotNull(treeNode.Children[0].Stat);
+                getSubtreeResult.ContinuationPath.Should().Be(null);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that lock collision in Multi operation is handled properly
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task GetLockCollisionInMulti()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                // At the 3rd level, there are 2500 lock objects by default (see GetLockSizesPerLevelFromConfig in
+                // Node.cs). If node count at this level is greater than lock collision will happen.
+                const int nodeCount = 3000;
+                var data0 = BitConverter.GetBytes(0);
+                var data1 = BitConverter.GetBytes(1);
+
+                var operations = new List<Op>();
+                for (int i = 0; i < nodeCount; i++)
+                {
+                    operations.Add(Op.Create($"/$rmbvt/N{i:0000}", data0, null, CreateMode.PersistentAllowPathCreation));
+                }
+
+                await ringMaster.Multi(operations, true);
+
+                operations.Clear();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    operations.Add(Op.GetData($"/$rmbvt/N{i:0000}", RequestGetData.GetDataOptions.None, null));
+                }
+
+                for (int i = 10; i < nodeCount; i++)
+                {
+                    operations.Add(Op.SetData($"/$rmbvt/N{i:0000}", data1, -1));
+                }
+
+                await ringMaster.Multi(operations, true);
+            }
+        }
+
+        /// <summary>
         /// Runs the multi in the background and wait for completion.
         /// </summary>
         /// <param name="ringMaster">The ring master.</param>
@@ -1942,19 +2254,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         {
             try
             {
-                IStat stat = await ringMaster.Exists(path, null);
-                int count = 1; // one, for the input path existing
-
-                IReadOnlyList<string> children = await ringMaster.GetChildren(path, null);
-
-                Assert.AreEqual(children.Count, stat.NumChildren);
-
-                foreach (string child in children)
-                {
-                    count += await this.CountNodesFrom(ringMaster, path + "/" + child);
-                }
-
-                return count;
+                var rootNode = await ringMaster.GetFullSubtree(path, true);
+                return CountNode(rootNode);
             }
             catch (RingMasterException e)
             {
@@ -1964,6 +2265,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 }
 
                 throw;
+            }
+
+            int CountNode(TreeNode node)
+            {
+                var count = 1;
+                if (node.Children != null && node.Children.Count != 0)
+                {
+                    // Stat.NumChildren is intentionally left to be zero during serialization.
+                    // Assert.AreEqual(node.Stat.NumChildren, node.Children.Count);
+                    count += node.Children.Select(CountNode).Sum();
+                }
+
+                return count;
             }
         }
 

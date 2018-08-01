@@ -5,14 +5,15 @@
 namespace Microsoft.Azure.Networking.RingMaster.Tools
 {
     using System;
-    using System.Configuration;
     using System.Diagnostics;
+    using System.IO;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Server;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// RingMasterBackend tool hosts an instance RingMasterServerBackend and acts
@@ -20,6 +21,7 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
     /// </summary>
     public sealed class RingMasterBackendTool : IDisposable
     {
+        private static IConfiguration appSettings;
         private InMemoryFactory factory;
         private RingMasterBackendCore backend;
         private RingMasterServer ringMasterServer;
@@ -40,7 +42,7 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
             ushort port = ushort.Parse(args[0]);
             Console.WriteLine("Port={0}", port);
 
-            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
@@ -105,7 +107,7 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
                     return environmentSettingValue;
                 }
 
-                return ConfigurationManager.AppSettings[settingName];
+                return appSettings[settingName];
             }
             catch
             {
@@ -154,11 +156,14 @@ namespace Microsoft.Azure.Networking.RingMaster.Tools
             var backendStarted = new ManualResetEventSlim();
             Trace.TraceInformation("CreateBackend");
 
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            appSettings = builder.Build();
             RingMasterBackendCore.GetSettingFunction = GetSetting;
             this.factory = new InMemoryFactory();
             this.backend = new RingMasterBackendCore(this.factory);
             this.backend.StartService = (p1, p2) => { backendStarted.Set(); };
-            this.backend.Start();
+            this.backend.Start(CancellationToken.None);
             this.backend.OnBecomePrimary();
 
             if (!backendStarted.Wait(30000))

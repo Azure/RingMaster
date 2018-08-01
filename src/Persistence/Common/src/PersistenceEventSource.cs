@@ -14,6 +14,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class PersistenceEventSource : EventSource
     {
+        static PersistenceEventSource()
+        {
+        }
+
+        private PersistenceEventSource()
+        {
+        }
+
         public static PersistenceEventSource Log { get; } = new PersistenceEventSource();
 
         [Event(2, Level = EventLevel.Informational, Version = 1)]

@@ -1,52 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <EnableStyleCop>true</EnableStyleCop>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{172FBB3A-5367-4C7B-8BB5-99D02841DFA8}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>VegaTracingPerf</RootNamespace>
-    <AssemblyName>VegaTracingPerf</AssemblyName>
-    <FileAlignment>512</FileAlignment>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <CoverageDisabled>true</CoverageDisabled>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="VegaTracingPerf.cs" />
-  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
   </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

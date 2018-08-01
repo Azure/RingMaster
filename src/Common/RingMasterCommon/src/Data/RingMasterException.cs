@@ -30,6 +30,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <summary>
         /// Codes for possible failures.
         /// </summary>
+        // note: Keep RingMasterBackendCore.CriticalErrorBatchApplicationResponseCodes up-to-date with any new server errors
         public enum Code
         {
             /// <summary>

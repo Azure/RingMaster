@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+
+    <!-- Default build is debug x64.  AnyCPU is slow and may causes UT failure in CloudBuild -->
+    <PlatformTarget Condition="'$(PlatformTarget)' == ''">x64</PlatformTarget>
+
+    <!-- Fix the .NET core version across product, test code, and nuget packages -->
+    <DotNetCoreVersion>2.0.0</DotNetCoreVersion>
+
+    <SRCROOT>$(EnlistmentRoot)\src</SRCROOT>
+    <PkgRoot>$(EnlistmentRoot)\packages</PkgRoot>
+
+    <!-- Fix CDPx build issue -->
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">$(UserProfile)\.nuget\packages\</NuGetPackageRoot>
+
+    <NoTargets>$(MSBuildThisFileDirectory)NoTarget.targets</NoTargets>
+    <TraversalTargets>$(MSBuildThisFileDirectory)Traversal.targets</TraversalTargets>
+
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
+    <OutputRoot>$(EnlistmentRoot)\out\$(Configuration)-$(Platform)\</OutputRoot>
+    <OutputPath>$(OutputRoot)$(MSBuildProjectName)</OutputPath>
+
+    <!-- TODO: Workaround on CloudBuild. QTest does not work for dotnetcore for now. -->
+    <EnableNuGetDeterministic Condition="'$(QBUILD)' != ''">false</EnableNuGetDeterministic>
+
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Default date if we're not in an official build. -->
+    <!-- Before Q_SESSION_ID is available, use the timestamp in Q_CommandLogDir, e.g. d:\dbs\sh\acnn\1026_230501_log -->
+    <Q_SESSION_ID Condition="'$(Q_SESSION_ID)' == ''">$([System.Text.RegularExpressions.Regex]::Match($(Q_CommandLogDir), ".*\\([\d,_]+)_log").Groups[1].Value)</Q_SESSION_ID>
+    <!-- Session on CloudBuild: 1026_173431_0 to 1026-1734 -->
+    <_session Condition="'$(Q_SESSION_ID)' != ''">$(Q_SESSION_ID.Substring(0,9).Replace('_', '-'))</_session>
+    <!-- now 161026-1734 -->
+    <_thisYear>$([System.DateTime]::Now.ToString("yy"))$(_session)</_thisYear>
+    <!-- change to integer -->
+    <_thisYearNum>$(_thisYear.Replace('-', ''))</_thisYearNum>
+    <!-- number representation of the current time -->
+    <_nowTS>$([System.DateTime]::Now.ToString("yyMMddHHmm"))</_nowTS>
+    <!-- Only assign on CloudBuild -->
+    <_ts Condition="$(_thisYearNum) &lt; $(_nowTS) And '$(_session)' != ''">$(_thisYear)</_ts>
+    <_lastYear>$([System.DateTime]::Now.ToString("yy"))</_lastYear>
+    <_ts Condition="'$(_ts)' == '' And '$(_session)' != ''">$([MSBuild]::Subtract($(_lastYear), 1))$(_session)</_ts>
+    <!-- Fall back to current time on dev machine -->
+    <_ts Condition="'$(_ts)' == ''">$([System.DateTime]::Now.ToString("yyMMdd-HHmm"))</_ts>
+
+    <!-- Ensure we have timestamp associated with the build start/schedule time even when the build is distributed on
+         multiple machines -->
+    <BuildDate Condition="'$(BuildDate)' == ''">$(_ts)</BuildDate>
+
+    <GitRepositoryName Condition="'$(GitRepositoryName)' == ''">Networking-Vega</GitRepositoryName>
+
+    <!-- For normal build on Build Tracker machines or dev machines -->
+    <_githead>$(EnlistmentRoot)\.git\HEAD</_githead>
+    <_gitorghead>$(EnlistmentRoot)\.git\ORIG_HEAD</_gitorghead>
+    <_BranchFile Condition="Exists($(_githead))">$([System.IO.File]::ReadAllText("$(_githead)"))</_BranchFile>
+    <_CommitHash Condition="Exists($(_gitorghead))">$([System.IO.File]::ReadAllText("$(_gitorghead)"))</_CommitHash>
+    <!-- In QuickBuild sandbox symlink for .git does not exist. This format is for regex parsing of branch name -->
+    <_BranchFile Condition="!Exists($(_githead))">refs/heads/quickbuild</_BranchFile>
+    <!-- On CloudBuild, symlink for .git does not exist -->
+    <_CommitHash Condition="'$(VersionCommitHash)' == '' And '$(Q_SYNCTO_CHANGELIST)' != '' And '$(Q_SYNCTO_CHANGELIST)' != '0' ">$(Q_SYNCTO_CHANGELIST)</_CommitHash>
+    <!-- For BuildTracker buddy build, neither of above way works -->
+    <_CommitHash Condition="'$(_CommitHash)' == ''">0123456789</_CommitHash>
+
+    <!-- These environment variables are only available on the BuildTracker machines -->
+    <GitBranchName Condition="'$(GitBranchName)' == ''">$([System.Text.RegularExpressions.Regex]::Match($(_BranchFile), 'refs/heads/([^\n]+)').Groups[1].Value)</GitBranchName>
+    <!-- Normalize the branch name, which will be part of build number later -->
+    <GitBranchName>$([System.Text.RegularExpressions.Regex]::Replace($(GitBranchName), '[/|\.\-"%3C%3E]', '_'))</GitBranchName>
+
+    <!-- On private machine, append user name to the branch name -->
+    <GitBranchName Condition="'$(BuildTracker)'=='' And Exists('$(EnlistmentRoot)\.git')">$(GitBranchName)_$(USERNAME)</GitBranchName>
+
+    <VersionCommitHash Condition="'$(VersionCommitHash)'==''">$(_CommitHash.Substring(0,7))</VersionCommitHash>
+
+    <!-- Attributes for code injection -->
+    <Company>Microsoft Corporation</Company>
+    <Description>$(GitRepositoryName) $(GitBranchName) commit $(VersionCommitHash) on $(BuildDate)</Description>
+    <InformationalVersion>$(AssemblyInformationalVersion)</InformationalVersion>
+    <Product>Microsoft Azure</Product>
+    <Copyright>Copyright $([System.DateTime]::Now.ToString(`yyyy`)) Microsoft Corporation. All rights reserved.</Copyright>
+  </PropertyGroup>
+
+   <!-- Settings common to all projects -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <StyleCopTreatErrorsAsWarnings Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</StyleCopTreatErrorsAsWarnings>
+    <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <StyleCopProps>$(MSBuildThisFileDirectory)stylecop.props</StyleCopProps>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <SimpleReplace Condition="Exists('/bin/sh')">sh $(MSBuildThisFileDirectory)findreplace.sh</SimpleReplace>
+    <SimpleReplace Condition="!Exists('/bin/sh')">powershell $(MSBuildThisFileDirectory)findreplace.ps1</SimpleReplace>
+  </PropertyGroup>
+
+  <Import Project="$(EnlistmentRoot)\build\versioning.props" />
+
+</Project>

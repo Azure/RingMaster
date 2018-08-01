@@ -132,10 +132,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             {
                 commitTask.ContinueWith(task =>
                 {
+                    completedEvent.Set();
+
                     if (!task.IsFaulted && !task.IsCanceled)
                     {
                         PersistenceEventSource.Log.CommitChangeListSyncCompleted(this.Id, xid, timer.ElapsedMilliseconds);
-                        completedEvent.Set();
                     }
                     else
                     {

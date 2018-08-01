@@ -1,0 +1,20 @@
+﻿syntax = "proto3";
+
+package Microsoft.Vega.DistTestCommonProto;
+
+message JobState {
+	bool Started = 1;
+    bool Completed = 2;
+	bool Passed = 3;
+	string Scenario = 4;
+	string Status = 5;
+	repeated double DurationMs = 6;
+}
+
+message JobParameter {
+	string Key = 1;
+	string Value = 2;
+}
+
+message Empty {
+}

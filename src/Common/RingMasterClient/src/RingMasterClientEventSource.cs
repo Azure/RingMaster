@@ -14,12 +14,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class RingMasterClientEventSource : EventSource
     {
-        private static readonly RingMasterClientEventSource LogInstance = new RingMasterClientEventSource();
-
-        public static RingMasterClientEventSource Log
+        static RingMasterClientEventSource()
         {
-            get { return LogInstance; }
         }
+
+        private RingMasterClientEventSource()
+        {
+        }
+
+        public static RingMasterClientEventSource Log { get; } = new RingMasterClientEventSource();
 
         [Event(2, Level = EventLevel.Informational, Version = 1)]
         public void Create(string path)

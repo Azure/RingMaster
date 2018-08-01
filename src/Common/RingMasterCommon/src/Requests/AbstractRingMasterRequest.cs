@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using RingMaster.Data;
 
     /// <summary>
@@ -13,6 +14,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
     /// </summary>
     public abstract class AbstractRingMasterRequest : IRingMasterRequest
     {
+        private static readonly UIdProvider UidProvider = new UIdProvider();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AbstractRingMasterRequest"/> class.
         /// </summary>
@@ -22,7 +25,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         public AbstractRingMasterRequest(RingMasterRequestType requestType, string path, ulong uid)
         {
             this.RequestType = requestType;
-            this.Uid = uid;
+
+            this.Uid = MakeUid(uid);
             this.Path = path;
 
             this.ExecutionQueueId = Guid.Empty;
@@ -75,5 +79,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// </summary>
         /// <returns><c>true</c> if this request is read only</returns>
         public abstract bool IsReadOnly();
+
+        private static ulong MakeUid(ulong uid)
+        {
+            if (uid == 0)
+            {
+                return UidProvider.NextUniqueId();
+            }
+
+            return uid;
+        }
     }
 }

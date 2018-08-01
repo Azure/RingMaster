@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include=".\src\Common\Common.csproj" />
-    <ProjectReference Include=".\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
-    <ProjectReference Include=".\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
-    <ProjectReference Include=".\unittest\CommunicationProtocolUnitTest.csproj" />
+    <ProjectFile Include=".\src\Common\Common.csproj" />
+    <ProjectFile Include=".\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectFile Include=".\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
+    <ProjectFile Include=".\unittest\CommunicationProtocolUnitTest.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

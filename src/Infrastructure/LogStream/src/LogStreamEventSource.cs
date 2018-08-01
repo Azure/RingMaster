@@ -15,6 +15,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.LogStream
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class LogStreamEventSource : EventSource
     {
+        static LogStreamEventSource()
+        {
+        }
+
+        private LogStreamEventSource()
+        {
+        }
+
         public static LogStreamEventSource Log { get; } = new LogStreamEventSource();
 
         [Event(2, Level = EventLevel.Informational, Version = 1)]

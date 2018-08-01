@@ -188,6 +188,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case RingMasterRequestType.SetData:
                     this.SerializeRequestSetData((RequestSetData)ringMasterRequest);
                     break;
+                case RingMasterRequestType.GetSubtree:
+                    this.SerializeRequestGetSubtree((RequestGetSubtree)ringMasterRequest);
+                    break;
 
                 case RingMasterRequestType.None:
                 default:
@@ -251,6 +254,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 this.SerializeGetDataOptionArgument(request.OptionArgument);
             }
+        }
+
+        /// <summary>
+        /// Serialize <see cref="RequestGetSubtree"/>.
+        /// </summary>
+        /// <param name="request">Request to serialize</param>
+        private void SerializeRequestGetSubtree(RequestGetSubtree request)
+        {
+            if (this.versionToUse < SerializationFormatVersions.Version25)
+            {
+                throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support GetSubtree", this.versionToUse));
+            }
+
+            bool hasValue = request.RetrievalCondition != null;
+            this.binaryWriter.Write((bool)hasValue);
+            if (hasValue)
+            {
+                this.binaryWriter.Write((string)request.RetrievalCondition);
+            }
+
+            this.binaryWriter.Write((byte)request.Options);
         }
 
         /// <summary>
@@ -524,6 +548,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         {
             switch (operationResult.ResultType)
             {
+                case OpCode.Check:
+                {
+                    if (this.versionToUse >= SerializationFormatVersions.Version24)
+                    {
+                        var checkResult = (OpResult.CheckResult)operationResult;
+                        this.SerializeStat(checkResult.Stat);
+                    }
+
+                    return;
+                }
+
                 case OpCode.Create:
                 {
                     var createResult = (OpResult.CreateResult)operationResult;
@@ -569,6 +604,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     return;
                 }
 
+                case OpCode.GetChildren:
+                {
+                    if (this.versionToUse >= SerializationFormatVersions.Version24)
+                    {
+                        var getChildrenResult = (OpResult.GetChildrenResult)operationResult;
+                        this.SerializeStat(getChildrenResult.Stat);
+                        this.SerializeContent(getChildrenResult.Children);
+                    }
+
+                    return;
+                }
+
                 case OpCode.SetData:
                 {
                     var setDataResult = (OpResult.SetDataResult)operationResult;
@@ -594,6 +641,41 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 {
                     var runResult = (OpResult.RunResult)operationResult;
                     this.SerializeOpResultList(runResult.Results);
+                    return;
+                }
+
+                case OpCode.Exists:
+                {
+                    if (this.versionToUse < SerializationFormatVersions.Version25)
+                    {
+                        throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.Exists", this.versionToUse));
+                    }
+
+                    var existsResult = (OpResult.ExistsResult)operationResult;
+                    this.SerializeStat(existsResult.Stat);
+                    return;
+                }
+
+                case OpCode.Sync:
+                {
+                    if (this.versionToUse < SerializationFormatVersions.Version25)
+                    {
+                        throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.Sync", this.versionToUse));
+                    }
+
+                    return;
+                }
+
+                case OpCode.GetSubtree:
+                {
+                    if (this.versionToUse < SerializationFormatVersions.Version25)
+                    {
+                        throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.GetSubtree", this.versionToUse));
+                    }
+
+                    var getSubtreeResult = (OpResult.GetSubtreeResult)operationResult;
+                    this.SerializeData(getSubtreeResult.SerializedSubtree);
+                    this.binaryWriter.WriteNullableString(getSubtreeResult.ContinuationPath);
                     return;
                 }
             }

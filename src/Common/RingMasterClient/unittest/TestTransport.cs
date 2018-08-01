@@ -9,6 +9,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
     using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
@@ -139,11 +140,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     Task multiTask = ringMaster.Multi(new List<Op>());
                     Task deleteTask = ringMaster.Delete("/test", -1);
 
+                    var sw = Stopwatch.StartNew();
                     // Wait for all 10 requests to be sent
                     while (transport.Requests.Count < 10)
                     {
-                        Thread.Sleep(100);
+                        Thread.Yield();
                     }
+
+                    var expectedErrorCodes = sw.ElapsedMilliseconds > 1000 * 10
+                        ? new[] { RingMasterException.Code.Operationtimeout, RingMasterException.Code.Connectionloss, }
+                        : new[] { RingMasterException.Code.Connectionloss, };
 
                     Trace.TraceInformation("Closing ringmaster");
                     ringMaster.Close();
@@ -168,16 +174,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     }
                     catch (AggregateException)
                     {
-                        this.VerifyErrorResult(createTask);
-                        this.VerifyErrorResult(existsTask);
-                        this.VerifyErrorResult(getChildrenTask);
-                        this.VerifyErrorResult(getDataTask);
-                        this.VerifyErrorResult(getAclTask);
-                        this.VerifyErrorResult(setDataTask);
-                        this.VerifyErrorResult(setAclTask);
-                        this.VerifyErrorResult(syncTask);
-                        this.VerifyErrorResult(multiTask);
-                        this.VerifyErrorResult(deleteTask);
+                        this.VerifyErrorResult(createTask, expectedErrorCodes);
+                        this.VerifyErrorResult(existsTask, expectedErrorCodes);
+                        this.VerifyErrorResult(getChildrenTask, expectedErrorCodes);
+                        this.VerifyErrorResult(getDataTask, expectedErrorCodes);
+                        this.VerifyErrorResult(getAclTask, expectedErrorCodes);
+                        this.VerifyErrorResult(setDataTask, expectedErrorCodes);
+                        this.VerifyErrorResult(setAclTask, expectedErrorCodes);
+                        this.VerifyErrorResult(syncTask, expectedErrorCodes);
+                        this.VerifyErrorResult(multiTask, expectedErrorCodes);
+                        this.VerifyErrorResult(deleteTask, expectedErrorCodes);
                     }
 
                     Assert.AreEqual(1, instrumentation.ConnectionCreatedCount);
@@ -676,6 +682,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                 Task getChildrenTask = ringMaster.GetChildren("/", false);
 
                 Trace.TraceInformation("Waiting for pending requests");
+
                 try
                 {
                     Task.WaitAll(
@@ -692,8 +699,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     this.VerifyErrorResult(getChildrenTask, RingMasterException.Code.Connectionloss);
                 }
 
-                // Expect 4 responses to be queued - Response for Init + 3 invalid responses for the 3 tasks
-                Assert.AreEqual(4, instrumentation.ResponseQueuedCount);
+                // Expect 4 responses to be received - Response for Init + 3 invalid responses for the 3 tasks
+                // Note that ResponseQueuedCount may not be 4 -- once the first invalid response is processed,
+                // RingMasterRequestHandler will be cancelled, pending request will not be sent, no more response
+                // is received from the dummy transport.
+                Assert.AreEqual(4, instrumentation.ResponseReceivedCount);
 
                 // The connection must have terminated after processing the first invalid response
                 Assert.AreEqual(1, instrumentation.InvalidPacketReceivedCount);
@@ -968,12 +978,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// </summary>
         /// <param name="task">Task whose result must be verified</param>
         /// <param name="expectedCode">Expected error code</param>
-        private void VerifyErrorResult(Task task, RingMasterException.Code expectedCode = RingMasterException.Code.Connectionloss)
+        private void VerifyErrorResult(Task task, RingMasterException.Code expectedCode = RingMasterException.Code.Connectionloss) =>
+            this.VerifyErrorResult(task, new[] { expectedCode });
+
+        private void VerifyErrorResult(Task task, IEnumerable<RingMasterException.Code> expectedCodes)
         {
-            Assert.IsTrue(task.IsFaulted);
+            Assert.IsTrue(task.IsFaulted, "Task should be faulted");
             Assert.IsTrue(task.Exception.InnerException is RingMasterException);
             var exception = (RingMasterException)task.Exception.InnerException;
-            Assert.AreEqual(expectedCode, exception.ErrorCode);
+            Assert.IsTrue(
+                expectedCodes.Any(c => c == exception.ErrorCode),
+                $"Actual exception is {exception.ErrorCode}, expected is: " + string.Join(", ", expectedCodes));
         }
 
         private sealed class TestWatcher : IWatcher, IDisposable

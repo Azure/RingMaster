@@ -34,6 +34,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterCommonU
             Assert.IsFalse(new RequestSetAuth(clientId: "abc").IsReadOnly());
             Assert.IsFalse(new RequestSetData(path: "/", data: null, version: 1, dataCommand: false).IsReadOnly());
             Assert.IsTrue(new RequestSync(path: "/").IsReadOnly());
+            Assert.IsTrue(new RequestGetSubtree(path: "/", retrievalCondition: null).IsReadOnly());
 
             Assert.IsTrue(new RequestMulti(new IRingMasterRequest[0], completeSynchronously: false).IsReadOnly());
 
@@ -109,6 +110,35 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterCommonU
                 },
                 completeSynchronously: false);
             Assert.IsFalse(nestedReadWriteBatch.IsReadOnly());
+        }
+
+        [TestMethod]
+        public void TestRequestUid()
+        {
+            var request1 = new RequestCreate(path: "/", data: null, acl: null, createMode: CreateMode.Persistent);
+            var request2 = new RequestExists(path: "/", watcher: null);
+
+            var batch1 = new RequestMulti(
+                new List<Op>
+                {
+                    Op.Check("/", 1),
+                    Op.Delete("/a", -1)
+                },
+                completeSynchronously: false);
+
+            var batch2 = new RequestMulti(
+                new List<Op>
+                {
+                    Op.GetChildren("/"),
+                    Op.Delete("/a", -1)
+                },
+                completeSynchronously: true);
+
+            Assert.IsTrue(request2.Uid > request1.Uid);
+            Assert.IsTrue(batch1.Requests[0].Uid > request2.Uid);
+            Assert.IsTrue(batch1.Requests[1].Uid > batch1.Requests[0].Uid);
+            Assert.IsTrue(batch1.Uid > batch1.Requests[1].Uid);
+            Assert.IsTrue(batch2.Uid > batch1.Uid);
         }
     }
 }

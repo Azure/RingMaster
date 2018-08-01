@@ -1,21 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="Binplace\dirs.proj" />
-    <ProjectReference Include="Applications\dirs.proj" />
-    <ProjectReference Include="Backend\dirs.proj" />
-    <ProjectReference Include="Common\dirs.proj" />
-    <ProjectReference Include="Infrastructure\dirs.proj" />
-    <ProjectReference Include="PackageDefinitions\dirs.proj" />
-    <ProjectReference Include="Persistence\dirs.proj" />
-    <ProjectReference Include="Tests\dirs.proj" />
-    <ProjectReference Include="Tools\dirs.proj" />
+    <ProjectFile Include="Applications\dirs.proj" />
+    <ProjectFile Include="Backend\dirs.proj" />
+    <ProjectFile Include="Binplace\dirs.proj" />
+    <ProjectFile Include="CloudUnitTests\CloudUnitTests.proj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectFile Include="Common\dirs.proj" />
+    <ProjectFile Include="Infrastructure\dirs.proj" />
+    <ProjectFile Include="PackageDefinitions\dirs.proj" />
+    <ProjectFile Include="Persistence\dirs.proj" />
+    <ProjectFile Include="Tests\dirs.proj" />
+    <ProjectFile Include="Tools\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

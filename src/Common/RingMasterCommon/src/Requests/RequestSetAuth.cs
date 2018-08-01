@@ -13,11 +13,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
     public class RequestSetAuth : AbstractRingMasterRequest
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestSetAuth"/> class.
+        /// Initializes a new instance of the <see cref="RequestSetAuth" /> class.
         /// </summary>
         /// <param name="clientId">The client identifier</param>
-        public RequestSetAuth(string clientId)
-            : base(RingMasterRequestType.SetAuth, string.Empty, 0)
+        /// <param name="uid">The unique request id</param>
+        public RequestSetAuth(string clientId, ulong uid = 0)
+            : base(RingMasterRequestType.SetAuth, string.Empty, uid)
         {
             this.ClientId = clientId;
         }

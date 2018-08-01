@@ -157,5 +157,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         {
             this.errorPathTests.TestMultiGetDataFromSomeNonExistentNodes().Wait();
         }
+
+        /// <summary>
+        /// Verifies that GetSubtree requests with invalid retreival conditions return proper errors.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestGetSubtreeInvalidRetrievalCondition()
+        {
+            this.errorPathTests.TestGetSubtreeInvalidRetrievalCondition().Wait();
+        }
+
+        /// <summary>
+        /// Verifies that GetSubtree requests for non-existent nodes return proper errors.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestGetSubtreeNonExistentNode()
+        {
+            this.errorPathTests.TestGetSubtreeNonExistentNode().Wait();
+        }
     }
 }

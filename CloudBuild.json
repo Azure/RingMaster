@@ -1,0 +1,16 @@
+{
+  "Branch": "master",
+  "EnlistmentRootPaths": {
+    "SourceRootDirs": [
+      "src", "sandbox"
+    ],
+    "OutputRootDirs": [
+      "out"
+    ],
+    "VersionGenerationMode": "SkipVersionGeneration"
+  },
+  "MSBuild": {
+    "Version": "15.0"
+  },
+  "QuickBuildArgs": "-Sandbox Tracker"
+}

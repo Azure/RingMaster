@@ -1,24 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{41B4C515-F384-4E05-B9A9-F37BA8131103}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.EventTracing</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.EventTracing</AssemblyName>
-    <RunAnalysis>true</RunAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="EventSourceTraceAdapter.cs" />
-  </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

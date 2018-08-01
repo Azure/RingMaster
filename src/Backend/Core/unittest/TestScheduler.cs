@@ -454,7 +454,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
-                    req.NotifyComplete(resp.ResultCode, resp.Content, resp.Stat);
+                    req.NotifyComplete(resp.ResultCode, resp.Content, resp.Stat, resp.ResponsePath);
                 });
             }
 

@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
-  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.props" />
-  <!--Import Project="$(PkgMicrosoft_VisualStudio_Azure_Fabric_MSBuild)\build\Microsoft.VisualStudio.Azure.Fabric.Application.props" Condition="Exists('$(PkgMicrosoft_VisualStudio_Azure_Fabric_MSBuild)\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" /-->
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets=";ValidateMSBuildFiles">
+  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" />
   <Import Project="..\Zip.targets" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>37D80B41-0442-456D-8D53-D6FD9709917C</ProjectGuid>
-    <ProjectVersion>1.6</ProjectVersion>
+    <ProjectVersion>2.0</ProjectVersion>
     <MinToolsVersion>1.5</MinToolsVersion>
-    <PackageLocation>$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)-Pkg\$(MsBuildProjectName)</PackageLocation>
-    <CompressedPackageLocation>$(BinariesBuildTypeArchDirectory)\RingMasterApplication.sfpkg</CompressedPackageLocation>
-    <ApplicationManifestFilePath>ApplicationManifest.xml</ApplicationManifestFilePath>
+    <SupportedMSBuildNuGetPackageVersion>1.6.5</SupportedMSBuildNuGetPackageVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <PackageLocation>$(OutputRoot)\$(MsBuildProjectName)-Pkg\$(MsBuildProjectName)</PackageLocation>
+    <CompressedPackageLocation>$(OutputRoot)RingMasterApplication.sfpkg</CompressedPackageLocation>
   </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -25,8 +24,12 @@
   <ItemGroup>
     <None Include="ApplicationPackageRoot\ApplicationManifest.xml" />
     <None Include="ApplicationParameters\RingMaster.WestCentralUS.xml" />
-    <None Include="ApplicationParameters\Local.xml" />
-    <None Include="PublishProfiles\Local.xml" />
+    <None Include="ApplicationParameters\Cloud.xml" />
+    <None Include="ApplicationParameters\Local.1Node.xml" />
+    <None Include="ApplicationParameters\Local.5Node.xml" />
+    <None Include="PublishProfiles\Cloud.xml" />
+    <None Include="PublishProfiles\Local.1Node.xml" />
+    <None Include="PublishProfiles\Local.5Node.xml" />
     <None Include="Scripts\Deploy-FabricApplication.ps1" />
   </ItemGroup>
   <ItemGroup>
@@ -35,17 +38,31 @@
   </ItemGroup>
   <ItemGroup>
     <QCustomInput Include="@(ProjectReference -> '%(RootDir)%(Directory)$(ServicePackageRootFolder)\**')" />
-    <QCustomOutput Include="$(CompressedPackageLocation" />
+    <QCustomOutput Include="$(CompressedPackageLocation)" />
   </ItemGroup>
-  <Import Project="$(PkgServiceFabric_Corext)\build\v15.0\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.targets" />
-  <!--Import Project="$(PkgMicrosoft_VisualStudio_Azure_Fabric_MSBuild)\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets" Condition="Exists('$(PkgMicrosoft_VisualStudio_Azure_Fabric_MSBuild)\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" /-->
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  <PropertyGroup>
+    <ApplicationProjectTargetsPath>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Service Fabric Tools\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.targets</ApplicationProjectTargetsPath>
+  </PropertyGroup>
+  <Import Project="$(ApplicationProjectTargetsPath)" Condition="Exists('$(ApplicationProjectTargetsPath)')" />
+  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" />
+  <Target Name="ValidateMSBuildFiles">
+    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
+    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
+  </Target>
+
   <Target Name="CompressPackage" AfterTargets="Build" DependsOnTargets="Package" Condition="'$(BuildingInsideVisualStudio)' == ''">
+    <Zip Input="$(PackageLocation)" Output="$(CompressedPackageLocation)" Condition="'$(OSSBUILD)' == ''" />
+    <Copy SourceFiles="ApplicationParameters\Local.5Node.xml" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
+    <Copy SourceFiles="ApplicationParameters\parameters.json" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
+    <Copy SourceFiles="Scripts\Deploy-FabricApplication.sh" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
+    <Copy SourceFiles="Scripts\Remove-FabricApplication.sh" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
     <ItemGroup>
+      <FilesToProcess Include="$(PackageLocation)\..\Deploy-FabricApplication.sh" />
+      <FilesToProcess Include="$(PackageLocation)\..\Remove-FabricApplication.sh" />
       <FilesToProcess Include="$(PackageLocation)\**\ApplicationManifest.xml" />
       <FilesToProcess Include="$(PackageLocation)\**\**\ServiceManifest.xml" />
     </ItemGroup>
-    <SimpleReplace Path="%(FilesToProcess.Identity)" Find="#BUILDNUMBER#" Replace="$(BuildNumber)" />
-    <Zip Input="$(PackageLocation)" Output="$(CompressedPackageLocation)" />
-	<Copy SourceFiles="ApplicationParameters\Local.xml" DestinationFolder="$(BinariesBuildTypeArchDirectory)\$(MsBuildProjectName)-Pkg"/>  
+    <Exec Command="$(SimpleReplace) %(FilesToProcess.Identity) @BUILDNUMBER@ $(BuildNumber)" />
   </Target>
 </Project>

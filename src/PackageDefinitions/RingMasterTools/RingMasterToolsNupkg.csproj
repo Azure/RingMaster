@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaTools$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Tools</Title>
+    <Description>Vega Tools</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaClient</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Tools\RingMasterClientModule\RingMasterClientModule.csproj" />
+  </ItemGroup>
+
+  <Target Name="AddDependencies" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <!-- We don't need netstandard assemblies in the package -->
+      <Content Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))">
+        <PackagePath>lib\net462</PackagePath>
+      </Content>
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Microsoft.Vega.Test</RootNamespace>
+    <AssemblyName>VegaFailoverCorrectness</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+    <StartupObject>Microsoft.Vega.Test.VegaFailoverCorrectness</StartupObject>
+    <EnableQTest>false</EnableQTest>
+    <PublishDir>$(OutputPath)</PublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+  </ItemGroup>
+
+  <Target Name="dummy" AfterTargets="Build" DependsOnTargets="Publish" Condition="'$(BuildingInsideVisualStudio)' == ''" />
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

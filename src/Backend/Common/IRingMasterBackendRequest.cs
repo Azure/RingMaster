@@ -30,7 +30,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="resultCode">The result code.</param>
         /// <param name="result">The result.</param>
         /// <param name="stat">The stat.</param>
-        void NotifyComplete(int resultCode, object result, IStat stat);
+        /// <param name="responsePath">The response path.</param>
+        void NotifyComplete(int resultCode, object result, IStat stat, string responsePath);
 
         /// <summary>
         /// Datas the equals.

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaClient$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Client Library</Title>
+    <Description>Vega Client Library</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaClient</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Client.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Client.pdb" />
+
+    <Content Include="@(libs)">
+      <PackagePath>lib\netstandard2.0</PackagePath>
+    </Content>
+  </ItemGroup>
+
+</Project>

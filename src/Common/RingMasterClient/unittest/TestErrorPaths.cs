@@ -66,7 +66,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// </summary>
         [TestMethod]
         [Timeout(10000)]
-        [Ignore]
         public void TestGetChildrenErrorPaths()
         {
             this.errorPathTests.TestGetChildrenErrorPaths().Wait();

@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="RingMasterBackend\RingMasterBackend.nuproj" />
-    <ProjectReference Include="RingMasterClient\RingMasterClient.nuproj" />
-    <ProjectReference Include="RingMasterCommon\RingMasterCommon.nuproj" />
-    <ProjectReference Include="RingMasterTools\RingMasterTools.nuproj" />
-    <ProjectReference Include="RingMasterPersistence\RingMasterPersistence.nuproj" />
-    <ProjectReference Include="ServiceFabricApplication\ServiceFabricApplication.nuproj" />
+    <ProjectFile Include="RingMasterBackend\RingMasterBackendNupkg.csproj" />
+    <ProjectFile Include="RingMasterClient\RingMasterClientNupkg.csproj" />
+    <ProjectFile Include="RingMasterCommon\RingMasterCommonNupkg.csproj" />
+    <ProjectFile Include="RingMasterTools\RingMasterToolsNupkg.csproj" />
+    <ProjectFile Include="RingMasterPersistence\RingMasterPersistenceNupkg.csproj" />
+    <ProjectFile Include="ServiceFabricApplication\ServiceFabricApplicationNupkg.csproj" Condition="'$(OSSBUILD)' == ''" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

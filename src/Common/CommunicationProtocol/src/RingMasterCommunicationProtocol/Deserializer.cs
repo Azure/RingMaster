@@ -237,10 +237,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             switch (type)
             {
                 case RingMasterRequestType.Init:
-                    request = this.DeserializeRequestInit();
+                    request = this.DeserializeRequestInit(uid);
                     break;
                 case RingMasterRequestType.SetAuth:
-                    request = this.DeserializeRequestSetAuth();
+                    request = this.DeserializeRequestSetAuth(uid);
                     break;
                 case RingMasterRequestType.Create:
                     request = this.DeserializeRequestCreate(uid, path);
@@ -280,6 +280,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     break;
                 case RingMasterRequestType.SetAcl:
                     request = this.DeserializeRequestSetAcl(uid, path);
+                    break;
+                case RingMasterRequestType.GetSubtree:
+                    request = this.DeserializeRequestGetSubtree(uid, path);
                     break;
 
                 case RingMasterRequestType.None:
@@ -504,7 +507,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 case OpCode.Check:
                     {
-                        return new OpResult.CheckResult();
+                        Stat stat = null;
+                        if (this.serializationVersionUsed >= SerializationFormatVersions.Version24)
+                        {
+                            stat = this.DeserializeStat();
+                        }
+
+                        return new OpResult.CheckResult(stat);
                     }
 
                 case OpCode.GetData:
@@ -518,6 +527,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                         }
 
                         return new OpResult.GetDataResult(stat, bytes, path);
+                    }
+
+                case OpCode.GetChildren:
+                    {
+                        Stat stat = null;
+                        IList<string> children = null;
+                        if (this.serializationVersionUsed >= SerializationFormatVersions.Version24)
+                        {
+                            stat = this.DeserializeStat();
+                            children = (IList<string>)this.DeserializeContent();
+                        }
+
+                        return new OpResult.GetChildrenResult(stat, children);
                     }
 
                 case OpCode.Delete:
@@ -571,6 +593,40 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     {
                         List<OpResult> operationResults = this.DeserializeOpResultList();
                         return new OpResult.RunResult(operationResults);
+                    }
+
+                case OpCode.Exists:
+                    {
+                        if (this.serializationVersionUsed < SerializationFormatVersions.Version25)
+                        {
+                            throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.Exists", this.serializationVersionUsed));
+                        }
+
+                        Stat stat = this.DeserializeStat();
+                        return new OpResult.ExistsResult(stat);
+                    }
+
+                case OpCode.Sync:
+                    {
+                        if (this.serializationVersionUsed < SerializationFormatVersions.Version25)
+                        {
+                            throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.Sync", this.serializationVersionUsed));
+                        }
+
+                        return new OpResult.SyncResult();
+                    }
+
+                case OpCode.GetSubtree:
+                    {
+                        if (this.serializationVersionUsed < SerializationFormatVersions.Version25)
+                        {
+                            throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.GetSubtree", this.serializationVersionUsed));
+                        }
+
+                        byte[] bytes = this.DeserializeByteArray();
+                        string continuationPath = this.binaryReader.ReadNullableString();
+
+                        return new OpResult.GetSubtreeResult(bytes, continuationPath);
                     }
             }
 
@@ -717,6 +773,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             }
 
             return new RequestGetChildren(path, watcher, retrievalCondition, uid);
+        }
+
+        /// <summary>
+        /// Deserialize <see cref="RequestGetChildren"/>
+        /// </summary>
+        /// <param name="uid"><c>uid</c> associated with the request</param>
+        /// <param name="path">Path associated with the request</param>
+        /// <returns>The deserialized request</returns>
+        private RequestGetSubtree DeserializeRequestGetSubtree(ulong uid, string path)
+        {
+            if (this.serializationVersionUsed < SerializationFormatVersions.Version25)
+            {
+                throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support GetSubtree", this.serializationVersionUsed));
+            }
+
+            string retrievalCondition = null;
+
+            if (this.binaryReader.ReadBoolean())
+            {
+                retrievalCondition = this.binaryReader.ReadString();
+            }
+
+            var options = (RequestGetSubtree.GetSubtreeOptions)this.binaryReader.ReadByte();
+
+            return new RequestGetSubtree(path, retrievalCondition, options, uid);
         }
 
         /// <summary>
@@ -881,25 +962,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Deserialize <see cref="RequestInit"/>.
         /// </summary>
         /// <returns>The deserialized request</returns>
-        private RequestInit DeserializeRequestInit()
+        private RequestInit DeserializeRequestInit(ulong uid)
         {
             ulong sessionId = this.binaryReader.ReadUInt64();
             string sessionPwd = this.binaryReader.ReadString();
             bool readonlyInterfaceRequiresLocks = this.binaryReader.ReadBoolean();
             RequestInit.RedirectionPolicy red = (RequestInit.RedirectionPolicy)this.binaryReader.ReadByte();
 
-            return new RequestInit(sessionId, sessionPwd, readonlyInterfaceRequiresLocks, red);
+            return new RequestInit(sessionId, sessionPwd, readonlyInterfaceRequiresLocks, red, uid);
         }
 
         /// <summary>
         /// Deserialize <see cref="RequestSetAuth"/>.
         /// </summary>
         /// <returns>The deserialized request</returns>
-        private RequestSetAuth DeserializeRequestSetAuth()
+        private RequestSetAuth DeserializeRequestSetAuth(ulong uid)
         {
             string clientId = this.binaryReader.ReadString();
 
-            return new RequestSetAuth(clientId);
+            return new RequestSetAuth(clientId, uid);
         }
 
         /// <summary>

@@ -41,5 +41,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// Gets or sets the path for the response (in case there was a wildcard involved and the path for the response is not the one in the request.
         /// </summary>
         public string ResponsePath { get; set; }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            var s = this.Stat;
+            if (s == null)
+            {
+                return $"Id:{this.CallId} Code:{this.ResultCode}";
+            }
+            else
+            {
+                // Keep the string compact to not overwhelm the log
+                return string.Format(
+                    "Id:{0} Code:{1} Stat:{2}",
+                    this.CallId,
+                    this.ResultCode,
+                    $"Ver:{s.Version}/{s.Cversion}/{s.Aversion} XID:{s.Czxid}/{s.Mzxid}/{s.Pzxid} Time:{s.Ctime}/{s.Mtime} Data:{s.DataLength} Children:{s.NumChildren}");
+            }
+        }
     }
 }

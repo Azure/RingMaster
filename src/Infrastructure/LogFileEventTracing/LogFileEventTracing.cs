@@ -154,6 +154,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             new Thread(this.WriteTraceToFile)
             {
                 Priority = ThreadPriority.AboveNormal,
+                IsBackground = true,
             }
             .Start(this.cancellation.Token);
         }

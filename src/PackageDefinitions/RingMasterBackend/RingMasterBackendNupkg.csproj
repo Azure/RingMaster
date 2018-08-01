@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaBackend$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Backend components</Title>
+    <Description>Vega Backend Component</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaBackend</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\src\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\SortedDictExt.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Common.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Common.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Core.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Core.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.HelperTypes.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.HelperTypes.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Instrumentation.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.Instrumentation.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SortedDictExt.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SortedDictExt.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Server.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Server.dll" />
+
+    <Content Include="@(libs)">
+      <PackagePath>lib\netstandard2.0</PackagePath>
+    </Content>
+  </ItemGroup>
+
+</Project>

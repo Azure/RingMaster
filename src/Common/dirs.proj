@@ -1,19 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include=".\CommunicationProtocol\dirs.proj" />
-    <ProjectReference Include=".\Instrumentation\Instrumentation.csproj" />
-    <ProjectReference Include=".\RingMasterCommon\dirs.proj" />
-    <ProjectReference Include=".\RingMasterClient\dirs.proj" />
-    <ProjectReference Include=".\RingMasterServer\dirs.proj" />
-    <ProjectReference Include=".\ZooKeeperServer\dirs.proj" />
-    <ProjectReference Include=".\SecureTransport\dirs.proj" />
+    <ProjectFile Include=".\CommunicationProtocol\dirs.proj" />
+    <ProjectFile Include=".\Instrumentation\Instrumentation.csproj" />
+    <ProjectFile Include=".\RingMasterClient\dirs.proj" />
+    <ProjectFile Include=".\RingMasterCommon\dirs.proj" />
+    <ProjectFile Include=".\RingMasterServer\dirs.proj" />
+    <ProjectFile Include=".\SecureTransport\dirs.proj" />
+    <ProjectFile Include=".\ZooKeeperServer\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

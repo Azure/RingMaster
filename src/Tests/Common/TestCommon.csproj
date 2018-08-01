@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Test</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Test.Common</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+  </ItemGroup>
+
+</Project>

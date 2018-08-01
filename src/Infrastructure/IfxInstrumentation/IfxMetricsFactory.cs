@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
 {
     using System;
     using System.Diagnostics;
+    using System.Runtime.InteropServices;
 
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
     using Microsoft.Cloud.InstrumentationFramework;
@@ -79,11 +80,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
 
             ErrorContext errContext = default(ErrorContext);
 
-            DefaultConfiguration.SetDefaultDimensionNamesValues(
-                    ref errContext,
-                    (uint)defaultDimensionNames.Length,
-                    defaultDimensionNames,
-                    defaultDimenstionValues);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                DefaultConfiguration.SetDefaultDimensionNamesValues(
+                        ref errContext,
+                        (uint)defaultDimensionNames.Length,
+                        defaultDimensionNames,
+                        defaultDimenstionValues);
+            }
 
             if (errContext.ErrorCode != 0)
             {
@@ -266,12 +270,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
 
             public Metric0DWrapper(string mdmAccountName, string mdmNamespace, string metricName)
             {
-                this.metric = MeasureMetric0D.Create(mdmAccountName, mdmNamespace, metricName, addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric0D.Create(mdmAccountName, mdmNamespace, metricName, addDefaultDimension: true);
+                }
             }
 
             public void LogValue(long value)
             {
-                this.metric.LogValue(value);
+                this.metric?.LogValue(value);
             }
         }
 
@@ -281,12 +288,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
 
             public Metric1DWrapper(string mdmAccountName, string mdmNamespace, string metricName, string dimension1Name)
             {
-                this.metric = MeasureMetric1D.Create(mdmAccountName, mdmNamespace, metricName, dimension1Name, addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric1D.Create(mdmAccountName, mdmNamespace, metricName, dimension1Name, addDefaultDimension: true);
+                }
             }
 
             public void LogValue(long value, string dimension1Value)
             {
-                this.metric.LogValue(value, dimension1Value);
+                this.metric?.LogValue(value, dimension1Value);
             }
         }
 
@@ -301,13 +311,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension1Name,
                 string dimension2Name)
             {
-                this.metric = MeasureMetric2D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric2D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -315,7 +328,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension1Value,
                 string dimension2Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value);
@@ -334,14 +347,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension2Name,
                 string dimension3Name)
             {
-                this.metric = MeasureMetric3D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric3D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -350,7 +366,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension2Value,
                 string dimension3Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -371,15 +387,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension3Name,
                 string dimension4Name)
             {
-                this.metric = MeasureMetric4D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric4D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -389,7 +408,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension3Value,
                 string dimension4Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -412,16 +431,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension4Name,
                 string dimension5Name)
             {
-                this.metric = MeasureMetric5D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric5D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -432,7 +454,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension4Value,
                 string dimension5Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -457,17 +479,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension5Name,
                 string dimension6Name)
             {
-                this.metric = MeasureMetric6D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    dimension6Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric6D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        dimension6Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -479,7 +504,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension5Value,
                 string dimension6Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -506,18 +531,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension6Name,
                 string dimension7Name)
             {
-                this.metric = MeasureMetric7D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    dimension6Name,
-                    dimension7Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric7D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        dimension6Name,
+                        dimension7Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -530,7 +558,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension6Value,
                 string dimension7Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -559,19 +587,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension7Name,
                 string dimension8Name)
             {
-                this.metric = MeasureMetric8D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    dimension6Name,
-                    dimension7Name,
-                    dimension8Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric8D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        dimension6Name,
+                        dimension7Name,
+                        dimension8Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -585,7 +616,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension7Value,
                 string dimension8Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -616,20 +647,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension8Name,
                 string dimension9Name)
             {
-                this.metric = MeasureMetric9D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    dimension6Name,
-                    dimension7Name,
-                    dimension8Name,
-                    dimension9Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric9D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        dimension6Name,
+                        dimension7Name,
+                        dimension8Name,
+                        dimension9Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -644,7 +678,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension8Value,
                 string dimension9Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,
@@ -677,21 +711,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension9Name,
                 string dimension10Name)
             {
-                this.metric = MeasureMetric10D.Create(
-                    mdmAccountName,
-                    mdmNamespace,
-                    metricName,
-                    dimension1Name,
-                    dimension2Name,
-                    dimension3Name,
-                    dimension4Name,
-                    dimension5Name,
-                    dimension6Name,
-                    dimension7Name,
-                    dimension8Name,
-                    dimension9Name,
-                    dimension10Name,
-                    addDefaultDimension: true);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    this.metric = MeasureMetric10D.Create(
+                        mdmAccountName,
+                        mdmNamespace,
+                        metricName,
+                        dimension1Name,
+                        dimension2Name,
+                        dimension3Name,
+                        dimension4Name,
+                        dimension5Name,
+                        dimension6Name,
+                        dimension7Name,
+                        dimension8Name,
+                        dimension9Name,
+                        dimension10Name,
+                        addDefaultDimension: true);
+                }
             }
 
             public void LogValue(
@@ -707,7 +744,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
                 string dimension9Value,
                 string dimension10Value)
             {
-                this.metric.LogValue(
+                this.metric?.LogValue(
                     value,
                     dimension1Value,
                     dimension2Value,

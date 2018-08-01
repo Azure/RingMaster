@@ -10,18 +10,19 @@ namespace Microsoft.Cloud.InstrumentationFramework
 
     public struct ErrorContext
     {
-        public int ErrorCode;
+        public uint ErrorCode;
         public string ErrorMessage;
     }
 
     public class DefaultConfiguration
     {
-        public static void SetDefaultDimensionNamesValues(
+        public static bool SetDefaultDimensionNamesValues(
             ref ErrorContext errorContext,
             uint length,
             string[] defaultDimensionNames,
             string[] defaultDimensionValues)
         {
+            return true;
         }
     }
 

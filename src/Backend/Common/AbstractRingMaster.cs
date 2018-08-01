@@ -10,7 +10,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.IO;
     using System.Runtime.Serialization;
     using System.Security.Authentication;
-    using System.ServiceModel;
     using System.Text;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.AsyncCallback;
@@ -19,6 +18,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Code = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.RingMasterException.Code;
     using GetDataOptions = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestGetData.GetDataOptions;
+    using GetSubtreeOptions = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestGetSubtree.GetSubtreeOptions;
     using IGetDataOptionArgument = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestGetData.IGetDataOptionArgument;
 
     /// <summary>
@@ -1401,6 +1401,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public void Sync(string path, VoidCallbackDelegate cb, object ctx)
         {
             this.Send(new RequestSync(path, ctx, cb));
+        }
+
+        /// <summary>
+        /// Gets the subtree under a given path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="retrievalCondition">Request retrieval condition</param>
+        /// <param name="cb">Request callback delegate.</param>
+        /// <param name="ctx">Request context.</param>
+        public void GetSubtree(string path, string retrievalCondition, SubtreeDataCallbackDelegate cb, object ctx)
+        {
+            this.Send(new RequestGetSubtree(path, retrievalCondition, GetSubtreeOptions.None, ctx, cb));
+        }
+
+        /// <summary>
+        /// Gets the subtree under a given path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="retrievalCondition">
+        ///     The retrieval contition in the form >:[top]:[ContinuationPath].
+        ///     ">:[Top]:[ContinuationPath]" returns the elements after [ContinuationPath] in depth-first-order limited to Top count
+        ///     [ContinuationPath] should be empty string for the initial call and from thereafter be the continuation path returned
+        ///     by the callback.
+        /// </param>
+        /// <param name="options">Request options.</param>
+        /// <param name="cb">Request callback delegate.</param>
+        /// <param name="ctx">Request context.</param>
+        public void GetSubtree(string path, string retrievalCondition, GetSubtreeOptions options, SubtreeDataCallbackDelegate cb, object ctx)
+        {
+            this.Send(new RequestGetSubtree(path, retrievalCondition, options, ctx, cb));
         }
 
         /// <summary>

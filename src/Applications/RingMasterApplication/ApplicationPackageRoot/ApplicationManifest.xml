@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="#BUILDNUMBER#" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="@BUILDNUMBER@" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- Note: These should be overridden in your Params Override file as needed -->
     <Parameter Name="EnvironmentName" DefaultValue="" />
@@ -8,12 +8,12 @@
     <Parameter Name="MdmNamespace" DefaultValue="RingMasterWorker" />
     <Parameter Name="RingMasterWatchdog.MdmNamespace" DefaultValue="RingMasterWorker/Watchdog" />
     <Parameter Name="VIP" DefaultValue="" />
-    <Parameter Name="RingMasterService_TargetReplicaSetSize" DefaultValue="1" />
-    <Parameter Name="RingMasterService_MinReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="RingMasterService_TargetReplicaSetSize" DefaultValue="5" />
+    <Parameter Name="RingMasterService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="RingMasterWatchdog_InstanceCount" DefaultValue="1" />
   </Parameters>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="#BUILDNUMBER#" />
+    <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="@BUILDNUMBER@" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -33,7 +33,7 @@
     </Policies>
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="RingMasterWatchdog" ServiceManifestVersion="#BUILDNUMBER#" />
+    <ServiceManifestRef ServiceManifestName="RingMasterWatchdog" ServiceManifestVersion="@BUILDNUMBER@" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -54,7 +54,7 @@
   </ServiceManifestImport>
   <DefaultServices>
     <Service Name="RingMasterService">
-      <StatefulService ServiceTypeName="RingMasterService" TargetReplicaSetSize="5" MinReplicaSetSize="3">
+      <StatefulService ServiceTypeName="RingMasterService" TargetReplicaSetSize="[RingMasterService_TargetReplicaSetSize]" MinReplicaSetSize="[RingMasterService_MinReplicaSetSize]">
         <SingletonPartition />
       </StatefulService>
     </Service>

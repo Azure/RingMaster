@@ -26,7 +26,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <summary>
         /// The maximum supported serialization version.
         /// </summary>
-        public const uint MaximumSupportedVersion = Version23;
+        public const uint MaximumSupportedVersion = Version25;
 
         /// <summary>
         /// The very first protocol version.
@@ -145,5 +145,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Added Data and Stat in WatchedEvent
         /// </summary>
         public const uint Version23 = 23;
+
+        /// <summary>
+        /// Added Stat in multi.check op
+        /// Added GetChildren op in multi
+        /// </summary>
+        public const uint Version24 = 24;
+
+        /// <summary>
+        /// Added GetSubtree request
+        /// Added Exists, Sync, GetSubtree ops in multi/batch
+        /// </summary>
+        public const uint Version25 = 25;
     }
 }

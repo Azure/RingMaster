@@ -37,8 +37,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         /// <param name="aversion">The aversion.</param>
         /// <param name="dataLength">Length of the data.</param>
         /// <param name="numChildren">The number children.</param>
+        /// <param name="numEphemeralChildren">The number of ephemeral children</param>
         /// <param name="pzxid">The pzxid.</param>
-        public MutableStat(long czxid, long mzxid, long ctime, long mtime, int version, int cversion, int aversion, int dataLength, int numChildren, long pzxid)
+        public MutableStat(long czxid, long mzxid, long ctime, long mtime, int version, int cversion, int aversion, int dataLength, int numChildren, int numEphemeralChildren, long pzxid)
         {
             this.Czxid = czxid;
             this.Mzxid = mzxid;
@@ -49,6 +50,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
             this.Aversion = aversion;
             this.DataLength = dataLength;
             this.NumChildren = numChildren;
+            this.NumEphemeralChildren = numEphemeralChildren;
             this.Pzxid = pzxid;
         }
 
@@ -82,6 +84,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         public MutableStat(IMutableStat other)
             : this((IStat)other)
         {
+            this.NumEphemeralChildren = other.NumEphemeralChildren;
         }
 
         /// <summary>
@@ -153,6 +156,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         /// </summary>
         /// <value>The number children.</value>
         public int NumChildren { get; set; }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// Note that number is only changed by the backend core when ephemeral nodes are added or removed. Concret
+        /// class of PersistedData/Factory (including SF and other ones) should not deal with ephemeral nodes.
+        /// </remarks>
+        public int NumEphemeralChildren { get; set; }
 
         /// <summary>
         /// computes the unique incarnation id for an arbitrary IStat
@@ -254,6 +264,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
                 this.Aversion == other.Aversion &&
                 this.DataLength == other.DataLength &&
                 this.NumChildren == other.NumChildren &&
+                this.NumEphemeralChildren == other.NumEphemeralChildren &&
                 this.Pzxid == other.Pzxid;
         }
 

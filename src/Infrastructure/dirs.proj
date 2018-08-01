@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="EventTracing\EventTracing.csproj" />
-    <ProjectReference Include="IfxInstrumentation\IfxInstrumentation.csproj" />
-    <ProjectReference Include="LogFileEventTracing\LogFileEventTracing.csproj" />
-    <ProjectReference Include="LogStream\dirs.proj" />
-    <ProjectReference Include="ServiceFabric\ServiceFabric.csproj" />
-    <ProjectReference Include="ServiceFabric\unittests\ServiceFabricUnitTest.csproj" />
+    <ProjectFile Include="EventTracing\EventTracing.csproj" />
+    <ProjectFile Include="IfxInstrumentation\IfxInstrumentation.csproj" />
+    <ProjectFile Include="LogFileEventTracing\LogFileEventTracing.csproj" />
+    <ProjectFile Include="LogStream\dirs.proj" />
+    <ProjectFile Include="ServiceFabric\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

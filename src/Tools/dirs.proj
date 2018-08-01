@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="FiniteModelChecker\FiniteModelChecker.csproj" />
-    <ProjectReference Include="FiniteModelChecker\UnitTest\FiniteModelCheckerUnitTest.csproj" />
-    <ProjectReference Include="RingMasterClientModule\RingMasterClientModule.csproj" />
-    <ProjectReference Include="RingMasterTool\RingMasterTool.csproj" />
-    <ProjectReference Include="RingMasterBackendTool\RingMasterBackendTool.csproj" />
+    <ProjectFile Include="FiniteModelChecker\dirs.proj" />
+    <ProjectFile Include="RingMasterBackendTool\RingMasterBackendTool.csproj" />
+    <ProjectFile Include="RingMasterClientModule\RingMasterClientModule.csproj" />
+    <ProjectFile Include="RingMasterTool\RingMasterTool.csproj" />
+    <ProjectFile Include="VegaLogAnalyzer\VegaLogAnalyzer.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

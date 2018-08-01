@@ -79,7 +79,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="resultCode">The result code.</param>
         /// <param name="ignore">The ignore.</param>
         /// <param name="stat">The stat.</param>
-        protected override void NotifyComplete(int resultCode, NoType ignore, IStat stat)
+        /// <param name="responsePath">The response path.</param>
+        protected override void NotifyComplete(int resultCode, NoType ignore, IStat stat, string responsePath)
         {
             this.callback?.Invoke(resultCode, this.Path, this.Context);
         }

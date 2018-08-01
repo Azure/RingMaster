@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaCommon$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Common Library</Title>
+    <Description>Vega Common Library</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaCommon</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Common.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Common.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.CommunicationProtocol.Common.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.CommunicationProtocol.Common.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Instrumentation.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Instrumentation.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterCommunicationProtocol.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterCommunicationProtocol.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.ZkprCommunicationProtocol.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.ZkprCommunicationProtocol.pdb" />
+
+    <Content Include="@(libs)">
+      <PackagePath>lib\netstandard2.0</PackagePath>
+    </Content>
+  </ItemGroup>
+
+</Project>

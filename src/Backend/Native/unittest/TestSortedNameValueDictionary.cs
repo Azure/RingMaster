@@ -9,7 +9,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     using System.Linq;
     using System.Xml;
     using Backend.Native;
-    using FluentAssertions;
     using VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
@@ -69,13 +68,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             dictionary.Contains(new KeyValuePair<string, object>("A", objZ)).Should().BeFalse();
 
             object value = null;
-            dictionary.TryGetValue("A", ref value).Should().BeTrue();
+            dictionary.TryGetValue("A", out value).Should().BeTrue();
             value.Should().Be(objA);
 
-            dictionary.TryGetValue("B", ref value).Should().BeFalse();
+            dictionary.TryGetValue("B", out value).Should().BeFalse();
 
-            // Value should not be touched if TryGetvalue returns false.
-            value.Should().Be(objA);
+            // Value should be default(TValue) per reference source.
+            value.Should().Be(default(object));
         }
 
         [TestMethod]
@@ -129,7 +128,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
             var array = new KeyValuePair<string, object>[3];
             dictionary.Invoking(d => d.CopyTo(array, -1)).ShouldThrow<ArgumentOutOfRangeException>();
-            dictionary.Invoking(d => d.CopyTo(array, array.Length)).ShouldThrow<ArgumentOutOfRangeException>();
+            dictionary.Invoking(d => d.CopyTo(array, array.Length)).ShouldThrow<ArgumentException>();
 
             var smallArray = new KeyValuePair<string, object>[1];
             dictionary.Invoking(d => d.CopyTo(smallArray, 0)).ShouldThrow<ArgumentException>();
@@ -165,8 +164,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             dictionary.Values.Count.Should().Be(2);
             dictionary.ContainsKey("B").Should().BeFalse();
 
-            dictionary.Remove(new KeyValuePair<string, object>("A", objB)).Should().BeFalse();
-            dictionary.Remove(new KeyValuePair<string, object>("A", objA)).Should().BeTrue();
+            dictionary.Remove("A").Should().BeTrue();
+            dictionary.Remove("A").Should().BeFalse();
             dictionary.Count.Should().Be(1);
             dictionary.Keys.Count.Should().Be(1);
             dictionary.Values.Count.Should().Be(1);

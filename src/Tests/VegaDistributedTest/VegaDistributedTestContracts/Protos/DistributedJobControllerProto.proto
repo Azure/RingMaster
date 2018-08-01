@@ -1,0 +1,40 @@
+﻿syntax = "proto3";
+
+package Microsoft.Vega.DistributedJobControllerProto;
+
+import "DistTestCommonProto.proto";
+
+service DistributedJobControllerSvc {
+	rpc CancelRunningJob (DistTestCommonProto.Empty) returns (DistTestCommonProto.Empty) {}
+
+	rpc GetJobStates (DistTestCommonProto.Empty) returns (GetJobStatesReply) {}
+
+	rpc GetJobMetrics (GetJobMetricsRequest) returns (GetJobMetricsReply) {}
+
+	rpc GetServiceInstanceIdentities (DistTestCommonProto.Empty) returns (GetServiceInstanceIdentitiesReply) {}
+
+	rpc StartJob (StartJobRequest) returns (DistTestCommonProto.Empty) {}
+}
+
+message GetJobStatesReply {
+	repeated DistTestCommonProto.JobState jobStates = 1;
+}
+
+message GetJobMetricsRequest {
+	string metricName = 1;
+	int32 startIndex = 2;
+	int32 pageSize = 3;
+}
+
+message GetJobMetricsReply {
+	repeated double jobMetrics = 1;
+}
+
+message GetServiceInstanceIdentitiesReply {
+	repeated string serviceInstanceIdentities = 1;	
+}
+
+message StartJobRequest {
+	string scenario = 1;
+	repeated DistTestCommonProto.JobParameter parameters = 2;
+}

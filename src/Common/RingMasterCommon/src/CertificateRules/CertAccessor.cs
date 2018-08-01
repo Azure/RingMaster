@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Security.Cryptography.X509Certificates;
 
     /// <summary>
@@ -49,6 +50,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
         /// or
         /// no cert found in path
         /// </exception>
+        [SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
+            Scope = "method",
+            Target = "Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules.CertAccessor.GetCertsFromThumbPrintOrFileName()",
+            Justification = "X509 certificates will be disposed in the finally block")]
         public virtual X509Certificate[] GetCertsFromThumbPrintOrFileName(string[] thumbprint)
         {
             if (thumbprint == null)
@@ -58,72 +65,84 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
 
             List<X509Certificate> certs = new List<X509Certificate>();
 
-            for (int i = 0; i < thumbprint.Length; i++)
+            try
             {
-                try
+                for (int i = 0; i < thumbprint.Length; i++)
                 {
-                    string tp = thumbprint[i].ToUpper();
-                    if (tp.StartsWith("FILE:"))
-                    {
-                        certs[i] = X509Certificate.CreateFromCertFile(tp.Substring("FILE:".Length));
-                        continue;
-                    }
-
-                    StoreName name;
-                    StoreLocation location;
-                    string certThumbprint;
-
-                    string[] pieces = tp.Split('/');
-                    if (pieces.Length == 1)
-                    {
-                        // No store name in the cert. Use default
-                        name = StoreName.My;
-                        location = StoreLocation.LocalMachine;
-                        certThumbprint = tp;
-                    }
-                    else
-                    {
-                        name = (StoreName)Enum.Parse(typeof(StoreName), pieces[0], true);
-                        location = (StoreLocation)Enum.Parse(typeof(StoreLocation), pieces[1], true);
-                        certThumbprint = pieces[2];
-                    }
-
-                    X509Store store = new X509Store(name, location);
                     try
                     {
-                        store.Open(OpenFlags.ReadOnly);
-                        X509Certificate2 found = null;
-                        foreach (X509Certificate2 res in store.Certificates.Find(X509FindType.FindByThumbprint, certThumbprint, false))
+                        string tp = thumbprint[i].ToUpper();
+                        if (tp.StartsWith("FILE:"))
                         {
-                            if (found == null || found.Equals(res))
-                            {
-                                found = res;
-                            }
-                            else
-                            {
-                                throw new ArgumentException("two certs found in the same path " + tp);
-                            }
+                            certs[i] = X509Certificate.CreateFromCertFile(tp.Substring("FILE:".Length));
+                            continue;
                         }
 
-                        if (found == null)
+                        StoreName name;
+                        StoreLocation location;
+                        string certThumbprint;
+
+                        string[] pieces = tp.Split('/');
+                        if (pieces.Length == 1)
                         {
-                            throw new KeyNotFoundException("no cert found in path " + tp);
+                            // No store name in the cert. Use default
+                            name = StoreName.My;
+                            location = StoreLocation.LocalMachine;
+                            certThumbprint = tp;
+                        }
+                        else
+                        {
+                            name = (StoreName)Enum.Parse(typeof(StoreName), pieces[0], true);
+                            location = (StoreLocation)Enum.Parse(typeof(StoreLocation), pieces[1], true);
+                            certThumbprint = pieces[2];
                         }
 
-                        certs.Add(found);
+                        using (X509Store store = new X509Store(name, location))
+                        {
+                            store.Open(OpenFlags.ReadOnly);
+                            X509Certificate2 found = null;
+                            foreach (X509Certificate2 res in store.Certificates.Find(X509FindType.FindByThumbprint, certThumbprint, false))
+                            {
+                                if (found == null || found.Equals(res))
+                                {
+                                    found = res;
+                                }
+                                else
+                                {
+                                    throw new ArgumentException("two certs found in the same path " + tp);
+                                }
+                            }
+
+                            if (found == null)
+                            {
+                                throw new KeyNotFoundException("no cert found in path " + tp);
+                            }
+
+                            certs.Add(found);
+                        }
                     }
-                    finally
+                    catch (Exception e)
                     {
-                        store.Close();
+                        CertificateRulesEventSource.Log.CertAccessor_GetCertsFromThumbprintOrFileNameFailed(e.ToString());
                     }
                 }
-                catch (Exception e)
+
+                var certsToReturn = new X509Certificate[certs.Count];
+                for (int i = 0; i < certs.Count; i++)
                 {
-                    CertificateRulesEventSource.Log.CertAccessor_GetCertsFromThumbprintOrFileNameFailed(e.ToString());
+                    certsToReturn[i] = certs[i];
+                    certs[i] = null;
+                }
+
+                return certsToReturn;
+            }
+            finally
+            {
+                foreach (var cert in certs)
+                {
+                    cert?.Dispose();
                 }
             }
-
-            return certs.ToArray();
         }
 
         /// <summary>
@@ -246,7 +265,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
                 return string.Empty;
             }
 
-            return certificate.Subject;
+            using (var cert2 = new X509Certificate2(certificate))
+            {
+                return cert2.GetNameInfo(X509NameType.SimpleName, false);
+            }
         }
 
         /// <summary>

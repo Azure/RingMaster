@@ -6,11 +6,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Fabric;
     using System.Fabric.Description;
+    using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Reflection;
@@ -25,6 +26,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Server;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.ServiceFabric.Services.Communication.Runtime;
     using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -39,6 +41,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     /// </summary>
     public sealed class RingMasterService : StatefulService, IDisposable
     {
+        private static IConfiguration appSettings;
+
         private readonly CancellationTokenSource cancellationSource = new CancellationTokenSource();
         private readonly IZooKeeperServerInstrumentation zooKeeperServerInstrumentation;
         private readonly IRingMasterServerInstrumentation ringMasterServerInstrumentation;
@@ -60,6 +64,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         public RingMasterService(StatefulServiceContext context, IMetricsFactory ringMasterMetricsFactory, IMetricsFactory persistenceMetricsFactory)
             : base(context, PersistedDataFactory.CreateStateManager(context))
         {
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            appSettings = builder.Build();
+
             RingMasterBackendCore.GetSettingFunction = GetSetting;
             string factoryName = $"{this.Context.ServiceTypeName}-{this.Context.ReplicaId}-{this.Context.NodeContext.NodeName}";
             this.zooKeeperServerInstrumentation = new ZooKeeperServerInstrumentation(ringMasterMetricsFactory);
@@ -70,9 +78,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
             RingMasterBackendCoreInstrumentation.Instance = ringMasterInstrumentation;
 
+            bool needFixStatDuringLoad = bool.TryParse(GetSetting("WinFabPersistence.FixStatDuringLoad"), out needFixStatDuringLoad) && needFixStatDuringLoad;
             var persistenceConfiguration = new PersistedDataFactory.Configuration
             {
                 EnableActiveSecondary = true,
+                FixStatDuringLoad = needFixStatDuringLoad,
             };
 
             bool useInMemoryPersistence;
@@ -119,7 +129,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             {
                 RingMasterServiceEventSource.Log.RunAsync();
 
-                this.backend.Start();
+                // Use this to pass the exception, it will not run to completion.
+                var tcs = new TaskCompletionSource<bool>();
+
+                this.backend.OnBackendRestartFailure = (o) =>
+                {
+                    tcs.TrySetException(new FabricException("Backend failed to timely restart on primary status lost"));
+                };
+
+                this.factory.OnFatalError = (msg, ex) =>
+                {
+                    // Unable to commit transaction, let exception propagate to RunAsync so the replica can be restarted
+                    if (ex is FabricTransientException)
+                    {
+                        tcs.TrySetException(new FabricTransientException(msg, ex));
+                    }
+                    else
+                    {
+                        tcs.TrySetException(new FabricException(msg, ex));
+                    }
+                };
+
+                // Start the backend core at the background. If LoadTree gets stuck due to service fabric replicator
+                // issue, the below while loop will handle the failure properly.
+                var unused = Task.Run(() => this.backend.Start(cancellationToken));
                 this.backend.OnBecomePrimary();
 
                 Assembly assembly = Assembly.GetExecutingAssembly();
@@ -128,8 +161,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
                 var sfFactory = this.factory as PersistedDataFactory;
 
-                while (!cancellationToken.IsCancellationRequested)
+                while (true)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     var totalSessionCount = 0L;
                     var activeSessionCount = 0L;
                     if (this.ringMasterServer != null)
@@ -142,23 +177,48 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                     RingMasterServiceEventSource.Log.ReportServiceStatus(version, (long)uptime.Elapsed.TotalSeconds, (int)totalSessionCount);
                     RingMasterBackendCoreInstrumentation.Instance.OnUpdateStatus(version, uptime.Elapsed, true, (int)activeSessionCount);
 
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                    await Task.WhenAny(
+                        Task.Delay(TimeSpan.FromSeconds(30), cancellationToken),
+                        tcs.Task);
+
+                    if (tcs.Task.IsFaulted)
+                    {
+                        throw tcs.Task.Exception;
+                    }
                 }
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
+                // TaskCancelledException is handled here. Ignore it. Let the primary become secondary.
             }
             catch (Exception ex)
             {
-                RingMasterServiceEventSource.Log.RunAsyncFailed(ex.ToString());
+                var firstEx = (ex as AggregateException)?.Flatten().InnerExceptions.First();
+                if (firstEx == null || !(firstEx is OperationCanceledException))
+                {
+                    // If it's not operation cancelled, we want to know why and handle it later.
+                    RingMasterServiceEventSource.Log.RunAsyncFailed(ex.ToString());
+                }
+
                 throw;
             }
             finally
             {
                 RingMasterServiceEventSource.Log.RunAsyncCompleted(uptime.ElapsedMilliseconds);
-                this.backend.OnPrimaryStatusLost();
-                Environment.Exit(0);
+                var task = this.backend.OnPrimaryStatusLost().ContinueWith((t) =>
+                {
+                    if (t.Exception != null)
+                    {
+                        Trace.TraceError($"OnPrimaryStatusLost finished with exception: {t.Exception}");
+                    }
+                });
             }
+        }
+
+        /// <inheritdoc />
+        protected override Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
+        {
+            return base.OnOpenAsync(openMode, cancellationToken);
         }
 
         /// <inheritdoc />
@@ -224,7 +284,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
         private static string GetSetting(string settingName)
         {
-            string returnedValue = ConfigurationManager.AppSettings[settingName];
+            string returnedValue = appSettings[settingName];
             RingMasterServiceEventSource.Log.RingMaster_GetSetting(settingName, returnedValue);
             return returnedValue;
         }

@@ -1,53 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{CD44DFEA-2396-43D9-AB01-9F64F73250A7}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.ClientModule</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.ClientModule</AssemblyName>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <PlatformTarget>x64</PlatformTarget>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="$(PkgSystem_Management_Automation)\lib\net40\System.Management.Automation.dll" />
+    <PackageReference Include="PowerShellStandard.Library" Version="5.1.0-preview-04" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include= "AddRingMasterNode.cs" />
-    <Compile Include= "MoveRingMasterNode.cs" />
-    <Compile Include= "ConnectRingMaster.cs" />
-    <Compile Include= "NewRingMasterAcl.cs" />
-    <Compile Include= "NewRingMasterCreateOperation.cs" />
-    <Compile Include= "NewRingMasterDeleteOperation.cs" />
-    <Compile Include= "NewRingMasterMoveOperation.cs" />
-    <Compile Include= "NewRingMasterServerSpec.cs" />
-    <Compile Include= "NewRingMasterSetAclOperation.cs" />
-    <Compile Include= "NewRingMasterSetDataOperation.cs" />
-    <Compile Include= "GetRingMasterNodeAcl.cs" />
-    <Compile Include= "GetRingMasterNodeChildren.cs" />
-    <Compile Include= "GetRingMasterNodeDescendants.cs" />
-    <Compile Include= "GetRingMasterNodeData.cs" />
-    <Compile Include= "GetRingMasterNodeStat.cs" />
-    <Compile Include= "RemoveRingMasterNode.cs" />
-    <Compile Include= "RingMasterSession.cs" />
-    <Compile Include= "SendRingMasterBatchRequest.cs" />
-    <Compile Include= "SendRingMasterMultiRequest.cs" />
-    <Compile Include= "SetRingMasterAuth.cs" />
-    <Compile Include= "SetRingMasterNodeAcl.cs" />
-    <Compile Include= "SetRingMasterNodeData.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
   </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

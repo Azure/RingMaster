@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaPersistence$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Persistence</Title>
+    <Description>Vega Persistence layer implementation</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaClient</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\Common\src\PersistenceCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Persistence\ServiceFabric\src\ServiceFabricPersistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Persistence.Common.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Persistence.Common.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Persistence.InMemory.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Persistence.InMemory.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.WinFabPersistence.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.WinFabPersistence.pdb" />
+
+    <Content Include="@(libs)">
+      <PackagePath>lib\net462</PackagePath>
+    </Content>
+  </ItemGroup>
+
+</Project>

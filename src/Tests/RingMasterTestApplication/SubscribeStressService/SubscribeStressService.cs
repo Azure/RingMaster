@@ -5,20 +5,17 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SubscribeStressService
 {
     using System;
-    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Fabric;
     using System.Fabric.Description;
-    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.ServiceFabric.Services.Runtime;
+    using Microsoft.Vega.Test.Helpers;
 
     /// <summary>
     /// Service used to stress the RingMaster by installing lots of watchers.
@@ -42,14 +39,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SubscribeStressSe
             {
                 ConfigurationSection subscribePerformanceTestConfiguration = this.Context.CodePackageActivationContext.GetConfigurationSection("SubscribePerformanceTest");
                 string connectionString = subscribePerformanceTestConfiguration.GetStringValue("TargetConnectionString");
+                connectionString = Helpers.GetServerAddressIfNotProvided(connectionString);
+
                 ulong timeStreamId = subscribePerformanceTestConfiguration.GetUInt64Value("TimeStream");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    using (var ringMaster = ConnectToRingMaster(connectionString, cancellationToken))
-                    using (var timeStream = ringMaster.OpenTimeStream(timeStreamId))
+                    using (var ringMaster = new RetriableRingMasterClient(s => Helpers.CreateRingMasterTimeStreamRequestHandler(s, cancellationToken, timeStreamId), connectionString))
                     {
-                        await this.SubscribePerformanceTest(timeStream, subscribePerformanceTestConfiguration, cancellationToken);
+                        await this.SubscribePerformanceTest(ringMaster, subscribePerformanceTestConfiguration, cancellationToken);
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);

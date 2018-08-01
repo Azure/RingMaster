@@ -5,6 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackendCoreUnitTest
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
@@ -46,6 +47,57 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                     }
                 }
             }).Wait();
+        }
+
+        /// <summary>
+        /// Repro case for VSO 2513546: RingMasterBackendCore OnBecomePrimary / OnPrimaryStatusLost race conditions.
+        /// Primary status change events need to be processed sequentially in-order.
+        /// </summary>
+        [TestMethod]
+        public void TestPrimaryChangeActionsProcessedInOrder()
+        {
+            var backend = CreateBackend(null);
+
+            bool stopServiceCalled = false;
+            bool orderingTestPassed = false;
+
+            ManualResetEvent sentNotificationsEvent = new ManualResetEvent(false);
+            ManualResetEvent startServiceCompletedEvent = new ManualResetEvent(false);
+            ManualResetEvent stopServiceCompletedEvent = new ManualResetEvent(false);
+
+            backend.StartService += (startMainEndpoint, startExtraEndpoints) =>
+            {
+                // make sure we will till after primary status lost notification was sent in order for the test to be valid
+                sentNotificationsEvent.WaitOne();
+
+                Thread.Sleep(1000);
+
+                if (!stopServiceCalled)
+                {
+                    orderingTestPassed = true;
+                }
+
+                startServiceCompletedEvent.Set();
+            };
+
+            backend.StopService += () =>
+            {
+                stopServiceCalled = true;
+                stopServiceCompletedEvent.Set();
+            };
+
+            backend.OnBecomePrimary();
+            backend.OnPrimaryStatusLost();
+            sentNotificationsEvent.Set();
+
+            startServiceCompletedEvent.WaitOne();
+            stopServiceCompletedEvent.WaitOne();
+
+            sentNotificationsEvent.Dispose();
+            startServiceCompletedEvent.Dispose();
+            stopServiceCompletedEvent.Dispose();
+
+            Assert.IsTrue(orderingTestPassed, "StartService must run to completion before StopService since OnBecomePrimary event came before OnPrimaryStatusLost");
         }
     }
 }

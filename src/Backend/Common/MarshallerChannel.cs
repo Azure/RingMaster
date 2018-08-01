@@ -5,7 +5,6 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
-    using System.Configuration;
     using System.Diagnostics;
     using System.IO;
     using System.Threading;
@@ -28,7 +27,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         public const uint CurrentMarshalVersion = SerializationFormatVersions.MaximumSupportedVersion;
 
-        private static readonly uint SProposedVersion;
+        private static uint sProposedVersion;
 
         private readonly RingMasterCommunicationProtocol protocol = new RingMasterCommunicationProtocol();
         private readonly ObjectTracker<IWatcher> watchers = new ObjectTracker<IWatcher>();
@@ -40,32 +39,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         private uint otherMarshallerVersion;
         private bool isDisposed;
-
-        /// <summary>
-        /// Initializes static members of the <see cref="MarshallerChannel"/> class.
-        /// Sets the version to propose, based on the version of this marshaller, and any possible
-        /// overrides from appconfig
-        /// </summary>
-        static MarshallerChannel()
-        {
-            uint versionToPropose = CurrentMarshalVersion;
-
-            try
-            {
-                uint downVersion;
-                string downVersionStr = ConfigurationManager.AppSettings["Marshaller.DownScaleToVersion"];
-                if (uint.TryParse(downVersionStr, out downVersion))
-                {
-                    versionToPropose = downVersion;
-                }
-            }
-            catch
-            {
-                // ignore
-            }
-
-            SProposedVersion = versionToPropose;
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MarshallerChannel"/> class.
@@ -103,6 +76,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public uint UsedMarshalVersion { get; protected set; }
 
         /// <summary>
+        /// Initializes static members of the <see cref="MarshallerChannel"/> class.
+        /// Sets the version to propose, based on the version of this marshaller, and any possible
+        /// overrides from appconfig
+        /// </summary>
+        /// <param name="getSetting">Function to read setting from app.config, etc.</param>
+        public static void ConfigureDefaultProposedVersion(Func<string, string> getSetting)
+        {
+            uint versionToPropose = CurrentMarshalVersion;
+
+            try
+            {
+                uint downVersion;
+                string downVersionStr = getSetting?.Invoke("Marshaller.DownScaleToVersion");
+                if (uint.TryParse(downVersionStr, out downVersion))
+                {
+                    versionToPropose = downVersion;
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            sProposedVersion = versionToPropose;
+        }
+
+        /// <summary>
         /// resets the stream for the marshaller.
         /// </summary>
         /// <param name="strInput">the new input stream to use</param>
@@ -122,7 +122,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             uint previousVersion = this.UsedMarshalVersion;
 
-            this.UsedMarshalVersion = SProposedVersion;
+            this.UsedMarshalVersion = sProposedVersion;
 
             // For writing and reading marshalling version we need to set a timeout
             // on the stream to avoid the listener thread getting stuck in a receive
@@ -172,7 +172,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             if (this.writer != null && this.reader != null)
             {
                 Trace.WriteLine(
-                    $"Marshaller: proposed {SProposedVersion} otherproposed "
+                    $"Marshaller: proposed {sProposedVersion} otherproposed "
                     + $"{this.otherMarshallerVersion} used {this.UsedMarshalVersion}");
             }
 
@@ -488,7 +488,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="request">Request to track</param>
         /// <returns>The request call</returns>
-        internal RequestCall LocalRequest(RequestDefinitions.IRingMasterRequest request)
+        internal static RequestCall LocalRequest(RequestDefinitions.IRingMasterRequest request)
         {
             return new RequestCall()
             {

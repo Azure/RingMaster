@@ -1,115 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{075626E6-030A-44EE-BF93-44F9FC7A552B}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Common</AssemblyName>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.ServiceModel" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Communication\ISessionState.cs" />
-    <Compile Include="Communication\IZooKeeperCommunicationProtocol.cs" />
-    <Compile Include="CreateMode.cs" />
-    <Compile Include="Communication\ICommunicationProtocol.cs" />
-    <Compile Include="Communication\IConnection.cs" />
-    <Compile Include="Communication\ITransport.cs" />
-    <Compile Include="Data\Acl.cs" />
-    <Compile Include="Data\AuthSchemes.cs" />
-    <Compile Include="Data\DelegateWatcher.cs" />
-    <Compile Include="Data\Id.cs" />
-    <Compile Include="Data\CachedKind.cs" />
-    <Compile Include="Data\IRingMasterClientCache.cs" />
-    <Compile Include="Data\IStat.cs" />
-    <Compile Include="Data\Op.cs" />
-    <Compile Include="Data\OpCode.cs" />
-    <Compile Include="Data\IOperationOverrides.cs" />
-    <Compile Include="Data\OperationOverrides.cs" />
-    <Compile Include="Data\ISetDataOperation.cs" />
-    <Compile Include="Data\ISetDataOperationHelper.cs" />
-    <Compile Include="Data\OpResult.cs" />
-    <Compile Include="Data\PathDecoration.cs" />
-    <Compile Include="Data\RingMasterException.cs" />
-    <Compile Include="Data\SetDataOperation.cs" />
-    <Compile Include="Data\SetDataOperationHelper.cs" />
-    <Compile Include="Data\Stat.cs" />
-    <Compile Include="Data\TreeNode.cs" />
-    <Compile Include="DeleteMode.cs" />
-    <Compile Include="IRingMasterRequestHandler.cs" />
-    <Compile Include="IRingMasterRequestHandlerOverlapped.cs" />
-    <Compile Include="QueuedWorkItemPool.cs" />
-    <Compile Include="IWatcher.cs" />
-    <Compile Include="MoveMode.cs" />
-    <Compile Include="PrefixedClientCache.cs" />
-    <Compile Include="Requests\AbstractRingMasterRequest.cs" />
-    <Compile Include="Requests\AbstractRingMasterCompoundRequest.cs" />
-    <Compile Include="Requests\IRingMasterRequest.cs" />
-    <Compile Include="Requests\ISessionAuth.cs" />
-    <Compile Include="Requests\IZooKeeperRequest.cs" />
-    <Compile Include="Requests\RedirectSuggested.cs" />
-    <Compile Include="Requests\RequestCall.cs" />
-    <Compile Include="Requests\RequestCheck.cs" />
-    <Compile Include="Requests\RequestCreate.cs" />
-    <Compile Include="Requests\RequestDelete.cs" />
-    <Compile Include="Requests\RequestExists.cs" />
-    <Compile Include="Requests\RequestGetAcl.cs" />
-    <Compile Include="Requests\RequestGetChildren.cs" />
-    <Compile Include="Requests\RequestGetData.cs" />
-    <Compile Include="Requests\RequestInit.cs" />
-    <Compile Include="Requests\RequestInternalRun.cs" />
-    <Compile Include="Requests\RequestBatch.cs" />
-    <Compile Include="Requests\RequestMove.cs" />
-    <Compile Include="Requests\RequestMulti.cs" />
-    <Compile Include="Requests\RequestResponse.cs" />
-    <Compile Include="Requests\RequestSetAcl.cs" />
-    <Compile Include="Requests\RequestSetAuth.cs" />
-    <Compile Include="Requests\RequestSetData.cs" />
-    <Compile Include="Requests\RequestSync.cs" />
-    <Compile Include="Requests\RingMasterRequestType.cs" />
-    <Compile Include="Requests\SessionAuth.cs" />
-    <Compile Include="Requests\WatcherCall.cs" />
-    <Compile Include="Requests\ProtocolRequestCall.cs" />
-    <Compile Include="Requests\ZooKeeperRequestType.cs" />
-    <Compile Include="RecursiveDeleter.cs" />
-    <Compile Include="RingMasterExtensions.cs" />
-    <Compile Include="RingMasterTimeStreamRequestHandler.cs" />
-    <Compile Include="WatchedEvent.cs" />
-    <Compile Include="CertificateRules\AllowIfAnyAllowedRule.cs" />
-    <Compile Include="CertificateRules\StandardValidationRuleSet.cs" />
-    <Compile Include="CertificateRules\AllowIfAllCoherentRule.cs" />
-    <Compile Include="CertificateRules\CertIdentities.cs" />
-    <Compile Include="CertificateRules\ICertificateRulesInstrumentation.cs" />
-    <Compile Include="CertificateRules\CertAccessor.cs" />
-    <Compile Include="CertificateRules\CertificateRulesEventSource.cs" />
-    <Compile Include="CertificateRules\CertificateRulesFlags.cs" />
-    <Compile Include="CertificateRules\CertificateValidator.cs" />
-    <Compile Include="CertificateRules\AbstractCertificateRule.cs" />
-    <Compile Include="CertificateRules\AllowIfAllAllowedRule.cs" />
-    <Compile Include="CertificateRules\AllowIfMaskRule.cs" />
-    <Compile Include="CertificateRules\ChainIsValidRule.cs" />
-    <Compile Include="CertificateRules\AllowCertSubjectRule.cs" />
-    <Compile Include="CertificateRules\BlackListThumbprintRule.cs" />
-    <Compile Include="CertificateRules\AllowCertificatesRule.cs" />
-    <Compile Include="CertificateRules\AzureValidationRule.cs" />
-    <Compile Include="CertificateRules\IsCertificateTimeValidRule.cs" />
-    <Compile Include="CertificateRules\NotExtraLongValidityTimeCertificateRule.cs" />
-    <Compile Include="CertificateRules\AllowSigningCertRule.cs" />
-    <Compile Include="CertificateRules\BreakGlassThumbprintRule.cs" />
-    <Compile Include="CertificateRules\BreakGlassCertificatesRule.cs" />
-    <Compile Include="WatcherKind.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
-  </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

@@ -6,9 +6,9 @@ namespace Microsoft.Vega.Performance
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration;
+    using System.Diagnostics;
+    using System.IO;
     using System.Linq;
-    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
     using Azure.Networking.Infrastructure.RingMaster;
@@ -19,7 +19,9 @@ namespace Microsoft.Vega.Performance
     using Azure.Networking.Infrastructure.RingMaster.Data;
     using Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using Azure.Networking.Infrastructure.RingMaster.Server;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Extensions.Configuration;
+    using Microsoft.Vega.Test.Helpers;
     using VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
@@ -82,14 +84,19 @@ namespace Microsoft.Vega.Performance
         /// Start the backend server
         /// </summary>
         /// <param name="context">Test context</param>
-        [AssemblyInitialize]
+        [ClassInitialize]
         public static void Setup(TestContext context)
         {
-            log = s => context.WriteLine(s);
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            IConfiguration appSettings = builder.Build();
+
+            Helpers.SetupTraceLog(Path.Combine(appSettings["LogFolder"], "VegaInMemoryPerf.LogPath"));
+            log = s => Trace.TraceInformation(s);
 
             // If a parameter is specified as follows:
             //      te.exe VegaInMemoryPerf.dll /p:ServerAddress=127.0.0.1:99
-            if (!context.Properties.Contains("ServerAddress"))
+            if (!context.Properties.ContainsKey("ServerAddress"))
             {
                 backendCore = CreateBackend();
                 backendServer = new RingMasterServer(protocol, null, CancellationToken.None);
@@ -118,15 +125,15 @@ namespace Microsoft.Vega.Performance
             }
 
             // Read the app settings
-            minPayloadSize = int.Parse(ConfigurationManager.AppSettings["MinPayloadSize"]);
-            maxPayloadSize = int.Parse(ConfigurationManager.AppSettings["MaxPayloadSize"]);
-            threadCount = int.Parse(ConfigurationManager.AppSettings["ThreadCount"]);
+            minPayloadSize = int.Parse(appSettings["MinPayloadSize"]);
+            maxPayloadSize = int.Parse(appSettings["MaxPayloadSize"]);
+            threadCount = int.Parse(appSettings["ThreadCount"]);
         }
 
         /// <summary>
         /// Cleanup the backend server
         /// </summary>
-        [AssemblyCleanup]
+        [ClassCleanup]
         public static void Cleanup()
         {
             if (serverTransport == null)
@@ -248,65 +255,315 @@ namespace Microsoft.Vega.Performance
         /// the first thread should not get inconsistant subtree.
         /// </summary>
         [TestMethod]
-        public async void TestGetFullSubtreeWhileUpdating()
+        public void TestGetFullSubtreeWhileUpdating()
         {
-            const int InitialNodeData = 1;
-            const int NewNodeData = 2;
-            const int ChildrenCount = 50000;
-            const string RootName = "Root";
+            TestAsync().GetAwaiter().GetResult();
 
-            using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+            async Task TestAsync()
             {
-                byte[] data = BitConverter.GetBytes(InitialNodeData);
-                await client.Create($"/{RootName}/node1", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
-                await client.Create($"/{RootName}/node2", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
-                await client.Create($"/{RootName}/node3", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                const int InitialNodeData = 1;
+                const int NewNodeData = 2;
+                const int ChildrenCount = 50000;
+                const string RootName = nameof(this.TestGetFullSubtreeWhileUpdating);
 
-                var ops = new List<Op>(ChildrenCount);
-                for (int count = 0; count < ChildrenCount; count++)
+                using (var client = new RingMasterClient(serverAddress, null, null, 100000))
                 {
-                    ops.Add(Op.Create($"/{RootName}/node2/{count}", data, null, CreateMode.PersistentAllowPathCreation));
-                }
+                    byte[] data = BitConverter.GetBytes(InitialNodeData);
+                    await client.Create($"/{RootName}/node1", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                    await client.Create($"/{RootName}/node2", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+                    await client.Create($"/{RootName}/node3", data, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
 
-                await client.Batch(ops).ConfigureAwait(false);
-            }
+                    var ops = new List<Op>(ChildrenCount);
+                    for (int count = 0; count < ChildrenCount; count++)
+                    {
+                        ops.Add(Op.Create($"/{RootName}/node2/{count}", data, null, CreateMode.PersistentAllowPathCreation));
+                    }
 
-            ManualResetEvent manualResetEvent = new ManualResetEvent(false);
-            Task<TreeNode> getSubtreeTask = new Task<TreeNode>(() =>
-            {
-                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
-                {
-                    return client.GetFullSubtree($"/{RootName}").Result;
-                }
-            });
-
-            Task updateDataTask = Task.Run(async () =>
-            {
-                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
-                {
-                    var ops = new List<Op>(2);
-                    byte[] newData = BitConverter.GetBytes(NewNodeData);
-
-                    ops.Add(Op.SetData($"/{RootName}/node1", newData, -1));
-                    ops.Add(Op.SetData($"/{RootName}/node3", newData, -1));
-
-                    manualResetEvent.WaitOne();
-
-                    // this is to make sure the set data occurs after get full substree started.
-                    Thread.Sleep(20);
                     await client.Batch(ops).ConfigureAwait(false);
                 }
-            });
 
-            getSubtreeTask.Start();
-            manualResetEvent.Set();
+                ManualResetEvent manualResetEvent = new ManualResetEvent(false);
+                Task<TreeNode> getSubtreeTask = new Task<TreeNode>(() =>
+                {
+                    using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                    {
+                        return client.GetFullSubtree($"/{RootName}").Result;
+                    }
+                });
 
-            await Task.WhenAll(getSubtreeTask, updateDataTask);
-            var tree = getSubtreeTask.Result;
-            int node1Data = BitConverter.ToInt32(tree.Children[0].Data, 0);
-            int node3Data = BitConverter.ToInt32(tree.Children[2].Data, 0);
+                Task updateDataTask = Task.Run(async () =>
+                {
+                    using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                    {
+                        var ops = new List<Op>(2);
+                        byte[] newData = BitConverter.GetBytes(NewNodeData);
 
-            Assert.IsTrue(node1Data >= node3Data);
+                        ops.Add(Op.SetData($"/{RootName}/node1", newData, -1));
+                        ops.Add(Op.SetData($"/{RootName}/node3", newData, -1));
+
+                        manualResetEvent.WaitOne();
+
+                        // this is to make sure the set data occurs after get full substree started.
+                        Thread.Sleep(20);
+                        await client.Batch(ops).ConfigureAwait(false);
+                    }
+                });
+
+                getSubtreeTask.Start();
+                manualResetEvent.Set();
+
+                await Task.WhenAll(getSubtreeTask, updateDataTask);
+                var tree = getSubtreeTask.Result;
+                int node1Data = BitConverter.ToInt32(tree.Children[0].Data, 0);
+                int node3Data = BitConverter.ToInt32(tree.Children[2].Data, 0);
+
+                Assert.IsTrue(node1Data >= node3Data);
+            }
+        }
+
+        /// <summary>
+        /// Tests the scenario that multiple threads
+        /// try to delete the same node at the same time.
+        /// Should not throw any exception.
+        /// </summary>
+        [TestMethod]
+        public void TestConcurrentDelete()
+        {
+            TestAsync().GetAwaiter().GetResult();
+
+            async Task TestAsync()
+            {
+                const int ChildrenCount = 1000;
+                const string RootName = nameof(this.TestConcurrentDelete);
+                const int threadCount = 64;
+
+                using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                {
+                    await client.Create($"/{RootName}", null, null, CreateMode.PersistentAllowPathCreation).ConfigureAwait(false);
+
+                    var ops = new List<Op>(ChildrenCount);
+                    for (int count = 0; count < ChildrenCount; count++)
+                    {
+                        ops.Add(Op.Create($"/{RootName}/{count}", null, null, CreateMode.PersistentAllowPathCreation));
+                    }
+
+                    await client.Batch(ops).ConfigureAwait(false);
+                }
+
+                for (int i = 0; i < threadCount; i++)
+                {
+                    var deleteChildTask = this.DeleteChild(RootName, ChildrenCount);
+                    var deleteParent = Task.Run(async () =>
+                    {
+                        using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+                        {
+                            await client.Delete($"/{RootName}", -1, DeleteMode.None);
+                        }
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if conflicting write and read requests on the same node cause any race condition. Exists and
+        /// SortedArrayList used to be broken with sporadic exceptions.
+        /// </summary>
+        [TestMethod]
+        public void TestConflictingCreateDeleteExists()
+        {
+            TestConflictingCreateDeleteExistsAsync().GetAwaiter().GetResult();
+
+            async Task TestConflictingCreateDeleteExistsAsync()
+            {
+                const string path = "/$rmbvt/test";
+                var stop = false;
+                var taskW = Task.Run(async () =>
+                {
+                    while (!stop)
+                    {
+                        try
+                        {
+                            using (var rm = new RingMasterClient(serverAddress, null, null, 10000))
+                            {
+                                while (!stop)
+                                {
+                                    await rm.Create(path, null, null, CreateMode.PersistentAllowPathCreation | CreateMode.SuccessEvenIfNodeExistsFlag);
+                                    await rm.Delete(path, -1, DeleteMode.SuccessEvenIfNodeDoesntExist);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            var rmException = ex as RingMasterException;
+                            if (rmException != null && rmException.ErrorCode == RingMasterException.Code.Operationtimeout)
+                            {
+                                // Do thing. Continue test.
+                            }
+                            else
+                            {
+                                stop = true;
+                                throw;
+                            }
+                        }
+                    }
+                });
+
+                var taskR = Task.Run(async () =>
+                {
+                    while (!stop)
+                    {
+                        try
+                        {
+                            using (var rm = new RingMasterClient(serverAddress, null, null, 10000))
+                            {
+                                while (!stop)
+                                {
+                                    await Task.WhenAll(
+                                        rm.Exists(path, null, true));
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            var rmException = ex as RingMasterException;
+                            if (rmException != null && rmException.ErrorCode == RingMasterException.Code.Operationtimeout)
+                            {
+                                // Do thing. Continue test.
+                            }
+                            else
+                            {
+                                stop = true;
+                                throw;
+                            }
+                        }
+                    }
+                });
+
+                var clock = Stopwatch.StartNew();
+                SpinWait.SpinUntil(() => clock.Elapsed.TotalSeconds >= 3600 || stop);
+
+                stop = true;
+                await Task.WhenAll(taskW, taskR).ContinueWith(t => log(t.Exception?.ToString()));
+            }
+        }
+
+        /// <summary>
+        /// This test verifies that the number of children remains the same after failed Multi.
+        /// </summary>
+        [TestMethod]
+        public void TestWrongChildrenCountAfterFailedMulti()
+        {
+            TestWrongNumChildrenInStastAsync().GetAwaiter().GetResult();
+
+            async Task TestWrongNumChildrenInStastAsync()
+            {
+                const string path = "/$rmbvt/test";
+                var stop = false;
+
+                // Create a parent node with 3 children. During the test, the number of children is not expected
+                // to change.
+                using (var rm = new RingMasterClient(serverAddress, null, null, 10000))
+                {
+                    var ops = new List<Op>
+                    {
+                        Op.Create($"{path}/parent/child1", null, null, CreateMode.PersistentAllowPathCreation),
+                        Op.Create($"{path}/parent/child2", null, null, CreateMode.PersistentAllowPathCreation),
+                        Op.Create($"{path}/parent/child3", null, null, CreateMode.PersistentAllowPathCreation),
+                    };
+
+                    await rm.Multi(ops);
+                }
+
+                // Start multiple threads to stress the backend
+                var tasks = Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
+                {
+                    using (var rm = new RingMasterClient(serverAddress, null, null, 10000))
+                    {
+                        var ops = new List<Op>();
+
+                        while (!stop)
+                        {
+                            // Randomly add or delete children in Multi
+                            ops.Clear();
+                            ops.AddRange(
+                                Enumerable.Range(1, 3).Select(
+                                    x => Op.Delete($"{path}/parent/child{x}", -1, false)));
+
+                            // Add one more operation to fail the multi, so nothing get committed, in other words the
+                            // locklist will always abort.
+                            ops.Add(Op.GetData(
+                                    $"{path}/parent/nonexisting/node",
+                                    Azure.Networking.Infrastructure.RingMaster.Requests.RequestGetData.GetDataOptions.None,
+                                    null));
+                            var result = (await rm.Multi(ops)).Last();
+                            Assert.AreEqual(OpCode.Error, result.ResultType);
+                            Assert.AreEqual(RingMasterException.Code.Nonode, result.ErrCode);
+
+                            var children = await rm.GetChildren($"{path}/parent", null);
+                            var stat = await rm.Exists($"{path}/parent", null);
+
+                            Assert.AreEqual(
+                                children.Count,
+                                stat.NumChildren,
+                                $"Children count {children.Count} should be consistent with Stat {stat.NumChildren}");
+                            Assert.AreEqual(
+                                3,
+                                stat.NumChildren,
+                                "Number of children returned by Exists should not change");
+                        }
+                    }
+                })).ToArray();
+
+                var clock = Stopwatch.StartNew();
+                while (clock.Elapsed.TotalMinutes < 60)
+                {
+                    await Task.Delay(1000);
+                    if (tasks.Any(t => t.IsCompleted))
+                    {
+                        break;
+                    }
+                }
+
+                stop = true;
+                await Task.WhenAll(tasks);
+            }
+        }
+
+        /// <summary>
+        /// This test verifies that the requests in multi will return proper response
+        /// </summary>
+        [TestMethod]
+        public void TestRequestInMultiReturnCorrectly()
+        {
+            TestRequestInMultiReturnCorrectlyAsync().GetAwaiter().GetResult();
+
+            async Task TestRequestInMultiReturnCorrectlyAsync()
+            {
+                const string RootName = nameof(this.TestRequestInMultiReturnCorrectly);
+                using (var rm = new RingMasterClient(serverAddress, null, null, 10000))
+                {
+                    await rm.Create($"/{RootName}/child1", null, null, CreateMode.PersistentAllowPathCreation);
+                    await rm.Create($"/{RootName}/child2", null, null, CreateMode.PersistentAllowPathCreation);
+                    await rm.Create($"/{RootName}/child3", null, null, CreateMode.PersistentAllowPathCreation);
+
+                    var ops = new List<Op>
+                    {
+                        Op.Check($"/{RootName}", -1),
+                        Op.GetChildren($"/{RootName}"),
+                    };
+
+                    var multiResult = await rm.Multi(ops);
+                    Assert.AreEqual(multiResult.Count, ops.Count);
+
+                    var checkResult = multiResult[0] as OpResult.CheckResult;
+                    var getChildrenResult = multiResult[1] as OpResult.GetChildrenResult;
+
+                    Assert.AreEqual(3, checkResult.Stat.NumChildren);
+                    Assert.AreEqual(RingMasterException.Code.Ok, getChildrenResult.ErrCode);
+                    Assert.AreEqual(3, getChildrenResult.Children.Count);
+                    Assert.AreEqual(3, getChildrenResult.Stat.NumChildren);
+                }
+            }
         }
 
         /// <summary>
@@ -333,7 +590,7 @@ namespace Microsoft.Vega.Performance
                 backend = new RingMasterBackendCore(inMemoryFactory);
 
                 backend.StartService = (p1, p2) => { backendStarted.Set(); };
-                backend.Start();
+                backend.Start(CancellationToken.None);
                 backend.OnBecomePrimary();
 
                 Assert.IsTrue(backendStarted.Wait(30000));
@@ -346,6 +603,18 @@ namespace Microsoft.Vega.Performance
                 if (backend != null)
                 {
                     backend.Dispose();
+                }
+            }
+        }
+
+        private async Task DeleteChild(string root, int childCount)
+        {
+            using (var client = new RingMasterClient(serverAddress, null, null, 10000))
+            {
+                for (int count = 0; count < childCount; count++)
+                {
+                    var path = $"/{root}/{count}";
+                    await client.Delete(path, -1, DeleteMode.SuccessEvenIfNodeDoesntExist);
                 }
             }
         }

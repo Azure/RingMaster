@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="HelperTypes\HelperTypes.csproj" />
-    <ProjectReference Include="Common\RingMasterBackendCommon.csproj" />
-    <ProjectReference Include="Core\RingMasterBackendCore.csproj" />
-    <ProjectReference Include="Core\unittest\RingMasterBackendCoreUnitTest.csproj" />
-    <ProjectReference Include="Core\stress\RingMasterBackendCoreStress.csproj" />
-    <ProjectReference Include="Native\dirs.proj" />
-    <ProjectReference Include="Instrumentation\RingMasterBackendInstrumentation.csproj" />
-    <ProjectReference Include="HelperTypes\unittest\HelperTypesUnitTest.csproj" />
+    <ProjectFile Include="Common\RingMasterBackendCommon.csproj" />
+    <ProjectFile Include="Core\dirs.proj" />
+    <ProjectFile Include="HelperTypes\dirs.proj" />
+    <ProjectFile Include="Instrumentation\RingMasterBackendInstrumentation.csproj" />
+    <ProjectFile Include="Native\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

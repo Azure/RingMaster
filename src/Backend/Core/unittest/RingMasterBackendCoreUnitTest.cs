@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 {
     using System.Diagnostics;
     using System.Threading;
-    using FluentAssertions;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using VisualStudio.TestTools.UnitTesting;
@@ -23,6 +22,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         protected RingMasterBackendCoreUnitTest()
         {
             this.backend = CreateBackend(null);
+        }
+
+        /// <summary>
+        /// Creates a new backend with an in-memory store
+        /// </summary>
+        /// <param name="auditConsumer">Interface to an object that can consume audit events</param>
+        /// <returns>Backend instance</returns>
+        protected static RingMasterBackendCore CreateBackend(IRingMasterAudit auditConsumer)
+        {
+            var backendStarted = new ManualResetEventSlim();
+            Trace.TraceInformation("RingMasterBackendCoreUnitTest.CreateBackend");
+
+            RingMasterBackendCore.GetSettingFunction = GetSetting;
+            var backend = new RingMasterBackendCore(new InMemoryFactory(), auditConsumer);
+
+            backend.StartService = (p1, p2) => { backendStarted.Set(); };
+            backend.Start(CancellationToken.None);
+            backend.OnBecomePrimary();
+            backendStarted.Wait(30000).Should().BeTrue();
+            Trace.TraceInformation("RingMasterBackendCoreUnitTest.BackendStarted");
+            return backend;
         }
 
         protected IRingMasterRequestHandler ConnectToRingMaster()
@@ -54,27 +74,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
             this.ps.Stop();
             this.ps = null;
-        }
-
-        /// <summary>
-        /// Creates a new backend with an in-memory store
-        /// </summary>
-        /// <param name="auditConsumer">Interface to an object that can consume audit events</param>
-        /// <returns>Backend instance</returns>
-        private static RingMasterBackendCore CreateBackend(IRingMasterAudit auditConsumer)
-        {
-            var backendStarted = new ManualResetEventSlim();
-            Trace.TraceInformation("RingMasterBackendCoreUnitTest.CreateBackend");
-
-            RingMasterBackendCore.GetSettingFunction = GetSetting;
-            var backend = new RingMasterBackendCore(new InMemoryFactory(), auditConsumer);
-
-            backend.StartService = (p1, p2) => { backendStarted.Set(); };
-            backend.Start();
-            backend.OnBecomePrimary();
-            backendStarted.Wait(30000).Should().BeTrue();
-            Trace.TraceInformation("RingMasterBackendCoreUnitTest.BackendStarted");
-            return backend;
         }
 
         private static string GetSetting(string settingName)

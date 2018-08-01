@@ -241,5 +241,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         {
             return new Op(OpCode.GetChildren, new RequestGetChildren(path, null, retrievalCondition));
         }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="Op"/> class that represents an Exists operation.
+        /// </summary>
+        /// <param name="path">Path to the node to get stats for.</param>
+        /// <returns>An Exists operation.</returns>
+        public static Op Exists(string path)
+        {
+            return new Op(OpCode.Exists, new RequestExists(path, null));
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="Op"/> class that represents a Sync operation.
+        /// </summary>
+        /// <param name="path">Path to sync.</param>
+        /// <returns>A Sync operation.</returns>
+        public static Op Sync(string path)
+        {
+            return new Op(OpCode.Sync, new RequestSync(path));
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="Op"/> class that represents a GetSubtree operation.
+        /// </summary>
+        /// <param name="path">Path to get the subtree of.</param>
+        /// <param name="retrievalCondition">Request retreival condition.</param>
+        /// <param name="options">Request options.</param>
+        /// <returns>A GetSubtree operation.</returns>
+        public static Op GetSubtree(string path, string retrievalCondition, RequestGetSubtree.GetSubtreeOptions options)
+        {
+            return new Op(OpCode.GetSubtree, new RequestGetSubtree(path, retrievalCondition, options));
+        }
     }
 }

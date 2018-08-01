@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
     {
         private const int DefaultMaxNodeDataLength = 1024;
         private const string ServiceEndpointName = "ServiceEndpoint";
-        private static readonly Uri RingMasterServiceUri = new Uri("fabric:/RingMaster/RingMasterService");
+        private readonly Uri ringMasterServiceUri;
 
         private readonly IMetric1D ringMasterWatchdogTestSucceeded;
 
@@ -41,9 +41,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
                 throw new ArgumentNullException(nameof(metricsFactory));
             }
 
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
             System.Diagnostics.Contracts.Contract.EndContractBlock();
 
             this.ringMasterWatchdogTestSucceeded = metricsFactory.Create1D(nameof(this.ringMasterWatchdogTestSucceeded), "testName");
+            this.ringMasterServiceUri = new Uri($"{context.CodePackageActivationContext.ApplicationName}/RingMasterService");
         }
 
         /// <inheritdoc />
@@ -61,15 +67,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
                 string instanceRootPath = $"/$watchdogs/RingMasterWatchdog/{this.Context.ReplicaOrInstanceId}";
 
                 long iteration = 0;
+                int retryCount = 0;
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        using (var ringMaster = await RingMasterWatchdog.ConnectToRingMaster(iteration, cancellationToken))
+                        using (var ringMaster = await this.ConnectToRingMaster(iteration, cancellationToken))
                         {
                             if (ringMaster != null && await this.TestRingMasterFunctionality(ringMaster, instanceRootPath, iteration))
                             {
+                                retryCount = 0;
                                 this.ringMasterWatchdogTestSucceeded.LogValue(1, "RingMasterFunctionality");
+                            }
+                            else if (ringMaster == null)
+                            {
+                                retryCount++;
+                                if (retryCount >= 10)
+                                {
+                                    throw new FabricTransientException($"could not connect to RingMaster in {retryCount} consecutive retries.");
+                                }
                             }
                         }
                     }
@@ -93,13 +109,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
             }
         }
 
-        private static async Task<IRingMasterRequestHandler> ConnectToRingMaster(long iteration, CancellationToken cancellationToken)
+        private async Task<IRingMasterRequestHandler> ConnectToRingMaster(long iteration, CancellationToken cancellationToken)
         {
             using (var serviceDiscovery = new ServiceDiscovery())
             {
-                IReadOnlyList<Uri> endpoints = await serviceDiscovery.GetServiceEndpoints(RingMasterServiceUri, ServiceEndpointName);
+                IReadOnlyList<Uri> endpoints = await serviceDiscovery.GetServiceEndpoints(this.ringMasterServiceUri, ServiceEndpointName);
 
-                if (endpoints.Count == 0)
+                if (endpoints.Count == 0 || string.IsNullOrEmpty(endpoints[0].Host) || endpoints[0].Port <= 0)
                 {
                     return null;
                 }

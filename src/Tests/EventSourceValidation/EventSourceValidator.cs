@@ -94,8 +94,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
             var eventNames = new HashSet<string>();
             foreach (var method in methods)
             {
-                var attribute = CustomAttributeData.GetCustomAttributes(method)
-                    .FirstOrDefault(a => a.AttributeType.Name == "EventAttribute");
+                var attribute = method.GetCustomAttribute<EventAttribute>();
                 if (attribute != null)
                 {
                     if (eventNames.Contains(method.Name))
@@ -124,22 +123,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
             var eventIds = new HashSet<int>();
             foreach (var method in methods)
             {
-                var attribute = CustomAttributeData.GetCustomAttributes(method)
-                    .FirstOrDefault(a => a.AttributeType.Name == "EventAttribute");
+                var attribute = method.GetCustomAttribute<EventAttribute>();
                 if (attribute != null)
                 {
-                    var eventId = (int)attribute.ConstructorArguments.FirstOrDefault().Value;
-
-                    this.TestContext.WriteLine($"  Checking {eventId} {method.Name}");
-
-                    if (eventIds.Contains(eventId))
+                    if (eventIds.Contains(attribute.EventId))
                     {
-                        this.TestContext.WriteLine($"{eventSourceType.FullName} has duplicate event id {eventId}");
+                        this.TestContext.WriteLine($"{eventSourceType.FullName} has duplicate event id {attribute.EventId}");
                         return false;
                     }
                     else
                     {
-                        eventIds.Add(eventId);
+                        eventIds.Add(attribute.EventId);
                     }
                 }
             }
@@ -156,23 +150,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValida
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             var assemblyFiles = Directory.GetFiles(path, $"{RingMasterAssemblyPrefix}*.dll").ToList();
-            assemblyFiles.AddRange(Directory.GetFiles(path, $"{RingMasterAssemblyPrefix}*.exe"));
 
-            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += (sender, args) =>
-            {
-                this.TestContext.WriteLine($"  Loading {args.Name}");
-                try
-                {
-                    return Assembly.ReflectionOnlyLoad(args.Name);
-                }
-                catch (Exception)
-                {
-                    var name = Path.Combine(path, args.Name.Split(',')[0] + ".dll");
-                    return Assembly.ReflectionOnlyLoadFrom(name);
-                }
-            };
-
-            return assemblyFiles.Select(Assembly.ReflectionOnlyLoadFrom);
+            // Do not add exe, it's bootstrap program
+            // assemblyFiles.AddRange(Directory.GetFiles(path, $"{RingMasterAssemblyPrefix}*.exe"));
+            return assemblyFiles.Select(Assembly.LoadFile);
         }
     }
 }

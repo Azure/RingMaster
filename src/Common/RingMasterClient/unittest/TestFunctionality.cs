@@ -117,7 +117,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// </summary>
         [TestMethod]
         [Timeout(30000)]
-        [Ignore]
         public void TestGetChildrenRetrievalConditions()
         {
             this.functionalityTest.TestGetChildrenRetrievalConditions().Wait();
@@ -140,7 +139,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// </summary>
         [TestMethod]
         [Timeout(30000)]
-        [Ignore]
         public void TestGetFullSubtreeData()
         {
             this.functionalityTest.TestGetFullSubtreeData().Wait();
@@ -210,6 +208,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         public void TestMulti()
         {
             this.functionalityTest.TestMulti().Wait();
+        }
+
+        /// <summary>
+        /// Verifies that lock collision is handled
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetLockCollisionInMulti()
+        {
+            this.functionalityTest.GetLockCollisionInMulti().Wait();
         }
     }
 }

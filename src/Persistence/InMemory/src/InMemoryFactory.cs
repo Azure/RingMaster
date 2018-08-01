@@ -43,7 +43,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
         /// <param name="instrumentation">Instrumentation object</param>
         /// <param name="cancellationToken">Cancellation token</param>
         public InMemoryFactory(bool isPrimary, IPersistenceInstrumentation instrumentation, CancellationToken cancellationToken)
-            : base("InMemory", instrumentation, cancellationToken)
+            : base("InMemory", instrumentation, cancellationToken, needFixStatDuringLoad: false)
         {
             this.RequiresCallsForEachDelete = true;
             this.isPrimary = isPrimary;
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
 
                 for (ulong i = 0; i < itemCount; i++)
                 {
-                    PersistedData data = new PersistedData(0, this);
+                    PersistedData data = new PersistedData(0);
                     data.ReadFrom(binaryReader);
                     yield return data;
                 }
@@ -124,7 +124,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
         }
 
         /// <inheritdoc />
-        protected override async Task StartLoadingData()
+        protected override async Task StartLoadingData(CancellationToken cancellation)
         {
             if (this.LoadState != null)
             {
@@ -303,7 +303,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
                         memoryStream = null;
 
                         ChangeList.ChangeType changeType = (ChangeList.ChangeType)binaryReader.ReadInt32();
-                        PersistedData data = new PersistedData(0, factory);
+                        PersistedData data = new PersistedData(0);
                         data.ReadFrom(binaryReader);
 
                         return new ChangeList.Change(changeType, data);

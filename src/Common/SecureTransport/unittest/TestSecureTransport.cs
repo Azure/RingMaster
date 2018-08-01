@@ -48,6 +48,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
 
         [TestMethod]
         [Timeout(30000)]
+        public void TestParseConnectionStringSingleHostAddress()
+        {
+            IPEndPoint[] endpoints = SecureTransport.ParseConnectionString("localhost:99");
+            Assert.AreEqual(1, endpoints.Length);
+            Assert.IsTrue(endpoints[0].Address.Equals(IPAddress.Loopback) || endpoints[0].Address.Equals(IPAddress.IPv6Loopback));
+            Assert.AreEqual(99, endpoints[0].Port);
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
         public void TestParseConnectionStringMultipleEndpoints()
         {
             IPEndPoint[] endpoints = SecureTransport.ParseConnectionString("127.0.0.1:99,10.11.12.13:990,8.8.8.8:8");
@@ -244,20 +254,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             var connectionEstablished = new ManualResetEventSlim();
             var connectionLost = new ManualResetEventSlim();
 
-            using (var serverTransport = CreateTransport())
+            SecureTransport serverTransport = null;
+            SecureTransport clientTransport = null;
+
+            try
             {
+                serverTransport = CreateTransport();
                 serverTransport.StartServer(this.serverListenPort);
                 serverTransport.OnNewConnection = _ => connectionEstablished.Set();
                 serverTransport.OnConnectionLost = () => connectionLost.Set();
 
-                using (var clientTransport = CreateTransport())
+                clientTransport = CreateTransport();
+                clientTransport.StartClient(this.clientEndPoints);
+                connectionEstablished.Wait();
+            }
+            finally
+            {
+                try
                 {
-                    clientTransport.StartClient(this.clientEndPoints);
-                    connectionEstablished.Wait();
+                    serverTransport.Dispose();
+                    Assert.IsTrue(connectionLost.Wait(5000));
+                }
+                finally
+                {
+                    clientTransport?.Dispose();
                 }
             }
-
-            connectionLost.Wait();
         }
 
         [TestMethod]
@@ -269,29 +291,46 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             var connection2Established = new ManualResetEventSlim();
             var connection2Lost = new ManualResetEventSlim();
 
-            using (var serverTransport = CreateTransport())
+            var port = GetAvailablePort(10000);
+            var clientEndpoint = SecureTransport.ParseConnectionString($"127.0.0.1:{port}");
+
+            SecureTransport serverTransport = null;
+            SecureTransport clientTransport1 = null;
+            SecureTransport clientTransport2 = null;
+
+            try
             {
-                serverTransport.StartServer(this.serverListenPort);
+                serverTransport = CreateTransport();
+                serverTransport.StartServer(port);
 
-                using (var clientTransport1 = CreateTransport())
+                clientTransport1 = CreateTransport();
+
+                serverTransport.OnNewConnection = _ => connection1Established.Set();
+                clientTransport1.OnConnectionLost = () => connection1Lost.Set();
+                clientTransport1.StartClient(clientEndpoint);
+                connection1Established.Wait();
+
+                clientTransport2 = CreateTransport();
+
+                serverTransport.OnNewConnection = _ => connection2Established.Set();
+                clientTransport2.OnConnectionLost = () => connection2Lost.Set();
+                clientTransport2.StartClient(clientEndpoint);
+                connection2Established.Wait();
+            }
+            finally
+            {
+                try
                 {
-                    serverTransport.OnNewConnection = _ => connection1Established.Set();
-                    clientTransport1.OnConnectionLost = () => connection1Lost.Set();
-                    clientTransport1.StartClient(this.clientEndPoints);
-                    connection1Established.Wait();
-
-                    using (var clientTransport2 = CreateTransport())
-                    {
-                        serverTransport.OnNewConnection = _ => connection2Established.Set();
-                        clientTransport2.OnConnectionLost = () => connection2Lost.Set();
-                        clientTransport2.StartClient(this.clientEndPoints);
-                        connection2Established.Wait();
-                    }
+                    serverTransport.Dispose();
+                    Assert.IsTrue(connection1Lost.Wait(5000));
+                    Assert.IsTrue(connection2Lost.Wait(5000));
+                }
+                finally
+                {
+                    clientTransport1?.Dispose();
+                    clientTransport2?.Dispose();
                 }
             }
-
-            connection1Lost.Wait();
-            connection2Lost.Wait();
         }
 
         [TestMethod]
@@ -471,21 +510,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             var connectionEstablished = new ManualResetEventSlim();
             var connectionLost = new ManualResetEventSlim();
 
-            using (var serverTransport = CreateTransport())
+            SecureTransport serverTransport = null;
+            SecureTransport clientTransport = null;
+
+            try
             {
+                serverTransport = CreateTransport();
                 serverTransport.StartServer(this.serverListenPort);
 
-                using (var clientTransport = CreateTransport())
-                {
-                    clientTransport.OnNewConnection = _ => connectionEstablished.Set();
-                    clientTransport.OnConnectionLost = () => connectionLost.Set();
+                clientTransport = CreateTransport();
+                clientTransport.OnNewConnection = _ => connectionEstablished.Set();
+                clientTransport.OnConnectionLost = () => connectionLost.Set();
 
-                    clientTransport.StartClient(this.clientEndPoints);
-                    connectionEstablished.Wait();
+                clientTransport.StartClient(this.clientEndPoints);
+                connectionEstablished.Wait();
+            }
+            finally
+            {
+                try
+                {
+                    serverTransport.Dispose();
+                    Assert.IsTrue(connectionLost.Wait(5000));
+                }
+                finally
+                {
+                    clientTransport?.Dispose();
                 }
             }
-
-            connectionLost.Wait();
         }
 
         [TestMethod]
@@ -495,32 +546,44 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             var connectionEstablished = new ManualResetEventSlim();
             var connectionLost = new ManualResetEventSlim();
 
-            using (var serverTransport = CreateTransport())
+            SecureTransport serverTransport = null;
+            SecureTransport clientTransport = null;
+
+            try
             {
+                serverTransport = CreateTransport();
                 serverTransport.StartServer(this.serverListenPort);
 
-                using (var clientTransport = CreateTransport())
+                clientTransport = CreateTransport();
+                clientTransport.OnNewConnection = _ => connectionEstablished.Set();
+                clientTransport.OnConnectionLost = () => connectionLost.Set();
+
+                clientTransport.StartClient(this.clientEndPoints);
+                connectionEstablished.Wait();
+
+                // Now stop the server to break the established connection
+                serverTransport.Stop();
+                connectionLost.Wait();
+
+                connectionEstablished.Reset();
+                connectionLost.Reset();
+
+                // Restart the server and verify that the client automatically connects to it
+                serverTransport.StartServer(this.serverListenPort);
+                connectionEstablished.Wait();
+            }
+            finally
+            {
+                try
                 {
-                    clientTransport.OnNewConnection = _ => connectionEstablished.Set();
-                    clientTransport.OnConnectionLost = () => connectionLost.Set();
-
-                    clientTransport.StartClient(this.clientEndPoints);
-                    connectionEstablished.Wait();
-
-                    // Now stop the server to break the established connection
-                    serverTransport.Stop();
-                    connectionLost.Wait();
-
-                    connectionEstablished.Reset();
-                    connectionLost.Reset();
-
-                    // Restart the server and verify that the client automatically connects to it
-                    serverTransport.StartServer(this.serverListenPort);
-                    connectionEstablished.Wait();
+                    serverTransport.Dispose();
+                    Assert.IsTrue(connectionLost.Wait(5000));
+                }
+                finally
+                {
+                    clientTransport?.Dispose();
                 }
             }
-
-            connectionLost.Wait();
         }
 
         [TestMethod]
@@ -534,35 +597,46 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             int server2ListenPort = GetAvailablePort(server1ListenPort + 1);
             IPEndPoint[] clientEndPoints = SecureTransport.ParseConnectionString(string.Format("127.0.0.1:{0},127.0.0.1:{1}", server1ListenPort, server2ListenPort));
 
-            using (var serverTransport1 = CreateTransport())
+            SecureTransport serverTransport1 = null;
+            SecureTransport clientTransport = null;
+            try
             {
+                serverTransport1 = CreateTransport();
                 serverTransport1.StartServer(server1ListenPort);
 
-                using (var clientTransport = CreateTransport())
+                clientTransport = CreateTransport();
+                clientTransport.OnNewConnection = _ => connectionEstablished.Set();
+                clientTransport.OnConnectionLost = () => connectionLost.Set();
+
+                clientTransport.StartClient(clientEndPoints);
+                connectionEstablished.Wait();
+
+                // Now stop the server to break the established connection
+                serverTransport1.Stop();
+                connectionLost.Wait();
+
+                connectionEstablished.Reset();
+                connectionLost.Reset();
+
+                using (var serverTransport2 = CreateTransport())
                 {
-                    clientTransport.OnNewConnection = _ => connectionEstablished.Set();
-                    clientTransport.OnConnectionLost = () => connectionLost.Set();
-
-                    clientTransport.StartClient(clientEndPoints);
+                    // Start a new server at a different port and verify that the client automatically connects to it
+                    serverTransport2.StartServer(server2ListenPort);
                     connectionEstablished.Wait();
-
-                    // Now stop the server to break the established connection
-                    serverTransport1.Stop();
-                    connectionLost.Wait();
-
-                    connectionEstablished.Reset();
-                    connectionLost.Reset();
-
-                    using (var serverTransport2 = CreateTransport())
-                    {
-                        // Start a new server at a different port and verify that the client automatically connects to it
-                        serverTransport2.StartServer(server2ListenPort);
-                        connectionEstablished.Wait();
-                    }
                 }
             }
-
-            connectionLost.Wait();
+            finally
+            {
+                try
+                {
+                    serverTransport1.Dispose();
+                    Assert.IsTrue(connectionLost.Wait(5000));
+                }
+                finally
+                {
+                    clientTransport?.Dispose();
+                }
+            }
         }
 
         [TestMethod]

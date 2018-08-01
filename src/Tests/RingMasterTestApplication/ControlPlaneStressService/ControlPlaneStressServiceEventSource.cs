@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ControlPlaneStressService
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -14,6 +13,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ControlPlaneStres
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class ControlPlaneStressServiceEventSource : EventSource
     {
+        static ControlPlaneStressServiceEventSource()
+        {
+        }
+
+        private ControlPlaneStressServiceEventSource()
+        {
+        }
+
         public static ControlPlaneStressServiceEventSource Log { get; } = new ControlPlaneStressServiceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]

@@ -10,6 +10,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
     using System.IO;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// Base class for RingMasterBVT tests.
@@ -47,10 +48,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
             if (Environment.GetEnvironmentVariable("TestEnvironment") == "QTEST")
             {
                 backendProcess = new Process();
-                backendProcess.StartInfo.FileName = Path.Combine(
+                backendProcess.StartInfo.FileName = "dotnet";
+
+                string backendProcessPath = Path.Combine(
                     Environment.CurrentDirectory,
-                    @"backendtool\Microsoft.RingMaster.RingMasterBackendTool.exe");
-                backendProcess.StartInfo.Arguments = "99";
+                    "backendtool",
+                    "Microsoft.RingMaster.RingMasterBackendTool.dll");
+
+                backendProcess.StartInfo.Arguments = backendProcessPath + " 2099";
                 backendProcess.StartInfo.RedirectStandardOutput = false;
                 backendProcess.StartInfo.UseShellExecute = true;
                 backendProcess.StartInfo.CreateNoWindow = false;
@@ -74,15 +79,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         [TestInitialize]
         public void SetupTest()
         {
-            this.ringMasterAddress = ConfigurationManager.AppSettings["RingMasterAddress"];
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            IConfiguration appSettings = builder.Build();
+
+            this.ringMasterAddress = appSettings["RingMasterAddress"];
 
             this.clientCertificateThumbprints = null;
             this.serverCertificateThumbprints = null;
 
-            if (bool.Parse(ConfigurationManager.AppSettings["SSL.UseSSL"]))
+            if (bool.Parse(appSettings["SSL.UseSSL"]))
             {
-                this.clientCertificateThumbprints = ConfigurationManager.AppSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
-                this.serverCertificateThumbprints = ConfigurationManager.AppSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
+                this.clientCertificateThumbprints = appSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
+                this.serverCertificateThumbprints = appSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
             }
         }
 
@@ -104,7 +113,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// <returns>A <see cref="RingMasterClient"/> object that represents the connection.</returns>
         protected virtual RingMasterClient ConnectToRingMaster(IWatcher watcher)
         {
-            RingMasterClient rm = new RingMasterClient(this.ringMasterAddress, this.clientCertificateThumbprints, this.serverCertificateThumbprints, 15000, watcher);
+            RingMasterClient rm = new RingMasterClient(this.ringMasterAddress, this.clientCertificateThumbprints, this.serverCertificateThumbprints, 40000, watcher);
 
             return rm;
         }

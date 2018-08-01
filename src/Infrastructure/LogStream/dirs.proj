@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include=".\src\LogStream.csproj" />
-    <ProjectReference Include=".\unittests\LogStreamUnitTest.csproj" />
+    <ProjectFile Include=".\src\LogStream.csproj" />
+    <ProjectFile Include=".\unittests\LogStreamUnitTest.csproj" />
   </ItemGroup>
-  <Import Project="$(MsBuildBinPath)\Microsoft.Common.Targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

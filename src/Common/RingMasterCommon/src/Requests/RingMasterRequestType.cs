@@ -100,5 +100,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// internal to the server only, executes an internal operation
         /// </summary>
         InternalRun,
+
+        /// <summary>
+        /// Retrieve the subtree of a node
+        /// </summary>
+        GetSubtree,
     }
 }

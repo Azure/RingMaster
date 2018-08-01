@@ -443,5 +443,57 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 this.StopPseudoNodes();
             }
         }
+
+        /// <summary>
+        /// Verifies that lock collision is handled
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetLockCollisionInMulti()
+        {
+            this.functionalityTest.GetLockCollisionInMulti().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeNoStats()
+        {
+            this.functionalityTest.TestGetSubtree(false).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStats()
+        {
+            this.functionalityTest.TestGetSubtree(true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeContinuationContainsNonExistentPath()
+        {
+            this.functionalityTest.TestGetSubtreeContinuationContainsNonExistentPath().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeContinuationPathEqualsNodePath()
+        {
+            this.functionalityTest.TestGetSubtreeContinuationPathEqualsNodePath().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeOfRoot()
+        {
+            this.functionalityTest.TestGetSubtreeOfRoot().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestExistsSyncGetSubtreeBatch()
+        {
+            this.functionalityTest.TestExistsSyncGetSubtreeBatch().Wait();
+        }
     }
 }

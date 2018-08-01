@@ -3,6 +3,8 @@
   <!-- This is used by the StateManager's replicator. -->
   <Section Name="ReplicatorConfig">
     <Parameter Name="ReplicatorEndpoint" Value="ReplicatorEndpoint" />
+    <Parameter Name="MaxPrimaryReplicationQueueSize" Value="1073741824" />
+    <Parameter Name="MaxSecondaryReplicationQueueSize" Value="1073741824" />
   </Section>
   <!-- This is used for securing StateManager's replication traffic. -->
   <Section Name="ReplicatorSecurityConfig" />

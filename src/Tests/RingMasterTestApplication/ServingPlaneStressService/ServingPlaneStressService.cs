@@ -5,7 +5,6 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServingPlaneStressService
 {
     using System;
-    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Fabric;
     using System.Fabric.Description;
@@ -16,6 +15,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServingPlaneStres
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.ServiceFabric.Services.Runtime;
+    using Microsoft.Vega.Test.Helpers;
 
     /// <summary>
     /// Service used to stress the Serving Plane of RingMaster.
@@ -39,14 +39,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServingPlaneStres
             {
                 ConfigurationSection getDataPerformanceTestConfiguration = this.Context.CodePackageActivationContext.GetConfigurationSection("GetDataPerformanceTest");
                 string connectionString = getDataPerformanceTestConfiguration.GetStringValue("TargetConnectionString");
+                connectionString = Helpers.GetServerAddressIfNotProvided(connectionString);
+
                 ulong timeStreamId = getDataPerformanceTestConfiguration.GetUInt64Value("TimeStream");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    using (var ringMaster = ConnectToRingMaster(connectionString, cancellationToken))
-                    using (var timeStream = ringMaster.OpenTimeStream(timeStreamId))
+                    using (var ringMaster = new RetriableRingMasterClient(s => Helpers.CreateRingMasterTimeStreamRequestHandler(s, cancellationToken, timeStreamId), connectionString))
                     {
-                        await this.GetDataPerformanceTest(timeStream, getDataPerformanceTestConfiguration, cancellationToken);
+                        await this.GetDataPerformanceTest(ringMaster, getDataPerformanceTestConfiguration, cancellationToken);
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);

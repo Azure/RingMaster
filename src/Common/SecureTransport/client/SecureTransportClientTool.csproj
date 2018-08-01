@@ -1,46 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{5B0E5875-0BF7-4B29-B3BE-B1D85548704D}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportClientTool</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.SecureTransportClientTool</AssemblyName>
     <CoverageDisabled>true</CoverageDisabled>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.0-preview2-final" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0-preview2-final" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="SecureTransportClientTool.cs" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
   </ItemGroup>
+
   <ItemGroup>
-    <None Include="App.config" />
-    <Content Include="$(BinariesBuildTypeArchDirectory)\$(AssemblyName)\$(AssemblyName).exe.config">
+    <None Update="appSettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible>
-    </Content>
+    </None>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj">
-      <Project>{f43d5ceb-344b-4a7c-93ed-953238ed9239}</Project>
-      <Name>SecureTransport</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  <Import Project="$(StyleCopProps)" />
 </Project>

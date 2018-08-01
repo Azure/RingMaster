@@ -120,7 +120,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        protected override void NotifyComplete(int resultCode, string result, IStat stat)
+        protected override void NotifyComplete(int resultCode, string result, IStat stat, string responsePath)
         {
             this.callback?.Invoke(resultCode, this.Path, this.Context, result);
         }

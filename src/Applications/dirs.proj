@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
   <ItemGroup>
-    <ProjectReference Include="RingMasterApplication\Utilities\Utilities.csproj" />
-    <ProjectReference Include="RingMasterApplication\RingMasterService\RingMasterService.csproj" />
-    <ProjectReference Include="RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
-    <ProjectReference Include="RingMasterApplication\AppPublish\AppPublish.proj" />
+    <ProjectFile Include="RingMasterApplication\RingMasterApplication.sfproj" />
+    <ProjectFile Include="RingMasterApplication\RingMasterService\RingMasterService.csproj" />
+    <ProjectFile Include="RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
+    <ProjectFile Include="RingMasterApplication\Utilities\Utilities.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.Common.targets" />
-  <PropertyGroup>
-    <BuildDependsOn>ResolveReferences</BuildDependsOn>
-  </PropertyGroup>
-  <Target Name="VerifyAlteredTargetsUsed" />
-  <Target Name="CleanupEmptyRefsFolder" />
+  <Import Project="$(TraversalTargets)" />
 </Project>

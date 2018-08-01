@@ -167,7 +167,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                 backend = new RingMasterBackendCore(this.factory);
 
                 backend.StartService = (p1, p2) => { backendStarted.Set(); };
-                backend.Start();
+                backend.Start(CancellationToken.None);
                 backend.OnBecomePrimary();
 
                 Assert.IsTrue(backendStarted.Wait(30000));

@@ -482,5 +482,93 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(RingMasterException.Code.Nonode, results[2].ErrCode);
             }
         }
+
+        public async Task TestGetSubtreeInvalidRetrievalCondition()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree("/", null);
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree with null retrieval condition");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree("/", string.Empty);
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree with empty retrieval condition");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree("/", ":1:");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree with non-well-formed retrieval condition");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree("/", ">:-1:");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree with negative top number");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree("/", ">:1:foo");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree with non-well-formed path");
+
+                // setup node for test
+                var testNodePath = $"/$bvt_TestGetSubtreeInvalidRetrievalCondition_nonexistent{Guid.NewGuid()}";
+                await ringMaster.Create(testNodePath, null, null, CreateMode.PersistentAllowPathCreation);
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree(testNodePath, ">:1:/c");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree if continuation path is not a suffix of the node path");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree(testNodePath, $">:1:{testNodePath}a/b");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree if continuation path is not a suffix of the node path");
+            }
+        }
+
+        public async Task TestGetSubtreeNonExistentNode()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree($"/{Guid.NewGuid()}", ">:1:");
+                    },
+                    "Nonode error if an attempt is made to GetSubtree on non-existent node");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.GetSubtree(null, ">:1:");
+                    },
+                    "Badarguments error if an attempt is made to GetSubtree on null path");
+            }
+        }
     }
 }

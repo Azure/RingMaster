@@ -2,6 +2,11 @@
 
 The *RingMasterClientModule* can be used to interact with RingMaster.
 
+## Import module to Powershell
+```powershell
+Import-Module -Name ./Microsoft.RingMaster.ClientModule.dll
+```
+
 ## Connect to RingMaster
 ```` powershell
 $session = Connect-RingMaster -ConnectionString "127.0.0.1:99"
@@ -34,7 +39,7 @@ Set-RingMasterNodeData -Session $session -Path "/Foo" -Data $data
 ## Set the ACL associated with a node
 ```` powershell
 $acls = @(New-RingMasterAcl -Permission Write -Scheme digest -Identifier someid)
-Get-RingMasterNodeAcl -Session $session -Path "/Foo" -Acls $acls
+Set-RingMasterNodeAcl -Session $session -Path "/Foo" -Acls $acls
 ````
 ## Delete a node
 ```` powershell

@@ -1,12 +1,11 @@
-﻿// <copyright file="SecureTransportClientTool.cs" company="Microsoft">
-//     Copyright ©  2015
+﻿// <copyright file="SecureTransportClientTool.cs" company="Microsoft Corporation">
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportClientTool
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -15,7 +14,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Microsoft.Extensions.Configuration;
 
+    /// <summary>
+    ///   TODO: comment this region
+    /// </summary>
     public class SecureTransportClientTool
     {
         /// <summary>
@@ -24,7 +27,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
         /// <param name="args">Command line arguments</param>
         public static void Main(string[] args)
         {
-            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
             if (args == null || args.Length < 1)
             {
@@ -41,16 +44,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
                 requestLength = int.Parse(args[1]);
             }
 
-            var configuration = new SecureTransport.Configuration();
-            int maxConcurrentRequests = int.Parse(ConfigurationManager.AppSettings["MaxConcurrentRequests"]);
-            configuration.SendBufferSize = int.Parse(ConfigurationManager.AppSettings["SendBufferSize"]);
-            configuration.ReceiveBufferSize = int.Parse(ConfigurationManager.AppSettings["ReceiveBufferSize"]);
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            var appSettings = builder.Build();
 
-            configuration.UseSecureConnection = bool.Parse(ConfigurationManager.AppSettings["SSL.UseSSL"]);
+            var configuration = new SecureTransport.Configuration();
+            int maxConcurrentRequests = int.Parse(appSettings["MaxConcurrentRequests"]);
+            configuration.SendBufferSize = int.Parse(appSettings["SendBufferSize"]);
+            configuration.ReceiveBufferSize = int.Parse(appSettings["ReceiveBufferSize"]);
+
+            configuration.UseSecureConnection = bool.Parse(appSettings["SSL.UseSSL"]);
             if (configuration.UseSecureConnection)
             {
-                string[] clientThumbprints = ConfigurationManager.AppSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
-                string[] serviceThumbprints = ConfigurationManager.AppSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
+                string[] clientThumbprints = appSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
+                string[] serviceThumbprints = appSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
 
                 configuration.ClientCertificates = SecureTransport.GetCertificatesFromThumbPrintOrFileName(clientThumbprints);
                 configuration.ServerCertificates = SecureTransport.GetCertificatesFromThumbPrintOrFileName(serviceThumbprints);

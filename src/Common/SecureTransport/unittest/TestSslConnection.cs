@@ -16,16 +16,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
     using System.Threading.Tasks;
-    using FluentAssertions;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Microsoft.Vega.Test.Helpers;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
     /// Unit tests for the SslConnection class.
     /// </summary>
-    /// <remarks>
-    /// FluentAssertions are documented here: https://github.com/dennisdoomen/fluentassertions/wiki
-    /// </remarks>
     [TestClass]
     public class TestSslConnection
     {
@@ -44,41 +41,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
                 log = s => context.WriteLine(s);
             }
 
-            try
-            {
-                Process.Start("makecert.exe", $"-n \"CN={TestCertPrefix}1\" -r -pe -ss My -sr CurrentUser -a sha1")
-                    .WaitForExit();
-                Process.Start("makecert.exe", $"-n \"CN={TestCertPrefix}2\" -r -pe -ss My -sr CurrentUser -a sha1")
-                    .WaitForExit();
-
-                log($"Created {TestCertPrefix}1 and {TestCertPrefix}2 in CurrentUser\\My");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to run makecert.exe: {ex}");
-                throw;
-            }
+            Helpers.InstallCert($"{TestCertPrefix}1");
+            Helpers.InstallCert($"{TestCertPrefix}2");
+            log($"Created {TestCertPrefix}1 and {TestCertPrefix}2 in CurrentUser\\My");
         }
 
         [AssemblyCleanup]
         public static void RemoveCerts()
         {
             // Use other store locations if your certificate is not in the current user store.
-            var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            store.Open(OpenFlags.ReadWrite | OpenFlags.IncludeArchived);
-
-            foreach (var cert in store.Certificates)
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
-                if (cert.SubjectName.Name.Contains(TestCertPrefix))
-                {
-                    Console.Out.WriteLine("Removing cert: {0}", cert.SubjectName.Name);
+                store.Open(OpenFlags.ReadWrite | OpenFlags.IncludeArchived);
 
-                    // Remove the certificate
-                    store.Remove(cert);
+                foreach (var cert in store.Certificates)
+                {
+                    if (cert.SubjectName.Name.Contains(TestCertPrefix))
+                    {
+                        Console.Out.WriteLine("Removing cert: {0}", cert.SubjectName.Name);
+
+                        // Remove the certificate
+                        store.Remove(cert);
+                    }
                 }
             }
-
-            store.Close();
         }
 
         /// <summary>
@@ -204,7 +190,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             // and trust chain validation fails
             clientTask.Result.Should().BeFalse();
 
-            serverTask.Result.Should().BeTrue();
+            try
+            {
+                serverTask.Result.Should().BeTrue();
+            }
+            catch (AggregateException ex)
+            {
+                Assert.IsTrue(ex.InnerException is IOException);
+            }
         }
 
         /// <summary>
@@ -228,7 +221,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             // and trust chain validation fails
             clientTask.Result.Should().BeFalse();
 
-            serverTask.Result.Should().BeTrue();
+            try
+            {
+                serverTask.Result.Should().BeTrue();
+            }
+            catch (AggregateException ex)
+            {
+                Assert.IsTrue(ex.InnerException is IOException);
+            }
         }
 
         /// <summary>
@@ -563,9 +563,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
         /// <returns>An array with the specified number of certificates</returns>
         private static X509Certificate[] GetLocalCertificates(int count)
         {
-            X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             var certificates = new List<X509Certificate>();
-            try
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadOnly);
                 DateTime now = DateTime.Now;
@@ -588,10 +587,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
                 certificates.Count.Should().Be(count);
 
                 return certificates.ToArray();
-            }
-            finally
-            {
-                store.Close();
             }
         }
 

@@ -9,7 +9,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     using System.Linq;
     using Backend;
     using Backend.Persistence;
-    using FluentAssertions;
     using Persistence;
     using Persistence.InMemory;
     using VisualStudio.TestTools.UnitTesting;
@@ -44,7 +43,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
             parentNode = parentPersistedData.Node;
             parentNode.ChildrenCount.Should().Be(2);
-            parentNode.ChildrenMapping.Select(kvp => kvp).Should().BeEquivalentTo(childrenToAdd.Select(p => new KeyValuePair<string, IPersistedData>(p.Name, p)), "Children should be added to the parent's children mapping");
+            parentNode.ChildrenMapping.Select(kvp => kvp).Should().BeEquivalentTo<IEnumerable<KeyValuePair<string, IPersistedData>>, KeyValuePair<string, IPersistedData>>(
+                childrenToAdd.Select(p => new KeyValuePair<string, IPersistedData>(p.Name, p)),
+                "Children should be added to the parent's children mapping");
         }
 
         [TestMethod]
@@ -79,7 +80,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
         private PersistedData CreatePersistedData(string name)
         {
-            return new PersistedData(this.persistedDataIdCount++, this.persistedDataFactory)
+            return new PersistedData(this.persistedDataIdCount++)
             {
                 Name = name
             };

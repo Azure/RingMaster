@@ -10,7 +10,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.KeeperExc
     using System.IO;
     using System.Runtime.Serialization;
     using System.Security.Authentication;
-    using System.ServiceModel;
     using System.Text;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.AsyncCallback;
@@ -108,7 +107,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.KeeperExc
                 case Code.Noauth:
                     return new AuthenticationException(message);
                 case Code.Connectionloss:
-                    return new CommunicationException(message);
+                    return new IOException(message);
                 case Code.Operationtimeout:
                 case Code.Sessionexpired:
                     return new TimeoutException(message);

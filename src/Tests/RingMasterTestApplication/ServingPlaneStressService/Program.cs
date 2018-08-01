@@ -5,10 +5,8 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServingPlaneStressService
 {
     using System;
-    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Fabric;
-    using System.Fabric.Description;
     using System.Reflection;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;

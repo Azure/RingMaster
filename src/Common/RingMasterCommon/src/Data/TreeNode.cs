@@ -52,7 +52,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// </summary>
         /// <param name="buffer">The buffer with the serialized node tree</param>
         /// <returns>The root of the deserialized node tree</returns>
-        internal static TreeNode Deserialize(byte[] buffer)
+        public static TreeNode Deserialize(byte[] buffer)
         {
             MemoryStream memoryStream = null;
             try

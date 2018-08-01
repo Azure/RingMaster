@@ -14,6 +14,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class ServiceFabricPersistenceEventSource : EventSource
     {
+        static ServiceFabricPersistenceEventSource()
+        {
+        }
+
+        private ServiceFabricPersistenceEventSource()
+        {
+        }
+
         public static ServiceFabricPersistenceEventSource Log { get; } = new ServiceFabricPersistenceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 4)]

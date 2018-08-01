@@ -83,16 +83,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 throw new ArgumentException("certhash cannot be null or empty");
             }
 
-            var store = new X509Store(storeName, storeLocation);
-            store.Open(OpenFlags.ReadOnly);
-
-            var desiredCert = store.Certificates.Find(X509FindType.FindByThumbprint, certHash, false);
-            if (desiredCert.Count == 0)
+            using (X509Store store = new X509Store(storeName, storeLocation))
             {
-                throw new ArgumentException("Unable to find cert with hash {0} ", certHash);
-            }
+                store.Open(OpenFlags.ReadOnly);
 
-            return desiredCert[0];
+                var desiredCert = store.Certificates.Find(X509FindType.FindByThumbprint, certHash, false);
+                if (desiredCert.Count == 0)
+                {
+                    throw new ArgumentException("Unable to find cert with hash {0} ", certHash);
+                }
+
+                return desiredCert[0];
+            }
         }
 
         /// <summary>

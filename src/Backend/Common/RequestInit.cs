@@ -90,7 +90,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        protected override void InvokeCallback(int resultCode, object result, IStat stat)
+        protected override void InvokeCallback(int resultCode, object result, IStat stat, string responsePath)
         {
             this.callback(resultCode, null, result);
         }

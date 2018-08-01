@@ -229,22 +229,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RSLValidation
         /// <returns>the signing cert</returns>
         private static X509Certificate2 GetSigningCert(X509Certificate2 cert)
         {
-            X509Chain ch = new X509Chain(true);
-            ch.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority | X509VerificationFlags.IgnoreCertificateAuthorityRevocationUnknown | X509VerificationFlags.IgnoreCtlSignerRevocationUnknown;
-
-            ch.Build(cert);
-
-            if (ch.ChainElements.Count < 1)
+            using (X509Chain ch = new X509Chain(true))
             {
-                Assert.Fail("test failed because chain couldn't be built");
-            }
+                ch.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority | X509VerificationFlags.IgnoreCertificateAuthorityRevocationUnknown | X509VerificationFlags.IgnoreCtlSignerRevocationUnknown;
 
-            if (ch.ChainElements.Count < 2)
-            {
-                return null;
-            }
+                ch.Build(cert);
 
-            return ch.ChainElements[1].Certificate;
+                if (ch.ChainElements.Count < 1)
+                {
+                    Assert.Fail("test failed because chain couldn't be built");
+                }
+
+                if (ch.ChainElements.Count < 2)
+                {
+                    return null;
+                }
+
+                return ch.ChainElements[1].Certificate;
+            }
         }
 
         private static void SetupCertificates(bool onlycleanup)
@@ -327,10 +329,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RSLValidation
         /// <returns>An array with the specified number of certificates</returns>
         private static X509Certificate[] GetLocalCertificates(int count)
         {
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-            var certificates = new List<X509Certificate>();
-            try
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
             {
+                var certificates = new List<X509Certificate>();
                 store.Open(OpenFlags.ReadOnly);
                 DateTime now = DateTime.Now;
 
@@ -352,10 +353,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RSLValidation
                 Assert.AreEqual(certificates.Count, count);
 
                 return certificates.ToArray();
-            }
-            finally
-            {
-                store.Close();
             }
         }
 

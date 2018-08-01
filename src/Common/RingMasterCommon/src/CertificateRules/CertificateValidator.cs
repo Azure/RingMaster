@@ -6,7 +6,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Net.Security;
@@ -222,7 +221,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 {
                     try
                     {
-                        string setvalue = getSettingValue != null ? getSettingValue(settingName) : ConfigurationManager.AppSettings[settingName];
+                        string setvalue = getSettingValue?.Invoke(settingName);
 
                         if (setvalue == null)
                         {

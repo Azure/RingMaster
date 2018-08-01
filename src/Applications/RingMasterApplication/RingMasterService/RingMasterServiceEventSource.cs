@@ -14,6 +14,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class RingMasterServiceEventSource : EventSource
     {
+        static RingMasterServiceEventSource()
+        {
+        }
+
+        private RingMasterServiceEventSource()
+        {
+        }
+
         public static RingMasterServiceEventSource Log { get; } = new RingMasterServiceEventSource();
 
         // Note: TraceLevel has EventId=1 as compiler will auto-generate a method for the property so we

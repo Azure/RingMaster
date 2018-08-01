@@ -8,6 +8,9 @@ Param (
     [ValidateScript({Test-Path -PathType Leaf $_})]
     [String] $ApplicationParametersFile,
 
+    [ValidateSet("Rollback", "Manual")]
+    [String] $FailureAction = "Rollback",
+
     [Switch] $UnMonitored = $false
 )
 
@@ -74,5 +77,5 @@ else {
         -HealthCheckStableDurationSec 60 `
         -UpgradeDomainTimeoutSec 1200 `
         -UpgradeTimeout 3000 `
-        -FailureAction Rollback
+        -FailureAction $FailureAction
 }

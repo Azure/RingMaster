@@ -9,7 +9,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     using System.Threading;
     using Backend;
     using Backend.KeeperException;
-    using FluentAssertions;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMemory;
     using VisualStudio.TestTools.UnitTesting;
 
@@ -136,7 +135,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             RingMasterBackendCore.GetSettingFunction = settingName => null;
             var backend = new RingMasterBackendCore(new InMemoryFactory(), auditConsumer);
             backend.StartService = (p1, p2) => { backendStarted.Set(); };
-            backend.Start();
+            backend.Start(CancellationToken.None);
             backend.OnBecomePrimary();
 
             backendStarted.Wait(30000).Should().BeTrue();

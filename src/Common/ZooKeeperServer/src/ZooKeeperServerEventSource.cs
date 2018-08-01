@@ -14,12 +14,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class ZooKeeperServerEventSource : EventSource
     {
-        private static readonly ZooKeeperServerEventSource LogInstance = new ZooKeeperServerEventSource();
-
-        public static ZooKeeperServerEventSource Log
+        static ZooKeeperServerEventSource()
         {
-            get { return LogInstance; }
         }
+
+        private ZooKeeperServerEventSource()
+        {
+        }
+
+        public static ZooKeeperServerEventSource Log { get; } = new ZooKeeperServerEventSource();
 
         [Event(2, Level = EventLevel.Informational, Version = 1)]
         public void RegisterTransport()

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!--
+      $(MSBuildAllProjects) is a list of files that determine if a project is up-to-date or not.  By including this
+      file in the list, it ensures that all projects will be rebuilt if it changes.
+    -->
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <Net462Targets>$(PkgRoot)\CBT.DotNetFx-net462.1.0.0-beta01\build\CBT.DotNetFx-net462.targets</Net462Targets>
+  </PropertyGroup>
+
+  <!--
+    Identify generated props and targets as outputs so they aren't seen as inputs from a producer-less generated dir (BuildCop error MissingInputDependency).
+    This should match the common props/targets import of these files as much as possible. QCustomOutput doesn't work with wildcards though as it may be
+    evaluated before the files exist, so we have to know which files should be generated beforehand.
+  -->
+  <ItemGroup Condition="'$(ImportProjectExtensionProps)' == 'true' And Exists('$(MSBuildProjectExtensionsPath)')">
+    <QCustomOutput Include="$(MSBuildProjectExtensionsPath)$(MSBuildProjectFile).nuget.g.props" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ImportProjectExtensionTargets)' == 'true' And Exists('$(MSBuildProjectExtensionsPath)')">
+    <QCustomOutput Include="$(MSBuildProjectExtensionsPath)$(MSBuildProjectFile).nuget.g.targets" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(EnableQTest)' != 'false' ">
+    <!--
+      $(QTestType) defaults to MSTest_Latest if the known Project GUID is specified.
+    -->
+    <QTestType Condition=" '$(QTestType)' == '' And $(ProjectTypeGuids.Contains(`3AC096D0-A1C2-E12C-1390-A8335801FDAB`)) ">MSTest_Latest</QTestType>
+    <QTestType Condition=" '$(QTestType)' == '' And '$(IsTestProject)' == 'true' ">MSTest_Latest</QTestType>
+
+    <!--
+      By default, $(QTestDirToDeploy) is the project output directory which is expected to be isolated.  If you're building to a common folder, you may want to set this
+      property to a smaller folder. This property must be absolute.
+    -->
+    <QTestDirToDeploy Condition=" '$(QTestType)' != '' And '$(QTestDirToDeploy)' == '' And '$(QTestType)' != '' ">$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '$(OutputPath)'))</QTestDirToDeploy>
+
+    <!--
+      By default, $(QTestAdapterPath) is the QTest root directory which is the sandboxed folder where tests are run and include everything from the output path of the test project
+    -->
+    <QTestAdapterPath Condition=" '$(QTestAdapterPath)' == '' And '$(QTestType)' == 'MSTest_Latest' ">%TESTROOT%</QTestAdapterPath>
+
+    <QTestDotNetFramework Condition=" '$(IsTestProject)' == 'true' And '$(QTestDotNetFramework)' == '' ">FrameworkCore20</QTestDotNetFramework>
+
+    <!-- Xunit projects can't have the testcase filter set.  Disabling for all projects by default to bring parity with lab experience. -->
+    <QTestIgnoreQTestSkip Condition=" '$(QTestIgnoreQTestSkip)' == '' " >true</QTestIgnoreQTestSkip>
+
+    <QTestAccount Condition=" ('$(QTestDotNetFramework)' == 'FrameworkCore10' Or '$(QTestDotNetFramework)' == 'FrameworkCore20') And '$(QBUILD_DISTRIBUTED)' == '' ">LocalAdmin</QTestAccount>
+  </PropertyGroup>
+
+  <Import Project="$(Net462Targets)" Condition="'$(MSBuildProjectExtension)' == '.csproj' and Exists($(Net462Targets))" />
+
+</Project>

@@ -5,7 +5,6 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities
 {
     using System;
-    using System.Configuration;
     using System.Threading;
 
     /// <summary>
@@ -16,14 +15,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplica
         /// <summary>
         /// Waits to attach the debugger
         /// </summary>
-        public static void AttachDebugger()
+        /// <param name="debuggerAttachTimeoutInSeconds">The debugger attach timeout in seconds</param>
+        public static void AttachDebugger(int debuggerAttachTimeoutInSeconds)
         {
             try
             {
                 // Wait for debugger to connect if debugger timeout is specified
-                string debuggerAttachTimeout = ConfigurationManager.AppSettings["DebuggerAttachTimeout"];
-                int debuggerAttachTimeoutInSeconds = 0;
-                debuggerAttachTimeoutInSeconds = Convert.ToInt32(debuggerAttachTimeout);
                 if (debuggerAttachTimeoutInSeconds > 0)
                 {
                     int iter = 0;

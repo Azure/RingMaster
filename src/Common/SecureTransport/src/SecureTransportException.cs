@@ -88,6 +88,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             /// Send queue is full
             /// </summary>
             SendQueueFull,
+
+            /// <summary>
+            /// The accept connection timedout
+            /// </summary>
+            AcceptConnectionTimedout,
         }
 
         /// <summary>
@@ -216,6 +221,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public static Exception SendQueueFull()
         {
             return new SecureTransportException(Code.SendQueueFull, "Send queue is full");
+        }
+
+        /// <summary>
+        /// Accepts the connection timedout.
+        /// </summary>
+        /// <returns>Exception object</returns>
+        public static Exception AcceptConnectionTimedout()
+        {
+            return new SecureTransportException(Code.AcceptConnectionTimedout, "AcceptConnection timed out");
         }
 
         /// <inheritdoc />

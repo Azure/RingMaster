@@ -1,0 +1,29 @@
+version:
+    major: 2
+    minor: 2
+    tag: 'rel'
+    name: 'Networking-Vega' # deprecated
+    system: 'buildrevision'
+
+package_sources:
+    nuget:
+        config_files:
+            - include:
+                - "NuGet.config"
+
+static_analysis_options:
+    fxcop_options:
+        files_to_scan:
+            - from: 'out'
+              include:
+                  # FxCop doesn't load .NET core binaries. Just scan a sample binary to confirm it is working.
+                  # - '**/*.dll'
+                  - 'Release-x64/NetFramework4App/NetFramework4App.exe'
+              exclude:
+                  - '**/*test*.dll'
+    binskim_options:
+        files_to_scan:
+            - from: 'src\'
+              exclude:
+                  - '**/System.Fabric*.dll'
+                  - '**/Microsoft.ServiceFabric*.dll'

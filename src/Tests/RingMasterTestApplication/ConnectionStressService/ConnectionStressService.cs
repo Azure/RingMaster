@@ -5,7 +5,6 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ConnectionStressService
 {
     using System;
-    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Fabric;
     using System.Fabric.Description;
@@ -19,6 +18,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ConnectionStressS
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.ServiceFabric.Services.Runtime;
+    using Microsoft.Vega.Test.Helpers;
 
     /// <summary>
     /// Service used to stress the RingMaster with lots of connections.
@@ -67,6 +67,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ConnectionStressS
                 var random = new Random();
 
                 string connectionString = config.GetStringValue("TargetConnectionString");
+                connectionString = Helpers.GetServerAddressIfNotProvided(connectionString);
                 IPEndPoint[] endpoints = SecureTransport.ParseConnectionString(connectionString);
                 string testPath = config.GetStringValue("TestPath");
                 int numConnections = config.GetIntValue("NumberOfConnections");

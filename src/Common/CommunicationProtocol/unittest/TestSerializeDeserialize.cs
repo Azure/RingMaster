@@ -579,6 +579,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         }
 
         /// <summary>
+        /// Verify serialization and deserialization works for <see cref="RequestGetSubtree"/> requests. 
+        /// </summary>
+        [TestMethod]
+        public void TestRequestGetSubtree()
+        {
+            var originalRequests = new RequestGetSubtree[]
+            {
+                new RequestGetSubtree("/getsubtree", retrievalCondition: null, uid: 0),
+                new RequestGetSubtree("/getsubtree/retreivalcondition", retrievalCondition: RandomString(), uid: 0),
+                new RequestGetSubtree("/getsubtree/uid", retrievalCondition: null, uid: 0),
+            };
+
+            VerifyRequestSerializationAndDeserialization(
+                (expected, actual, protocolVersion) =>
+                {
+                    Assert.AreEqual(RingMasterRequestType.GetSubtree, actual.RequestType);
+                    Assert.AreEqual(expected.RetrievalCondition, actual.RetrievalCondition);
+                },
+                protocolVersion => protocolVersion >= 25,
+                originalRequests);
+        }
+
+        /// <summary>
         /// Verify serialization and deserialization for <see cref="RequestResponse"/> objects.
         /// </summary>
         [TestMethod]
@@ -620,6 +643,84 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
                     return true;
                 },
+                originalResponses);
+        }
+
+        [TestMethod]
+        public void TestExistsOpResult()
+        {
+            var originalResponses = new RequestResponse[]
+            {
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new List<OpResult> { new OpResult.ExistsResult(null) }, ResponsePath = null, Stat = null },
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new List<OpResult> { new OpResult.ExistsResult(RandomStat()) }, ResponsePath = null, Stat = null },
+            };
+
+            VerifyResponseSerializationAndDeserialization(
+                (expected, actual, ProtocolVersion) =>
+                {
+                    var expectedOpResultContent = (List<OpResult>)expected.Content;
+                    var actualOpResultContent = (List<OpResult>)actual.Content;
+
+                    Assert.AreEqual(expectedOpResultContent.Count, actualOpResultContent.Count);
+
+                    var expectedExistsResult = (OpResult.ExistsResult)expectedOpResultContent[0];
+                    var actualExistsResult = (OpResult.ExistsResult)actualOpResultContent[0];
+
+                    Assert.AreEqual(expectedExistsResult.ResultType, actualExistsResult.ResultType);
+                    VerifyStat(expectedExistsResult.Stat, actualExistsResult.Stat);
+                },
+                (protocolVersion, expectedResponse) => protocolVersion >= 25,
+                originalResponses);
+        }
+
+        [TestMethod]
+        public void TestSyncOpResult()
+        {
+            var originalResponses = new RequestResponse[]
+            {
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new List<OpResult> { new OpResult.SyncResult() }, ResponsePath = null, Stat = null },
+            };
+
+            VerifyResponseSerializationAndDeserialization(
+                (expected, actual, ProtocolVersion) =>
+                {
+                    var actualOpResultContent = (List<OpResult>)actual.Content;
+                    Assert.AreEqual(1, actualOpResultContent.Count);
+
+                    var actualSyncResult = (OpResult.SyncResult)actualOpResultContent[0];
+                    Assert.IsNotNull(actualSyncResult);
+
+                    Assert.AreEqual(OpCode.Sync, actualSyncResult.ResultType);
+                },
+                (protocolVersion, expectedResponse) => protocolVersion >= 25,
+                originalResponses);
+        }
+
+        [TestMethod]
+        public void TestGetSubtreeOpResult()
+        {
+            var originalResponses = new RequestResponse[]
+            {
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new List<OpResult> { new OpResult.GetSubtreeResult(RandomData(), null) }, ResponsePath = null, Stat = null },
+                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new List<OpResult> { new OpResult.GetSubtreeResult(RandomData(), RandomString()) }, ResponsePath = null, Stat = null },
+            };
+
+            VerifyResponseSerializationAndDeserialization(
+                (expected, actual, ProtocolVersion) =>
+                {
+                    var expectedOpResultContent = (List<OpResult>)expected.Content;
+                    var actualOpResultContent = (List<OpResult>)actual.Content;
+
+                    Assert.AreEqual(expectedOpResultContent.Count, actualOpResultContent.Count);
+
+                    var expectedGetSubtreeResult = (OpResult.GetSubtreeResult)expectedOpResultContent[0];
+                    var actualGetSubtreeResult = (OpResult.GetSubtreeResult)actualOpResultContent[0];
+
+                    Assert.AreEqual(expectedGetSubtreeResult.ResultType, actualGetSubtreeResult.ResultType);
+                    VerifyData(expectedGetSubtreeResult.SerializedSubtree, actualGetSubtreeResult.SerializedSubtree);
+                    Assert.AreEqual(expectedGetSubtreeResult.ContinuationPath, actualGetSubtreeResult.ContinuationPath);
+                },
+                (protocolVersion, expectedResponse) => protocolVersion >= 25,
                 originalResponses);
         }
 
@@ -874,7 +975,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             switch (type)
             {
                 case 0:
-                    return new OpResult.CheckResult();
+                    return new OpResult.CheckResult(stat: RandomStat());
                 case 1:
                     return new OpResult.GetDataResult(stat: RandomStat(), bytes: RandomData(), path: RandomString());
                 case 2:
@@ -985,7 +1086,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <summary>
         /// Verify that all the given responses can be serialized and deserialized correctly using all supported versions.
         /// </summary>
-        /// /// <param name="responses">Responses to verify</param>
+        /// <param name="responses">Responses to verify</param>
         private static void VerifyResponseSerializationAndDeserialization(params RequestResponse[] responses)
         {
             VerifyResponseSerializationAndDeserialization((p, r) => { return true; }, responses);
@@ -998,6 +1099,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <param name="responses">Responses to verify</param>
         /// <exception cref="System.Exception">Exception while validating response  + i +  protocol  + protocolVersion + :  + e.Message</exception>
         private static void VerifyResponseSerializationAndDeserialization(Func<uint, RequestResponse, bool> tryProtocol, params RequestResponse[] responses)
+        {
+            VerifyResponseSerializationAndDeserialization(null, tryProtocol, responses);
+        }
+
+        /// <summary>
+        /// Verify that all the given responses can be serialized and deserialized correctly using all supported versions.
+        /// </summary>
+        /// <param name="verifyContent">the function to verify content field</param>
+        /// <param name="tryProtocol">the function to check if the protocol needs to be tested</param>
+        /// <param name="responses">Responses to verify</param>
+        /// <exception cref="System.Exception">Exception while validating response  + i +  protocol  + protocolVersion + :  + e.Message</exception>
+        private static void VerifyResponseSerializationAndDeserialization(Action<RequestResponse, RequestResponse, uint> verifyContent, Func<uint, RequestResponse, bool> tryProtocol, params RequestResponse[] responses)
         {
             for (int i = 0; i < responses.Length; i++)
             {
@@ -1028,6 +1141,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                         Assert.AreEqual(expected.ResultCode, actual.ResultCode);
                         VerifyStat(expected.Stat, actual.Stat);
                         Assert.AreEqual(expected.ResponsePath, actual.ResponsePath);
+
+                        if (verifyContent != null)
+                        {
+                            verifyContent(expected, actual, protocolVersion);
+                        }
                     }
                     catch (Exception e)
                     {

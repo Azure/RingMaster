@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Net;
     using System.Net.Security;
@@ -36,6 +37,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         private readonly ISecureTransportInstrumentation instrumentation;
         private readonly CancellationToken rootCancellationToken;
         private readonly ConcurrentDictionary<long, Connection> activeConnections = new ConcurrentDictionary<long, Connection>();
+        private readonly SemaphoreSlim acceptConnectionsSemaphore;
         private readonly ManualResetEventSlim hasStarted = new ManualResetEventSlim(initialState: false);
         private readonly ManualResetEventSlim hasStopped = new ManualResetEventSlim(initialState: true);
         private readonly Configuration configuration;
@@ -101,6 +103,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 this.secureConnectionPolicy = new NoSslConnection();
             }
 
+            this.acceptConnectionsSemaphore = new SemaphoreSlim(this.configuration.MaxConnections, this.configuration.MaxConnections);
             this.MaxConnectionLifeSpan = configuration.MaxConnectionLifespan;
             this.rootCancellationToken = cancellationToken;
             this.instrumentation = instrumentation ?? NoInstrumentation.Instance;
@@ -176,7 +179,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             foreach (var piece in pieces)
             {
                 string[] hostAndPort = piece.Split(HostPortSeparator, StringSplitOptions.RemoveEmptyEntries);
-                IPAddress host = IPAddress.Parse(hostAndPort[0]);
+
+                IPAddress host;
+                if (!IPAddress.TryParse(hostAndPort[0], out host))
+                {
+                    // If it cannot be parsed to a valid IP address, it should be resolvable. Otherwise just let it throw.
+                    host = Dns.GetHostAddresses(hostAndPort[0])[0];
+                }
+
                 ushort port = ushort.Parse(hostAndPort[1]);
 
                 endpoints.Add(new IPEndPoint(host, port));
@@ -190,79 +200,97 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// </summary>
         /// <param name="paths">List of thumbprint or file paths</param>
         /// <returns> A list of <see cref="X509Certificate"/>s that correspond to the given paths</returns>
+        [SuppressMessage(
+            "Microsoft.Reliability",
+            "CA2000:DisposeObjectsBeforeLosingScope",
+            Scope = "method",
+            Target = "Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport.SecureTransport.GetCertificatesFromThumbPrintOrFileName()",
+            Justification = "X509 certificates will be disposed in the finally block")]
         public static X509Certificate[] GetCertificatesFromThumbPrintOrFileName(string[] paths)
         {
             List<X509Certificate> certificates = new List<X509Certificate>();
 
-            if (paths != null)
+            try
             {
-                for (int i = 0; i < paths.Length; i++)
+                if (paths != null)
                 {
-                    try
+                    for (int i = 0; i < paths.Length; i++)
                     {
-                        string path = paths[i].ToUpper();
-                        if (path.StartsWith("FILE:"))
-                        {
-                            certificates[i] = X509Certificate.CreateFromCertFile(path.Substring("FILE:".Length));
-                            continue;
-                        }
-
-                        StoreName name;
-                        StoreLocation location;
-                        string thumbprint;
-
-                        string[] pieces = path.Split('/');
-                        if (pieces.Length == 1)
-                        {
-                            // No store name in the cert. Use default
-                            name = StoreName.My;
-                            location = StoreLocation.LocalMachine;
-                            thumbprint = path;
-                        }
-                        else
-                        {
-                            name = (StoreName)Enum.Parse(typeof(StoreName), pieces[0], true);
-                            location = (StoreLocation)Enum.Parse(typeof(StoreLocation), pieces[1], true);
-                            thumbprint = pieces[2];
-                        }
-
-                        X509Store store = new X509Store(name, location);
                         try
                         {
-                            store.Open(OpenFlags.ReadOnly);
-                            X509Certificate2 found = null;
-                            foreach (X509Certificate2 result in store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false))
+                            string path = paths[i].ToUpper();
+                            if (path.StartsWith("FILE:"))
                             {
-                                if (found == null || found.Equals(result))
-                                {
-                                    found = result;
-                                }
-                                else
-                                {
-                                    throw SecureTransportException.DuplicateCertificates(thumbprint);
-                                }
+                                certificates[i] = X509Certificate.CreateFromCertFile(path.Substring("FILE:".Length));
+                                continue;
                             }
 
-                            if (found == null)
+                            StoreName name;
+                            StoreLocation location;
+                            string thumbprint;
+
+                            string[] pieces = path.Split('/');
+                            if (pieces.Length == 1)
                             {
-                                throw SecureTransportException.MissingCertificate(thumbprint);
+                                // No store name in the cert. Use default
+                                name = StoreName.My;
+                                location = StoreLocation.LocalMachine;
+                                thumbprint = path;
+                            }
+                            else
+                            {
+                                name = (StoreName)Enum.Parse(typeof(StoreName), pieces[0], true);
+                                location = (StoreLocation)Enum.Parse(typeof(StoreLocation), pieces[1], true);
+                                thumbprint = pieces[2];
                             }
 
-                            certificates.Add(found);
+                            using (X509Store store = new X509Store(name, location))
+                            {
+                                store.Open(OpenFlags.ReadOnly);
+                                X509Certificate2 found = null;
+                                foreach (X509Certificate2 result in store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false))
+                                {
+                                    if (found == null || found.Equals(result))
+                                    {
+                                        found = result;
+                                    }
+                                    else
+                                    {
+                                        throw SecureTransportException.DuplicateCertificates(thumbprint);
+                                    }
+                                }
+
+                                if (found == null)
+                                {
+                                    throw SecureTransportException.MissingCertificate(thumbprint);
+                                }
+
+                                certificates.Add(found);
+                            }
                         }
-                        finally
+                        catch (Exception ex)
                         {
-                            store.Close();
+                            SecureTransportEventSource.Log.GetCertificatesFromThumbprintOrFileNameFailed(ex.ToString());
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        SecureTransportEventSource.Log.GetCertificatesFromThumbprintOrFileNameFailed(ex.ToString());
                     }
                 }
-            }
 
-            return certificates.ToArray();
+                var certificatesToReturn = new X509Certificate[certificates.Count];
+                for (int i = 0; i < certificates.Count; i++)
+                {
+                    certificatesToReturn[i] = certificates[i];
+                    certificates[i] = null;
+                }
+
+                return certificatesToReturn;
+            }
+            finally
+            {
+                foreach (var cert in certificates)
+                {
+                    cert?.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -402,6 +430,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.Close();
             this.hasStopped.Dispose();
             this.hasStarted.Dispose();
+            this.acceptConnectionsSemaphore.Dispose();
         }
 
         private static IPEndPoint GetRemoteEndPoint(TcpClient client)
@@ -427,35 +456,51 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 int consecutiveFailureCount = 0;
                 while ((!this.cancellationTokenSource.Token.IsCancellationRequested) && (consecutiveFailureCount < ConsecutiveAcceptFailuresLimit))
                 {
+                    bool mustReleaseSemaphore = false;
                     try
                     {
+                        if (!await this.acceptConnectionsSemaphore.WaitAsync(validationTimeout, this.cancellationTokenSource.Token))
+                        {
+                            throw SecureTransportException.AcceptConnectionTimedout();
+                        }
+
+                        mustReleaseSemaphore = true;
+
                         iteration++;
                         Task<TcpClient> acceptTask = this.listener.AcceptTcpClientAsync();
 
-                        // AcceptTcpClientAsync does not have an overload that takes a cancellationToken, so it
-                        // does not return even if cancellation is in progress.  The following task will observe
-                        // the cancellation token and go into the canceled state when cancellation is requested.
-                        Task delayTask = Task.Delay(Timeout.InfiniteTimeSpan, this.cancellationTokenSource.Token);
-
-                        await Task.WhenAny(acceptTask, delayTask);
-
-                        if (acceptTask.IsCompleted)
+                        using (var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(this.cancellationTokenSource.Token))
                         {
-                            TcpClient client = acceptTask.Result;
-                            consecutiveFailureCount = 0;
+                            // AcceptTcpClientAsync does not have an overload that takes a cancellationToken, so it
+                            // does not return even if cancellation is in progress.  The following task will observe
+                            // the cancellation token and go into the canceled state when cancellation is requested.
+                            Task delayTask = Task.Delay(Timeout.InfiniteTimeSpan, cancelSource.Token);
 
-                            var task = Task.Run(
-                                async () =>
-                                {
-                                    await this.AcceptConnection(iteration, client, validationTimeout);
-                                },
-                                this.cancellationTokenSource.Token);
+                            await Task.WhenAny(acceptTask, delayTask);
+
+                            if (acceptTask.IsCompleted)
+                            {
+                                cancelSource.Cancel();
+                                TcpClient client = await acceptTask;
+                                consecutiveFailureCount = 0;
+
+                                mustReleaseSemaphore = false;
+                                var ignoredTask = this.AcceptConnection(iteration, client, validationTimeout)
+                                    .ContinueWith(t => this.acceptConnectionsSemaphore.Release());
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         consecutiveFailureCount++;
                         SecureTransportEventSource.Log.AcceptTcpClientFailed(this.transportId, iteration, consecutiveFailureCount, ex.ToString());
+                    }
+                    finally
+                    {
+                        if (mustReleaseSemaphore)
+                        {
+                            this.acceptConnectionsSemaphore.Release();
+                        }
                     }
                 }
 
@@ -700,6 +745,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                         SecureTransportEventSource.Log.OnConnectionLost(this.transportId, connectionId, timer.ElapsedMilliseconds);
                     }
                 }
+                catch (Exception ex)
+                {
+                    SecureTransportEventSource.Log.HandleConnectionFailed(this.transportId, connectionId, ex.ToString());
+                    throw;
+                }
                 finally
                 {
                     this.instrumentation.ConnectionClosed(connectionId, GetRemoteEndPoint(client), remoteIdentity);
@@ -898,6 +948,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             /// before the send buffer is flushed.
             /// </summary>
             public int MaxUnflushedPacketsCount { get; set; } = 10000;
+
+            /// <summary>
+            /// Gets or sets the maximum number of connections that can be established at the same time.
+            /// </summary>
+            public int MaxConnections { get; set; } = 1000;
         }
 
         private sealed class NoInstrumentation : ISecureTransportInstrumentation

@@ -108,25 +108,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         // The highest seen Zxid
         private long lastZxid;
 
+        private bool needFixStatDuringLoad;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="AbstractPersistedDataFactory"/> class.
+        /// Initializes a new instance of the <see cref="AbstractPersistedDataFactory" /> class.
         /// </summary>
         /// <param name="name">Name of this instance</param>
         /// <param name="instrumentation">Instrumentation consumer</param>
         /// <param name="cancellationToken">Token that will be observed for cancellation signal</param>
         /// <param name="changeListQueueSize">Maximum size of the change list queue</param>
         /// <param name="replicationGroupDataSizeThreshold">Maximum size of data replication for grouping</param>
+        /// <param name="needFixStatDuringLoad">if set to <c>true</c> [need fix stat during load].</param>
         protected AbstractPersistedDataFactory(
             string name,
             IPersistenceInstrumentation instrumentation,
             CancellationToken cancellationToken,
             int changeListQueueSize,
-            int replicationGroupDataSizeThreshold)
+            int replicationGroupDataSizeThreshold,
+            bool needFixStatDuringLoad)
         {
             this.Name = name;
             this.instrumentation = instrumentation;
             this.cancellationToken = cancellationToken;
             this.RequiresCallsForEachDelete = true;
+            this.needFixStatDuringLoad = needFixStatDuringLoad;
 
             this.changeListQueueAvailable = new Semaphore(changeListQueueSize, changeListQueueSize);
             this.newChangeListAvailable = new SemaphoreSlim(0, changeListQueueSize);
@@ -138,13 +143,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AbstractPersistedDataFactory"/> class.
+        /// Initializes a new instance of the <see cref="AbstractPersistedDataFactory" /> class.
         /// </summary>
         /// <param name="name">Name of this instance</param>
         /// <param name="instrumentation">Instrumentation consumer</param>
         /// <param name="cancellationToken">Token that will be observed for cancellation signal</param>
-        protected AbstractPersistedDataFactory(string name, IPersistenceInstrumentation instrumentation, CancellationToken cancellationToken)
-            : this(name, instrumentation, cancellationToken, DefaultReplicationQueueSize, DefaultReplicationGroupDataSize)
+        /// <param name="needFixStatDuringLoad">if set to <c>true</c> [need fix stat during load].</param>
+        protected AbstractPersistedDataFactory(string name, IPersistenceInstrumentation instrumentation, CancellationToken cancellationToken, bool needFixStatDuringLoad)
+            : this(name, instrumentation, cancellationToken, DefaultReplicationQueueSize, DefaultReplicationGroupDataSize, needFixStatDuringLoad)
         {
         }
 
@@ -239,21 +245,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <summary>
         /// Loads the initial tree of nodes.
         /// </summary>
+        /// <param name="cancellation">Cancellation token</param>
         /// <param name="lastXId">The highest transaction Id loaded.</param>
         /// <returns>Root of the tree.</returns>
-        public Node LoadTree(out long lastXId)
+        public Node LoadTree(CancellationToken cancellation, out long lastXId)
         {
             try
             {
                 PersistenceEventSource.Log.LoadTreeStarted();
                 var timer = Stopwatch.StartNew();
 
+                this.dataAvailable.Reset();
+
                 // Initiate the data load process and wait until
                 // root is available.
-                Task unused = this.StartLoadingData();
+                Task unused = this.StartLoadingData(cancellation);
 
                 while (!this.dataAvailable.Wait(DataLoadWaitIntervalMs, this.cancellationToken))
                 {
+                    // If cancellation is requested before the data is fully loaded (for instance the SF primary status
+                    // lost), throw and consider load tree failed.
+                    cancellation.ThrowIfCancellationRequested();
                     PersistenceEventSource.Log.LoadTree_WaitingForData(timer.ElapsedMilliseconds);
                 }
 
@@ -261,8 +273,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 {
                     PersistenceEventSource.Log.LoadTree_CreatingNewRoot();
 
-                    var changeList = this.CreateChangeList();
-                    var root = new PersistedData(1, this)
+                    var changeList = (ChangeList)this.CreateChangeList();
+                    var root = new PersistedData(1)
                     {
                         Name = "/",
                         Acl = null,
@@ -298,6 +310,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                     this.Root.Stat.Aversion,
                     this.Root.Stat.NumChildren);
 
+                if (this.needFixStatDuringLoad)
+                {
+                    var wrongChildrenCount = 0;
+                    var clock = Stopwatch.StartNew();
+
+                    // Sanity check of children count
+                    foreach (var kvp in this.dataById)
+                    {
+                        var id = kvp.Key;
+                        var node = kvp.Value;
+                        if (node.Stat.NumChildren != node.Node.ChildrenCount)
+                        {
+                            Trace.TraceInformation($"Inconsistent children count of node Id={node.Id} Name={node.Name}: Stat:NC={node.Stat.NumChildren}/M={node.Stat.Mzxid}, Actual#:{node.GetChildrenCount()}");
+                            wrongChildrenCount++;
+
+                            node.Stat.NumChildren = node.Node.ChildrenCount;
+                        }
+                    }
+
+                    Trace.TraceInformation($"Number of children count being wrong: {wrongChildrenCount} out of {this.totalDataCount}/{this.dataById.Count}. Time spent to scan and fix: {clock.ElapsedMilliseconds} ms");
+                }
+
                 return this.Root.Node;
             }
             catch (Exception ex)
@@ -313,7 +347,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <returns>A newly created object that implements <see cref="IPersistedData"/> interface</returns>
         public IPersistedData CreateNew()
         {
-            IPersistedData persistedData = new PersistedData(this.uidProvider.NextUniqueId(), this);
+            IPersistedData persistedData = new PersistedData(this.uidProvider.NextUniqueId());
             PersistenceEventSource.Log.CreateNew(persistedData.Id);
             this.RecordStatsDelta(1, 0);
             return persistedData;
@@ -532,7 +566,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// that must be applied as a unit.
         /// </summary>
         /// <returns>The newly created <see cref="ChangeList"/></returns>
-        internal ChangeList CreateChangeList()
+        public IChangeList CreateChangeList()
         {
             ulong id = (ulong)Interlocked.Increment(ref this.lastAssignedChangeListId);
             return new ChangeList(id, this);
@@ -545,6 +579,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <returns>async task can be used to track the completion of change list commit</returns>
         internal Task EnqueueAsync(ChangeList changeList)
         {
+            if (changeList.Changes.Count == 0)
+            {
+                return Task.FromResult(0);
+            }
+
+            if (!this.IsActive)
+            {
+                // If this factory is nonactive, don't enqueue and tell upper layer replication is cancelled.
+                return Task.FromCanceled(default(CancellationToken));
+            }
+
             // Enqueue the change list and unblock DequeueAsync task
             var it = new ChangeListReplicationTask
             {
@@ -554,6 +599,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 
             foreach (var change in changeList.Changes)
             {
+                // If any of the following fails, fatal error is reported and the primary should be relinquished. It
+                // is NOT okay to return canceled task to the upper layer and leave the in-memory tree partially
+                // changed.
                 switch (change.ChangeType)
                 {
                     case ChangeList.ChangeType.Add:
@@ -632,6 +680,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 
                 this.changeListQueueAvailable.Release(taskCompletionSnapshot.Count);
 
+                // Once we reach here, the in-memory tree is changed and we have to try the best to replication.
+                // If the factory is inactive at this point, either because the primary status is lost or we haven't
+                // become primary (unlikely because there will be nothing to enqueue), we have to report failure and
+                // reload the data because the underlying persistence is inconsistent with the in-memory tree.
+                if (!this.IsActive)
+                {
+                    // This factory is inactive either because the primary status is lost or we haven't become primary
+                    // yet. Here we just drain the replication queue and inform the backend core the replication is
+                    // cancelled.
+                    foreach (var taskCompletion in taskCompletionSnapshot)
+                    {
+                        taskCompletion.TrySetCanceled();
+                    }
+
+                    this.ReportFatalError("Factory is inactive", new InvalidOperationException());
+                }
+
+                // It is okay to proceed to replication.
                 var firstChangeListId = changeListSnapshot[0].Item1;
                 var lastChangeListId = changeListSnapshot[changeListSnapshot.Count - 1].Item1;
 
@@ -708,7 +774,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                         ex.Message);
 
                     this.ReportFatalError("Commit Failed", ex);
-                    throw;
                 }
             }
         }
@@ -733,8 +798,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <summary>
         /// Initiate the data load process.
         /// </summary>
+        /// <param name="cancellation">Cancellation token to indicate the loading should be cancelled</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        protected abstract Task StartLoadingData();
+        protected abstract Task StartLoadingData(CancellationToken cancellation);
 
         /// <summary>
         /// Start replication of the changes included in the given <see cref="ChangeList"/>.
@@ -784,7 +850,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             if (!this.dataById.TryAdd((long)data.Id, data))
             {
                 PersistenceEventSource.Log.CommitAdd_AlreadyExists(changeListId, replicationId, data.Id, data.Name, data.ParentId);
-                throw new InvalidOperationException("CommitAddFailed-Data exists already");
+
+                var msg = $"{nameof(this.CommitAdd)} failed: data exists already id={data.Id} name={data.Name}";
+                var ex = new InvalidOperationException(msg);
+                this.ReportFatalError(msg, ex);
             }
             else
             {
@@ -827,21 +896,38 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             {
                 Interlocked.Decrement(ref this.totalDataCount);
 
-                if (removedData != data)
+                if (!MostlyIdentical(removedData, data))
                 {
                     PersistenceEventSource.Log.CommitRemoveFailed_DataMismatch(changeListId, replicationId, data.Id, data.Name);
-                    throw new InvalidOperationException($"CommitRemove DataMismatch. id={data.Id}");
+                    ReportError("DataMismatch");
                 }
             }
             else
             {
                 PersistenceEventSource.Log.CommitRemoveFailed_DataNotFound(changeListId, replicationId, data.Id, data.Name);
-                throw new InvalidOperationException($"CommitRemove DataNotFound. id={data.Id}");
+                ReportError("DataNotFound");
+            }
+
+            bool MostlyIdentical(PersistedData data1, PersistedData data2)
+            {
+                return
+                    data1.Id == data2.Id &&
+                    data1.ParentId == data2.ParentId &&
+                    data1.IsEphemeral == data2.IsEphemeral &&
+                    data1.Name == data2.Name &&
+                    data1.Data?.Length == data2.Data?.Length;
+            }
+
+            void ReportError(string errorKind)
+            {
+                var msg = $"{nameof(this.CommitRemove)} {errorKind}: id={data.Id} name={data.Name}";
+                var ex = new InvalidOperationException(msg);
+                this.ReportFatalError(msg, ex); // Owner of persisted data factory is expected to relinquish primary
             }
         }
 
         /// <summary>
-        /// Process an add notification.
+        /// Process an add notification. Used in Active Secondary.
         /// </summary>
         /// <param name="replicationId">Id of the replication that added the data</param>
         /// <param name="data">The data that was added</param>
@@ -860,7 +946,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             PersistenceEventSource.Log.ProcessAdd_Started(replicationId, data.Id);
 
             Debug.Assert(data.Node == null, "Data being newly added must not have a node");
-            Debug.Assert(data.Factory == this, "Data that is being newly added should belong to this factory");
 
             try
             {
@@ -1086,7 +1171,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.lastZxid = 0;
             this.uidProvider.SetLastId(0);
             this.Root = null;
-            this.dataAvailable.Reset();
         }
 
         private void CompleteRebuild(bool ignoreErrors)
@@ -1209,7 +1293,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             PersistenceEventSource.Log.ProcessLoad_Started(data.Id);
 
             Debug.Assert(data.Node == null, "Data being newly added must not have a node");
-            Debug.Assert(data.Factory == this, "Data that is being newly added should belong to this factory");
 
             try
             {

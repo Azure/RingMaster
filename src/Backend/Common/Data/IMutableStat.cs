@@ -66,9 +66,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         new int DataLength { get; set; }
 
         /// <summary>
-        /// Gets or sets the number children.
+        /// Gets or sets the number of children, including ephemeral nodes
         /// </summary>
         /// <value>The number children.</value>
         new int NumChildren { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of ephemeral children nodes
+        /// </summary>
+        int NumEphemeralChildren { get; set; }
     }
 }

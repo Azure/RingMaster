@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Microsoft.Vega.Test.Helpers</RootNamespace>
+    <AssemblyName>TestHelpers</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ServiceFabric" Version="6.2.274" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.1.274" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Instrumentation\Instrumentation.csproj" />
+    <ProjectReference Include="..\..\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="..\..\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\IfxInstrumentation\IfxInstrumentation.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

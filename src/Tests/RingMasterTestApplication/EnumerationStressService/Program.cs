@@ -7,7 +7,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EnumerationStress
     using System;
     using System.Diagnostics;
     using System.Fabric;
-    using System.Fabric.Description;
     using System.Reflection;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;

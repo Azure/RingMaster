@@ -200,7 +200,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
         public Task Start()
         {
             Trace.TraceInformation($"RingMasterInstance.Start id={this.Id}");
-            this.backend.Start();
+            this.backend.Start(CancellationToken.None);
             this.backend.OnBecomePrimary();
             return this.hasBackendStarted.Task;
         }
@@ -262,7 +262,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
                 backend = new RingMasterBackendCore(persistedDataFactory);
 
                 backend.StartService = (p1, p2) => { backendStarted.Set(); };
-                backend.Start();
+                backend.Start(CancellationToken.None);
                 backend.OnBecomePrimary();
 
                 backendStarted.Wait();

@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>VegaServiceFabricApplication$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>Vega Service Fabric Application</Title>
+    <Description>Vega Persistence layer that uses ReliableDictionary to persist data</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>RingMaster;VegaClient</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterApplication.sfproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(OutputRoot)RingMasterApplication.sfpkg">
+      <PackagePath>content</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterService.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterService.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterWatchdog.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.RingMasterWatchdog.pdb" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.pdb" />
+    <Content Include="@(libs)">
+      <PackagePath>lib\net462</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <QCustomInput Include="$(OutputRoot)RingMasterApplication.sfpkg">
+      <Visible>false</Visible>
+    </QCustomInput>
+  </ItemGroup>
+</Project>

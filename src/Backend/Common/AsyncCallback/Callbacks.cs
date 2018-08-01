@@ -142,6 +142,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.AsyncCall
     public delegate void DataCallbackDelegate(int rc, string path, object ctx, byte[] data, IStat stat);
 
     /// <summary>
+    /// Delegate SubtreeDataCallbackDelegate
+    /// </summary>
+    /// <param name="rc">The response code.</param>
+    /// <param name="path">The original request path.</param>
+    /// <param name="ctx">The response context.</param>
+    /// <param name="data">The subtree data.</param>
+    /// <param name="continuationPath">The continuation path.</param>
+    public delegate void SubtreeDataCallbackDelegate(int rc, string path, object ctx, byte[] data, string continuationPath);
+
+    /// <summary>
     /// Interface IDataCallback
     /// </summary>
     public interface IDataCallback

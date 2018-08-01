@@ -23,6 +23,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Test;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Microsoft.Vega.Test.Helpers;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
@@ -31,6 +32,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     [TestClass]
     public class TestClient : RingMasterClientUnitTest
     {
+        private const string TestCertPrefix = "RingMasterClientTestCert";
         private readonly Random random = new Random();
 
         [TestMethod]
@@ -897,12 +899,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// <returns>An array with the specified number of certificates</returns>
         private static X509Certificate[] GetLocalCertificates(int count)
         {
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             var certificates = new List<X509Certificate>();
-            try
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadOnly);
                 DateTime now = DateTime.Now;
+
+                // Install certificates if count is greather than the amount of certificates in the store
+                for (int i = 0; i < count - store.Certificates.Count; ++i) {
+                    Helpers.InstallCert($"{TestCertPrefix}{i+1}");
+                }
 
                 // Select certificates from the personal store in the local machine that were specifically
                 // created for use by this unit test.
@@ -916,11 +922,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     }
                 }
 
+
                 return certificates.ToArray();
             }
-            finally
+        }
+
+        [AssemblyCleanup]
+        public static void RemoveCerts()
+        {
+            // Use other store locations if your certificate is not in the current user store.
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
-                store.Close();
+                store.Open(OpenFlags.ReadWrite | OpenFlags.IncludeArchived);
+
+                foreach (var cert in store.Certificates)
+                {
+                    if (cert.SubjectName.Name.Contains(TestCertPrefix))
+                    {
+                        Console.Out.WriteLine("Removing cert: {0}", cert.SubjectName.Name);
+
+                        // Remove the certificate
+                        store.Remove(cert);
+                    }
+                }
             }
         }
 

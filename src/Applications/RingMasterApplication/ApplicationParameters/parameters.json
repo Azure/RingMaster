@@ -1,0 +1,6 @@
+{
+  "EnvironmentName": "localhost",
+  "Tenant": "localhost",
+  "MdmAccountName": "DummyMdm",
+  "VIP": "127.0.0.1"
+}

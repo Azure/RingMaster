@@ -1,31 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{6038F58C-52DC-40D6-94C3-5721C7FAB916}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Server</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Server</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="IRingMasterServerInstrumentation.cs" />
-    <Compile Include="RingMasterServer.cs" />
-    <Compile Include="RingMasterServerEventSource.cs" />
-    <Compile Include="RingMasterServerInstrumentation.cs" />
-    <Compile Include="Session.cs" />
-  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
   </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

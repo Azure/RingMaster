@@ -92,14 +92,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             int maxReplicationDataSize,
             IServiceFabricPersistenceInstrumentation instrumentation,
             CancellationToken cancellationToken)
-            : base(name, instrumentation, cancellationToken, replicationQueueSize, maxReplicationDataSize)
+            : base(name, instrumentation, cancellationToken, replicationQueueSize, maxReplicationDataSize, configuration.FixStatDuringLoad)
         {
             this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
             this.configuration = configuration ?? new Configuration();
             this.instrumentation = instrumentation;
             this.cancellationToken = cancellationToken;
-
-            PersistedDataFactory.SerializerInstance.Factory = this;
 
             if (this.configuration.EnableActiveSecondary)
             {
@@ -190,22 +188,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             return d;
         }
 
-        /// <summary>
-        /// Start the data load process.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        protected override async Task StartLoadingData()
+        /// <inheritdoc />
+        protected override async Task StartLoadingData(CancellationToken cancellation)
         {
             ServiceFabricPersistenceEventSource.Log.StartLoadingData();
 
-            var result = await this.stateManager.TryGetAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
+            var result = await this.stateManager.TryGetAsync<IReliableDictionary2<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
             if (result.HasValue)
             {
                 var dataById = result.Value;
                 using (var transaction = this.stateManager.CreateTransaction())
                 {
-                    long count = await dataById.GetCountAsync(transaction);
-                    ServiceFabricPersistenceEventSource.Log.DataByIdDictionaryAlreadyExists(count);
+                    ServiceFabricPersistenceEventSource.Log.DataByIdDictionaryAlreadyExists(dataById.Count);
 
                     // If active secondary feature is not enabled, then the
                     // dictionary must be explicitly loaded. Otherwise, the
@@ -213,7 +207,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                     // is received.
                     if (!this.configuration.EnableActiveSecondary)
                     {
-                        await this.LoadDictionary(dataById, transaction);
+                        await this.LoadDictionary(dataById, transaction, cancellation);
                     }
 
                     await transaction.CommitAsync();
@@ -447,8 +441,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// </summary>
         /// <param name="dataById">Dictionary to load</param>
         /// <param name="transaction">Transaction to use</param>
+        /// <param name="cancellation">Cancellation token to indicate the cancellation of loading</param>
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        private async Task LoadDictionary(IReliableDictionary<long, WinFabPersistence.PersistedData> dataById, ITransaction transaction)
+        private async Task LoadDictionary(
+            IReliableDictionary<long, WinFabPersistence.PersistedData> dataById,
+            ITransaction transaction,
+            CancellationToken cancellation)
         {
             ServiceFabricPersistenceEventSource.Log.LoadDictionaryStarted();
             Stopwatch timer = Stopwatch.StartNew();
@@ -459,7 +457,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                 IAsyncEnumerable<KeyValuePair<long, WinFabPersistence.PersistedData>> enumerable = await dataById.CreateEnumerableAsync(transaction);
                 using (var enumerator = enumerable.GetAsyncEnumerator())
                 {
-                    while (await enumerator.MoveNextAsync(CancellationToken.None))
+                    while (await enumerator.MoveNextAsync(cancellation))
                     {
                         dataList.Add(enumerator.Current.Value.Data);
                     }
@@ -492,6 +490,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             /// Gets or sets a value indicating whether errors during load must be ignored.
             /// </summary>
             public bool IgnoreErrorsDuringLoad { get; set; } = false;
+
+            /// <summary>
+            /// Gets or sets a value indicating whether to fix the number of children in stat during load.
+            /// </summary>
+            public bool FixStatDuringLoad { get; set; } = false;
         }
 
         private sealed class Replication : IReplication

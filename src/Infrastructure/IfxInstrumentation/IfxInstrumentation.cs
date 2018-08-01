@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
 {
     using System;
     using System.Diagnostics;
+    using System.Runtime.InteropServices;
 
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
     using Microsoft.Cloud.InstrumentationFramework;
@@ -58,10 +59,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentatio
             instrumentationSpec.MaxSizeTraceFileInKb = DefaultMaxTraceFileSizeInKB;
             instrumentationSpec.MaxSizeCompletedTraceFilesInMb = DefaultMaxCompletedTraceFileSizeInMB;
 
-            IfxInitializer.IfxInitialize(
-                sessionName,
-                instrumentationSpec,
-                auditSpec);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                IfxInitializer.IfxInitialize(
+                    sessionName,
+                    instrumentationSpec,
+                    auditSpec);
+            }
         }
 
         /// <summary>

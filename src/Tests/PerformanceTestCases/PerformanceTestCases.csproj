@@ -1,48 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{8AC71971-FAE7-4528-8A5B-590F30DF93FA}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Test.PerformanceTestCases</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj">
-      <Project>{2F20991A-04B8-4305-9325-E8A3395A7BB7}</Project>
-      <Name>RingMasterClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="BulkWatcherPerformance.cs" />
-    <Compile Include="ConnectPerformance.cs" />
-    <Compile Include="CreatePerformance.cs" />
-    <Compile Include="DeletePerformance.cs" />
-    <Compile Include="ExistsPerformance.cs" />
-    <Compile Include="GetChildrenPerformance.cs" />
-    <Compile Include="GetDataPerformance.cs" />
-    <Compile Include="RandomGenerator.cs" />
-    <Compile Include="SetDataPerformance.cs" />
-    <Compile Include="WatcherPerformance.cs" />
-  </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
 </Project>

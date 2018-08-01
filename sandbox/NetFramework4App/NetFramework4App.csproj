@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <!-- CloudBuild specific -->
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster</RootNamespace>
+    <AssemblyName>NetFramework4App</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+    <EnableStyleCop>false</EnableStyleCop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetStandard20Lib\NetStandard20Lib.csproj" />
+  </ItemGroup>
+
+</Project>

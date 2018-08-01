@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+    <CodeAnalysisRuleSet>$(SRCROOT)\StyleCop\stylecop.ruleset</CodeAnalysisRuleSet>
+    -->
+  </PropertyGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="$(SRCROOT)\StyleCop\stylecop.json" Link="stylecop.json" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta006" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

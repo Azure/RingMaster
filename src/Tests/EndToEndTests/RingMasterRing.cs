@@ -161,7 +161,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
                     if (expected.Data != null)
                     {
                         Assert.IsNotNull(actual.Data);
-                        CollectionAssert.AreEqual(expected.Data, actual.Data, "Data");
+                        Assert.IsTrue(Backend.HelperTypes.EqualityHelper.Equals(expected.Data, actual.Data), "Data");
                     }
                     else
                     {

@@ -1,89 +1,16 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{22AC66A6-3E79-49D4-B896-E5E3C15D7158}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Backend.Common</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Configuration" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="AbstractRingMaster.cs" />
-    <Compile Include="AsyncCallback\Callbacks.cs" />
-    <Compile Include="AuthNotSetException.cs" />
-    <Compile Include="BackendCompoundRequest.cs" />
-    <Compile Include="BackendRequest.cs" />
-    <Compile Include="BackendRequestNoResult.cs" />
-    <Compile Include="BackendRequestWithContext.cs" />
-    <Compile Include="BehaviorAction.cs" />
-    <Compile Include="IoSession.cs" />
-    <Compile Include="DataEncodingHelper.cs" />
-    <Compile Include="Data\FirstStat.cs" />
-    <Compile Include="Data\IMutableStat.cs" />
-    <Compile Include="Data\MutableStat.cs" />
-    <Compile Include="Data\Scheme.cs" />
-    <Compile Include="HealthDefinition.cs" />
-    <Compile Include="IByteArrayMarshaller.cs" />
-    <Compile Include="IClientConnectionInstrumentation.cs" />
-    <Compile Include="ILoadBehavior.cs" />
-    <Compile Include="InvalidAclException.cs" />
-    <Compile Include="IRingMasterBackendCompondRequest.cs" />
-    <Compile Include="IRingMasterBackendRequest.cs" />
-    <Compile Include="KeeperException\ExceptionHelper.cs" />
-    <Compile Include="MarshallerChannel.cs" />
-    <Compile Include="NoSslWrapping.cs" />
-    <Compile Include="NoType.cs" />
-    <Compile Include="RepositoryOperation.cs" />
-    <Compile Include="RequestBatch.cs" />
-    <Compile Include="RequestCall.cs" />
-    <Compile Include="RequestCheck.cs" />
-    <Compile Include="RequestCreate.cs" />
-    <Compile Include="RequestDelegates.cs" />
-    <Compile Include="RequestDelete.cs" />
-    <Compile Include="RequestExists.cs" />
-    <Compile Include="RequestGetAcl.cs" />
-    <Compile Include="RequestGetChildren.cs" />
-    <Compile Include="RequestGetData.cs" />
-    <Compile Include="RequestInit.cs" />
-    <Compile Include="RequestMove.cs" />
-    <Compile Include="RequestMulti.cs" />
-    <Compile Include="RequestSetAcl.cs" />
-    <Compile Include="RequestSetAuth.cs" />
-    <Compile Include="RequestSetData.cs" />
-    <Compile Include="RequestSync.cs" />
-    <Compile Include="SslWrapping.cs" />
-    <Compile Include="States.cs" />
-    <Compile Include="Watcher\Event\EventType.cs" />
-    <Compile Include="Watcher\Event\KeeperState.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj">
-      <Project>{0F4FADD2-3470-4A24-BDF5-4DB7E9679BD9}</Project>
-      <Name>HelperTypes</Name>
-    </ProjectReference>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj">
-      <Project>{075626e6-030a-44ee-bf93-44f9fc7a552b}</Project>
-      <Name>RingMasterCommon</Name>
-    </ProjectReference>
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
   </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

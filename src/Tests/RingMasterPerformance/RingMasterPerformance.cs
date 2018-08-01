@@ -7,6 +7,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
     using System;
     using System.Configuration;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Security.Cryptography.X509Certificates;
@@ -15,12 +16,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// RingMaster performance test
     /// </summary>
     public class RingMasterPerformance
     {
+        private static IConfiguration appSettings;
+
         /// <summary>
         /// Random number generator.
         /// </summary>
@@ -108,6 +112,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             string ringMasterAddress = "127.0.0.1:99";
             string path = "/Performance";
 
+            var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(assemblyPath)).AddJsonFile("appSettings.json");
+            appSettings = builder.Build();
+
             if (args.Length > 0)
             {
                 testType = args[0].ToLower();
@@ -127,12 +135,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             X509Certificate[] clientCertificates = null;
             X509Certificate[] acceptedServerCertificates = null;
 
-            if (bool.Parse(ConfigurationManager.AppSettings["SSL.UseSSL"]))
+            if (bool.Parse(appSettings["SSL.UseSSL"]))
             {
                 useSecureConnection = true;
-                string[] clientCertificateThumbprints = ConfigurationManager.AppSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
+                string[] clientCertificateThumbprints = appSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
                 clientCertificates = RingMasterClient.GetCertificatesFromThumbPrintOrFileName(clientCertificateThumbprints);
-                acceptedServerCertificates = Certificates.GetDecodedCertificates(ConfigurationManager.AppSettings["SSL.ServerCerts"]);
+                acceptedServerCertificates = Certificates.GetDecodedCertificates(appSettings["SSL.ServerCerts"]);
 
                 foreach (var certificate in clientCertificates)
                 {
@@ -152,22 +160,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             var performanceTest = new RingMasterPerformance();
 
             performanceTest.TestPath = path;
-            performanceTest.TimeStreamId = ulong.Parse(ConfigurationManager.AppSettings["TimeStream"]);
-            performanceTest.MaxConcurrency = int.Parse(ConfigurationManager.AppSettings["MaxConcurrency"]);
-            performanceTest.MaxDataSize = int.Parse(ConfigurationManager.AppSettings["MaxDataSize"]);
-            performanceTest.MinDataSize = int.Parse(ConfigurationManager.AppSettings["MinDataSize"]);
-            performanceTest.MinChildrenPerNode = int.Parse(ConfigurationManager.AppSettings["MinChildrenPerNode"]);
-            performanceTest.MaxChildrenPerNode = int.Parse(ConfigurationManager.AppSettings["MaxChildrenPerNode"]);
-            performanceTest.BatchLength = int.Parse(ConfigurationManager.AppSettings["BatchLength"]);
-            performanceTest.MaxAllowedCodePoint = int.Parse(ConfigurationManager.AppSettings["MaxAllowedCodePoint"]);
-            performanceTest.MaxGetChildrenEnumerationCount = int.Parse(ConfigurationManager.AppSettings["MaxGetChildrenEnumerationCount"]);
-            performanceTest.MaxSetOperations = int.Parse(ConfigurationManager.AppSettings["MaxSetOperations"]);
-            performanceTest.MaxNodes = int.Parse(ConfigurationManager.AppSettings["MaxNodes"]);
-            performanceTest.TestMaxRunTimeInSeconds = int.Parse(ConfigurationManager.AppSettings["TestMaxRunTimeInSeconds"]);
+            performanceTest.TimeStreamId = ulong.Parse(appSettings["TimeStream"]);
+            performanceTest.MaxConcurrency = int.Parse(appSettings["MaxConcurrency"]);
+            performanceTest.MaxDataSize = int.Parse(appSettings["MaxDataSize"]);
+            performanceTest.MinDataSize = int.Parse(appSettings["MinDataSize"]);
+            performanceTest.MinChildrenPerNode = int.Parse(appSettings["MinChildrenPerNode"]);
+            performanceTest.MaxChildrenPerNode = int.Parse(appSettings["MaxChildrenPerNode"]);
+            performanceTest.BatchLength = int.Parse(appSettings["BatchLength"]);
+            performanceTest.MaxAllowedCodePoint = int.Parse(appSettings["MaxAllowedCodePoint"]);
+            performanceTest.MaxGetChildrenEnumerationCount = int.Parse(appSettings["MaxGetChildrenEnumerationCount"]);
+            performanceTest.MaxSetOperations = int.Parse(appSettings["MaxSetOperations"]);
+            performanceTest.MaxNodes = int.Parse(appSettings["MaxNodes"]);
+            performanceTest.TestMaxRunTimeInSeconds = int.Parse(appSettings["TestMaxRunTimeInSeconds"]);
 
-            int requestTimeout = int.Parse(ConfigurationManager.AppSettings["RequestTimeout"]);
+            int requestTimeout = int.Parse(appSettings["RequestTimeout"]);
 
-            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
             var serverSpec = new RingMasterClient.ServerSpec
             {
@@ -550,8 +558,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             var instrumentation = new ConnectPerformanceInstrumentation();
             var random = new Random();
 
-            int minConnectionLifetimeSeconds = int.Parse(ConfigurationManager.AppSettings["ConnectPerformance.MinConnectionLifetimeSeconds"]);
-            int maxConnectionLifetimeSeconds = int.Parse(ConfigurationManager.AppSettings["ConnectPerformance.MaxConnectionLifetimeSeconds"]);
+            int minConnectionLifetimeSeconds = int.Parse(appSettings["ConnectPerformance.MinConnectionLifetimeSeconds"]);
+            int maxConnectionLifetimeSeconds = int.Parse(appSettings["ConnectPerformance.MaxConnectionLifetimeSeconds"]);
 
             Func<IRingMasterRequestHandler> createConnection = () =>
             {

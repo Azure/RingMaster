@@ -8,9 +8,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
     using System.Diagnostics;
     using System.Diagnostics.Tracing;
     using System.Fabric;
+    using System.IO;
     using System.Threading;
+
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.ServiceFabric.Services.Runtime;
     using RingMasterApplication.Utilities;
 
@@ -24,9 +27,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
         /// </summary>
         public static void Main()
         {
-            RingMasterApplicationHelper.AttachDebugger();
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            IConfiguration appSettings = builder.Build();
 
-            LogFileEventTracing.Start(@"c:\Resources\Directory\RingMasterWatchdog.LogPath");
+            RingMasterApplicationHelper.AttachDebugger(int.Parse(appSettings["DebuggerAttachTimeout"]));
+
+            LogFileEventTracing.Start(Path.Combine(appSettings["LogFolder"], "RingMasterWatchdog.LogPath"));
 
             AppDomain.CurrentDomain.ProcessExit +=
                 (sender, eventArgs) =>

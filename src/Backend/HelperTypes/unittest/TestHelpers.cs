@@ -43,7 +43,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// </summary>
         /// <typeparam name="T">exception type to throw</typeparam>
         /// <param name="action">The action.</param>
-        internal static void AssertThrows<T>(Action action) where T : Exception
+        internal static void AssertThrows<T>(Action action)
+            where T : Exception
         {
             try
             {

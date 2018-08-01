@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SubscribeStressService
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -14,6 +13,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SubscribeStressSe
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class SubscribeStressServiceEventSource : EventSource
     {
+        static SubscribeStressServiceEventSource()
+        {
+        }
+
+        private SubscribeStressServiceEventSource()
+        {
+        }
+
         public static SubscribeStressServiceEventSource Log { get; } = new SubscribeStressServiceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]

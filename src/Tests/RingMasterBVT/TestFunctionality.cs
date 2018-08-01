@@ -237,7 +237,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// Verify that a node can be fast-deleted.
         /// </summary>
         [TestMethod]
-        [Timeout(30000)]
+        [Timeout(40000)]
         public void TestFastDelete()
         {
             this.functionalityTest.TestCascadeDelete(fastDelete: true).Wait();
@@ -247,7 +247,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// Verify that a node can be fast-deleted.
         /// </summary>
         [TestMethod]
-        [Timeout(30000)]
+        [Timeout(40000)]
         public void TestCascadeDelete()
         {
             this.functionalityTest.TestCascadeDelete(fastDelete: false).Wait();
@@ -414,6 +414,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         public void TestMultiScheduled()
         {
             this.functionalityTest.TestMultiScheduled().Wait();
+        }
+
+        /// <summary>
+        /// Verifies that lock collision is handled
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetLockCollisionInMulti()
+        {
+            this.functionalityTest.GetLockCollisionInMulti().Wait();
+        }
+
+        /// <summary>
+        /// Verifies that GetSubtree requests work correctly.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtree()
+        {
+            this.functionalityTest.TestGetSubtree(false).Wait();
+        }
+
+        /// <summary>
+        /// Verifies that Exists, Sync, and GetSubtree work correctly in batch requests.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestExistsSyncGetSubtreeBatch()
+        {
+            this.functionalityTest.TestExistsSyncGetSubtreeBatch().Wait();
         }
     }
 }

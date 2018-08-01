@@ -192,9 +192,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="resultCode">The result code.</param>
         /// <param name="result">The result.</param>
         /// <param name="stat">The stat.</param>
-        public void NotifyComplete(int resultCode, object result, IStat stat)
+        /// <param name="responsePath">The response path.</param>
+        public void NotifyComplete(int resultCode, object result, IStat stat, string responsePath)
         {
-            this.InvokeCallback(resultCode, result, stat);
+            this.InvokeCallback(resultCode, result, stat, responsePath);
             if (this.onComplete != null)
             {
                 double time = 1.0 * (DateTime.UtcNow.Ticks - this.completionTimeInTicks) / TimeSpan.TicksPerMillisecond;
@@ -215,7 +216,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="resultCode">Result code</param>
         /// <param name="result">Result object</param>
         /// <param name="stat">Stat object</param>
-        protected abstract void InvokeCallback(int resultCode, object result, IStat stat);
+        /// <param name="responsePath">Response path</param>
+        protected abstract void InvokeCallback(int resultCode, object result, IStat stat, string responsePath);
     }
 
     /// <summary>
@@ -268,6 +270,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     return new RequestBatch((RequestDefinitions.RequestBatch)request, null, null);
                 case RingMasterRequestType.Move:
                     return new RequestMove((RequestDefinitions.RequestMove)request, null, null);
+                case RingMasterRequestType.GetSubtree:
+                    return new RequestGetSubtree((RequestDefinitions.RequestGetSubtree)request, null, null);
             }
 
             throw new InvalidOperationException();

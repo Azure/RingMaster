@@ -58,6 +58,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             {
                 case OpCode.Check:
                 {
+                    var checkResult = (OpResult.CheckResult)operationResult;
+                    response.Stat = checkResult.Stat;
                     break;
                 }
 
@@ -75,6 +77,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                     response.ResponsePath = getDataResult.Path;
                     response.Stat = getDataResult.Stat;
                     response.Content = getDataResult.Bytes;
+                    break;
+                }
+
+                case OpCode.GetChildren:
+                {
+                    var getChildrenResult = (OpResult.GetChildrenResult)operationResult;
+                    response.Stat = getChildrenResult.Stat;
+                    response.Content = getChildrenResult.Children;
                     break;
                 }
 
@@ -110,6 +120,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                     response.ResultCode = errorResult.ResultCode;
                     break;
                 }
+
+                case OpCode.Exists:
+                {
+                    var existsResult = (OpResult.ExistsResult)operationResult;
+                    response.Content = existsResult.Stat;
+                    break;
+                }
+
+                case OpCode.Sync:
+                {
+                    break;
+                }
+
+                case OpCode.GetSubtree:
+                {
+                    var getSubtreeResult = (OpResult.GetSubtreeResult)operationResult;
+                    response.Content = getSubtreeResult.SerializedSubtree;
+                    response.ResponsePath = getSubtreeResult.ContinuationPath;
+                    break;
+                }
             }
 
             return response;
@@ -136,11 +166,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             switch (requestType)
             {
                 case RingMasterRequestType.Check:
-                    return new OpResult.CheckResult();
+                    return new OpResult.CheckResult(response.Stat);
                 case RingMasterRequestType.Create:
                     return new OpResult.CreateResult(response.Stat, (string)response.Content);
                 case RingMasterRequestType.GetData:
                     return new OpResult.GetDataResult(response.Stat, (byte[])response.Content, response.ResponsePath);
+                case RingMasterRequestType.GetChildren:
+                    return new OpResult.GetChildrenResult(response.Stat, (IList<string>)response.Content);
                 case RingMasterRequestType.Delete:
                     return new OpResult.DeleteResult();
                 case RingMasterRequestType.SetData:
@@ -152,6 +184,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 case RingMasterRequestType.Multi:
                 case RingMasterRequestType.Batch:
                     return new OpResult.RunResult((List<OpResult>)response.Content);
+                case RingMasterRequestType.Exists:
+                    return new OpResult.ExistsResult((IStat)response.Content);
+                case RingMasterRequestType.Sync:
+                    return new OpResult.SyncResult();
+                case RingMasterRequestType.GetSubtree:
+                    return new OpResult.GetSubtreeResult((byte[])response.Content, response.ResponsePath);
             }
 
             return new OpResult.ErrorResult((int)RingMasterException.Code.Unimplemented);
@@ -165,10 +203,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// <summary>
             /// Initializes a new instance of the <see cref="CheckResult"/> class.
             /// </summary>
-            public CheckResult()
+            /// <param name="stat">stat of the node to be checked</param>
+            public CheckResult(IStat stat)
                 : base(OpCode.Check)
             {
+                this.Stat = stat;
             }
+
+            /// <summary>
+            /// Gets the <see cref="IStat"/> associated with the node at the time of the Check operation.
+            /// </summary>
+            public IStat Stat { get; private set; }
         }
 
         /// <summary>
@@ -204,6 +249,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// Gets the content of the node.
             /// </summary>
             public byte[] Bytes { get; private set; }
+        }
+
+        /// <summary>
+        /// Result of a <see cref="OpCode.GetChildren"/> operation.
+        /// </summary>
+        public sealed class GetChildrenResult : OpResult
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="GetChildrenResult"/> class.
+            /// </summary>
+            /// <param name="stat">The <see cref="IStat"/> of the node at the time GetChildren operation was executed</param>
+            /// <param name="children">a list of children</param>
+            public GetChildrenResult(IStat stat, IList<string> children)
+                : base(OpCode.GetChildren)
+            {
+                this.Stat = stat;
+                this.Children = children;
+            }
+
+            /// <summary>
+            /// Gets the list of children.
+            /// </summary>
+            public IList<string> Children { get; private set; }
+
+            /// <summary>
+            /// Gets the <see cref="IStat"/> associated with the node at the time of the GetChildren operation.
+            /// </summary>
+            public IStat Stat { get; private set; }
         }
 
         /// <summary>
@@ -379,6 +452,69 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// Gets the result code associated with the operation.
             /// </summary>
             public int ResultCode { get; private set; }
+        }
+
+        /// <summary>
+        /// Result of a <see cref="OpCode.Exists"/> operation.
+        /// </summary>
+        public sealed class ExistsResult : OpResult
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ExistsResult"/> class.
+            /// </summary>
+            /// <param name="stat">The <see cref="IStat"/> of the node at the time the operation was executed</param>
+            public ExistsResult(IStat stat)
+                : base(OpCode.Exists)
+            {
+                this.Stat = stat;
+            }
+
+            /// <summary>
+            /// Gets the <see cref="IStat"/> of the node after the operation was completed.
+            /// </summary>
+            public IStat Stat { get; private set; }
+        }
+
+        /// <summary>
+        /// Result of a <see cref="OpCode.Sync"/> operation.
+        /// </summary>
+        public sealed class SyncResult : OpResult
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="SyncResult"/> class.
+            /// </summary>
+            public SyncResult()
+                : base(OpCode.Sync)
+            {
+            }
+        }
+
+        /// <summary>
+        /// Result of a <see cref="OpCode.GetSubtree"/> operation.
+        /// </summary>
+        public sealed class GetSubtreeResult : OpResult
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="GetSubtreeResult"/> class.
+            /// </summary>
+            /// <param name="serializedSubtree">Serialized subtree data.</param>
+            /// <param name="continuationPath">Continuation path if there are still more nodes in the subtree.</param>
+            public GetSubtreeResult(byte[] serializedSubtree, string continuationPath)
+                : base(OpCode.GetSubtree)
+            {
+                this.SerializedSubtree = serializedSubtree;
+                this.ContinuationPath = continuationPath;
+            }
+
+            /// <summary>
+            /// Gets the data of the subtree.
+            /// </summary>
+            public byte[] SerializedSubtree { get; private set; }
+
+            /// <summary>
+            /// Gets the continuation path result of the operation.
+            /// </summary>
+            public string ContinuationPath { get; private set; }
         }
     }
 }

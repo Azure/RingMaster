@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.SortedDictExt</AssemblyName>
+  </PropertyGroup>
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

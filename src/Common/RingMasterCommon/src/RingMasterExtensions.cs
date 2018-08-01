@@ -310,6 +310,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
+        /// Gets the subtree under a given path.
+        /// </summary>
+        /// <param name="ringMaster">Interface to RingMaster.</param>
+        /// <param name="path">The path to get the subtree of.</param>
+        /// <param name="retrievalCondition">Request retrieval condition of the form >:[Top]:[ContinuationPath]</param>
+        /// <param name="options">Request options.</param>
+        /// <returns>Task that will resolve on success to the root of the subtree under the given path.</returns>
+        public static async Task<ResponseGetSubtree> GetSubtree(this IRingMasterRequestHandler ringMaster, string path, string retrievalCondition, RequestGetSubtree.GetSubtreeOptions options = RequestGetSubtree.GetSubtreeOptions.None)
+        {
+            RequestResponse response = await ringMaster.Request(new RequestGetSubtree(path, retrievalCondition, options));
+            ThrowIfError(response);
+
+            var treeNodeData = TreeNode.Deserialize((byte[])response.Content);
+
+            return new ResponseGetSubtree(treeNodeData, response.ResponsePath);
+        }
+
+        /// <summary>
         /// Sets the data for the node at the given path if the given version matches
         /// the current version of the node (If the given version is -1, it matches any version).
         /// </summary>

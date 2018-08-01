@@ -14,11 +14,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     internal sealed class PersistedDataSerializer : IStateSerializer<WinFabPersistence.PersistedData>
     {
         /// <summary>
-        /// Gets or sets the persisted data factory instance
-        /// </summary>
-        internal PersistedDataFactory Factory { get; set; }
-
-        /// <summary>
         /// Deserializes a <see cref="WinFabPersistence.PersistedData"/> from the given <see cref="BinaryReader"/>.
         /// </summary>
         /// <param name="binaryReader">The <see cref="BinaryReader"/> to deserialize from</param>
@@ -30,7 +25,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                 throw new ArgumentNullException(nameof(binaryReader));
             }
 
-            var pd = new PersistedData(0, this.Factory);
+            var pd = new PersistedData(0);
             pd.ReadFrom(binaryReader);
             ServiceFabricPersistenceEventSource.Log.PersistedDataSerializer_Read(pd.Id, pd.Name);
 

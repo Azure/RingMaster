@@ -130,7 +130,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         /// Gets or sets the number children.
         /// </summary>
         /// <value>The number children.</value>
-        public int NumChildren { get; set; }
+        public int NumChildren
+        {
+            get { return 0; }
+            set { throw new InvalidOperationException($"{nameof(FirstStat)} must not have child"); }
+        }
+
+        /// <inheritdoc />
+        public int NumEphemeralChildren
+        {
+            get { return 0; }
+            set { throw new InvalidOperationException($"{nameof(FirstStat)} must not have child"); }
+        }
 
         /// <summary>
         /// Gets the unique incarnation id for this object
@@ -186,6 +197,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
                 this.Aversion == other.Aversion &&
                 this.DataLength == other.DataLength &&
                 this.NumChildren == other.NumChildren &&
+                this.NumEphemeralChildren == other.NumEphemeralChildren &&
                 this.Pzxid == other.Pzxid;
         }
 
@@ -203,7 +215,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
             hash ^= this.Cversion.GetHashCode();
             hash ^= this.Aversion.GetHashCode();
             hash ^= this.DataLength.GetHashCode();
-            hash ^= this.NumChildren.GetHashCode();
             hash ^= this.Pzxid.GetHashCode();
             return hash;
         }

@@ -1,25 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{F659B58C-BB27-4ACB-B84F-2CED11E68749}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion>
+    <IsPackable>false</IsPackable>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.EventSourceValidation</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Test.EventSourceValidation</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="6.2.274" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.1.274" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" />
     <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\src\RingMasterBackendCore.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
@@ -30,38 +37,7 @@
     <ProjectReference Include="$(SRCROOT)\Persistence\InMemory\src\InMemoryPersistence.csproj" />
     <ProjectReference Include="$(SRCROOT)\Persistence\ServiceFabric\src\ServiceFabricPersistence.csproj" />
     <ProjectReference Include="$(SRCROOT)\Tests\PerformanceTestCases\PerformanceTestCases.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tests\RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
-      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.ServiceFabric.Services">
-      <HintPath>$(PkgMicrosoft_ServiceFabric_Services)\lib\net45\Microsoft.ServiceFabric.Services.dll</HintPath>
-    </Reference>  
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="EventSourceValidator.cs" />
-  </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <PropertyGroup>
-    <QTestType>Taef_Latest</QTestType>
-    <QTestDirToDeploy>$(OutputPath)</QTestDirToDeploy>
-  </PropertyGroup>
+
+  <Import Project="$(StyleCopProps)" />
 </Project>

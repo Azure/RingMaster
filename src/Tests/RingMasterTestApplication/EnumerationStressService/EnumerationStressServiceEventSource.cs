@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EnumerationStressService
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -14,6 +13,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EnumerationStress
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class EnumerationStressServiceEventSource : EventSource
     {
+        static EnumerationStressServiceEventSource()
+        {
+        }
+
+        private EnumerationStressServiceEventSource()
+        {
+        }
+
         public static EnumerationStressServiceEventSource Log { get; } = new EnumerationStressServiceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]

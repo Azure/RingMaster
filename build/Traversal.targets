@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MsBuildAllProjects>$(MsBuildAllProjects);$(MsBuildThisFileFullPath)</MsBuildAllProjects>
+
+    <IsTraversalProject>true</IsTraversalProject>
+    <BuildDependsOn Condition=" '$(IsRestoreOnly)' == 'true' " >Restore;$(BuildDependsOn)</BuildDependsOn>
+    <BuildInParallel Condition="'$(BuildInParallel)' == ''">true</BuildInParallel>
+    <UnloadProjectsOnCompletion Condition="'$(UnloadProjectsOnCompletion)' == ''">false</UnloadProjectsOnCompletion>
+  </PropertyGroup>
+
+  <!-- This target file is only used at the repo root level -->
+  <Target Name="Build" Condition="'@(ProjectFile)' != ''">
+    <MSBuild Projects="@(ProjectFile)" Targets="Build" Properties="BuildingTraversal=$(BuildingTraversal)"
+      BuildInParallel="$(BuildInParallel)"
+      SkipNonexistentProjects="$(SkipNonexistentProjectsInTraversal)"
+      UnloadProjectsOnCompletion="$(UnloadProjectsOnCompletion)" />
+  </Target>
+
+  <!-- This target file is only used at the repo root level -->
+  <Target Name="Restore" Condition="'@(ProjectFile)' != ''">
+    <MSBuild Projects="@(ProjectFile)" Targets="Restore" Properties="BuildingTraversal=$(BuildingTraversal)"
+      BuildInParallel="$(BuildInParallel)"
+      SkipNonexistentProjects="$(SkipNonexistentProjectsInTraversal)"
+      UnloadProjectsOnCompletion="$(UnloadProjectsOnCompletion)" />
+  </Target>
+
+  <!-- Copy Build and change name -->
+  <Target Name="Clean" Condition="'@(ProjectFile)' != ''">
+    <MSBuild Projects="@(ProjectFile)" Targets="Build" Properties="BuildingTraversal=$(BuildingTraversal)"
+      BuildInParallel="$(BuildInParallel)"
+      SkipNonexistentProjects="$(SkipNonexistentProjectsInTraversal)"
+      UnloadProjectsOnCompletion="$(UnloadProjectsOnCompletion)" />
+  </Target>
+
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
+</Project>

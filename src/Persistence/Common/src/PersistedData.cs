@@ -26,17 +26,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// Initializes a new instance of the <see cref="PersistedData"/> class.
         /// </summary>
         /// <param name="id">Unique Id</param>
-        /// <param name="factory">Factory associated with this data</param>
-        public PersistedData(ulong id, AbstractPersistedDataFactory factory)
+        public PersistedData(ulong id)
+            : this(id, null)
         {
-            if (factory == null)
-            {
-                throw new ArgumentNullException(nameof(factory));
-            }
+        }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PersistedData"/> class.
+        /// </summary>
+        /// <param name="id">Unique Id</param>
+        /// <param name="unused">Unused factory object, for backward compatibility</param>
+        public PersistedData(ulong id, AbstractPersistedDataFactory unused)
+        {
             this.Id = id;
             this.stat = new MutableStat();
-            this.Factory = factory;
         }
 
         /// <summary>
@@ -120,16 +123,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         public ulong ParentId { get; set; }
 
         /// <summary>
-        /// Gets or sets the children count.
-        /// </summary>
-        internal int ChildrenCount { get; set; }
-
-        /// <summary>
-        /// Gets the <see cref="AbstractPersistedDataFactory"/> associated with this data.
-        /// </summary>
-        internal AbstractPersistedDataFactory Factory { get; private set; }
-
-        /// <summary>
         /// Clones this object for persistence
         /// </summary>
         /// <returns>Cloned object</returns>
@@ -148,14 +141,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 copiedAcl = this.Acl.Select(a => new Acl(a)).ToList();
             }
 
-            return new PersistedData(this.Id, this.Factory)
+            return new PersistedData(this.Id)
             {
-                Id = this.Id,
                 Name = this.Name,
                 Stat = this.Stat == null ? null : new MutableStat(this.Stat),
                 Data = copiedData,
                 Acl = copiedAcl,
-                ChildrenCount = this.ChildrenCount,
                 ParentId = this.ParentId,
             };
         }
@@ -190,8 +181,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             }
 
             child.Parent = this;
-            this.ChildrenCount++;
-            PersistenceEventSource.Log.PersistedDataAddChild(this.Id, this.Name, child.Id, child.Name, this.ChildrenCount);
+            PersistenceEventSource.Log.PersistedDataAddChild(this.Id, this.Name, child.Id, child.Name, this.GetChildrenCount());
         }
 
         /// <summary>
@@ -218,8 +208,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             }
 
             child.Parent = null;
-            this.ChildrenCount--;
-            PersistenceEventSource.Log.PersistedDataRemoveChild(this.Id, this.Name, child.Id, child.Name, this.ChildrenCount);
+            PersistenceEventSource.Log.PersistedDataRemoveChild(this.Id, this.Name, child.Id, child.Name, this.GetChildrenCount());
         }
 
         /// <summary>
@@ -228,14 +217,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <returns>The number of children</returns>
         public int GetChildrenCount()
         {
-            return this.ChildrenCount;
+            return this.stat.NumChildren - this.stat.NumEphemeralChildren;
         }
 
         /// <summary>
         /// Ensures the data is fresh before reading it. May block the call until it is fresh
         /// </summary>
         /// <param name="chgs">The changelist.</param>
-        public void AppendRead(ref IChangeList chgs)
+        public void AppendRead(IChangeList chgs)
         {
             PersistenceEventSource.Log.PersistedDataAppendRead(this.Id, this.Name);
         }
@@ -244,10 +233,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// Associates the creation of this instance with the given <see cref="IChangeList"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
-        public void AppendCreate(ref IChangeList changeList)
+        public void AppendCreate(IChangeList changeList)
         {
             PersistenceEventSource.Log.PersistedDataAppendCreate(this.Id, this.Name);
-            this.OnCreate(ref changeList);
+            this.OnCreate(changeList);
         }
 
         /// <summary>
@@ -264,7 +253,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
         /// <param name="child">The child that was added</param>
-        public void AppendAddChild(ref IChangeList changeList, IPersistedData child)
+        public void AppendAddChild(IChangeList changeList, IPersistedData child)
         {
             if (child == null)
             {
@@ -272,7 +261,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             }
 
             PersistenceEventSource.Log.PersistedDataAppendAddChild(this.Id, this.Name, child.Id, child.Name);
-            this.OnUpdate(ref changeList);
+            this.OnUpdate(changeList);
         }
 
         /// <summary>
@@ -280,7 +269,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
         /// <param name="child">The child that was removed</param>
-        public void AppendRemoveChild(ref IChangeList changeList, IPersistedData child)
+        public void AppendRemoveChild(IChangeList changeList, IPersistedData child)
         {
             if (child == null)
             {
@@ -289,28 +278,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 
             PersistenceEventSource.Log.PersistedDataAppendRemoveChild(this.Id, this.Name, child.Id, child.Name);
             var childData = (PersistedData)child;
-            childData.OnUpdate(ref changeList);
-            this.OnUpdate(ref changeList);
+            childData.OnUpdate(changeList);
+            this.OnUpdate(changeList);
         }
 
         /// <summary>
         ///  Associates an update (where an ACL was set on this instance) with the given <see cref="IChangeList"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
-        public void AppendSetAcl(ref IChangeList changeList)
+        public void AppendSetAcl(IChangeList changeList)
         {
             PersistenceEventSource.Log.PersistedDataAppendSetAcl(this.Id, this.Name);
-            this.OnUpdate(ref changeList);
+            this.OnUpdate(changeList);
         }
 
         /// <summary>
         ///  Associates an update (where data was set on this instance) with the given <see cref="IChangeList"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
-        public void AppendSetData(ref IChangeList changeList)
+        public void AppendSetData(IChangeList changeList)
         {
             PersistenceEventSource.Log.PersistedDataAppendSetData(this.Id, this.Name);
-            this.OnUpdate(ref changeList);
+            this.OnUpdate(changeList);
         }
 
         /// <summary>
@@ -319,10 +308,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
         /// <param name="parent">The parent of this instance</param>
         /// <param name="isRecursive">If <c>true</c> the removal was recursive</param>
-        public void AppendRemove(ref IChangeList changeList, IPersistedData parent, bool isRecursive = false)
+        public void AppendRemove(IChangeList changeList, IPersistedData parent, bool isRecursive = false)
         {
             PersistenceEventSource.Log.PersistedDataAppendRemove(this.Id, this.Name, isRecursive);
-            this.OnRemove(ref changeList);
+
+            // Log the change that this node, or the child, is removed.
+            this.OnRemove(changeList);
+
+            // Log the change on the parent, including Mzxid/Mtime in stat.
+            ((PersistedData)parent).OnUpdate(changeList);
         }
 
         /// <summary>
@@ -330,7 +324,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// </summary>
         /// <param name="spec">The poison pill spec</param>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
-        public void AppendPoison(string spec, ref IChangeList changeList)
+        public void AppendPoison(string spec, IChangeList changeList)
         {
             PersistenceEventSource.Log.PersistedDataAppendPoison(this.Id, this.Name, spec);
         }
@@ -385,8 +379,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                     binaryWriter.Write((byte[])this.Data);
                 }
 
-                // Note we use this.GetChildrenCount() and NOT this.stat.ChildrenCount because the later includes ephemeral nodes.
+                // Note this may be called in both primary (most of time) and secondaries. The number should not
+                // contain ephemeral nodes. GetChildrenCount() checks the difference between total children and number
+                // of ephemeral nodes (which is 0 on secondaries), and it is the correct number on both primary and
+                // secondaries.
                 binaryWriter.Write((int)this.GetChildrenCount());
+
+                ////Trace.TraceInformation($"PersistedData.Write: Id={this.Id} ParentId={this.ParentId} Name={this.Name} #Children={this.GetChildrenCount()} M={this.Stat.Mzxid} NC={this.Stat.NumChildren}/{this.stat.NumEphemeralChildren}");
                 binaryWriter.Write((ulong)this.ParentId);
             }
         }
@@ -447,19 +446,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 this.Data = binaryReader.ReadBytes(loadedStat.DataLength);
             }
 
+            // NumEphemeralChildren is 0 after deserialization.
             loadedStat.NumChildren = binaryReader.ReadInt32();
             this.ParentId = binaryReader.ReadUInt64();
 
             this.Stat = loadedStat;
+            ////Trace.TraceInformation($"PersistedData.Read: Id={this.Id} ParentId={this.ParentId} Name={this.Name} #Children={loadedStat.NumChildren} M={this.Stat.Mzxid}");
         }
 
         /// <summary>
         /// Record creation of that this instance of <see cref="IPersistedData"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> associated with the creation</param>
-        private void OnCreate(ref IChangeList changeList)
+        private void OnCreate(IChangeList changeList)
         {
-            ChangeList list = this.CreateOrGetChangeList(ref changeList);
+            var list = (ChangeList)changeList;
             PersistenceEventSource.Log.RecordAddition(list.Id, this.Id, this.Name, this.Stat.Czxid);
             list.RecordAdd(this);
         }
@@ -468,9 +469,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// Record an update to this instance of <see cref="IPersistedData"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> associated with the update</param>
-        private void OnUpdate(ref IChangeList changeList)
+        private void OnUpdate(IChangeList changeList)
         {
-            ChangeList list = this.CreateOrGetChangeList(ref changeList);
+            var list = (ChangeList)changeList;
             PersistenceEventSource.Log.RecordUpdate(list.Id, this.Id, this.Name, this.Stat.Mzxid, this.Stat.Pzxid);
             list.RecordUpdate(this);
         }
@@ -479,27 +480,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         /// Record removal of this instance of <see cref="IPersistedData"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> associated with the removal</param>
-        private void OnRemove(ref IChangeList changeList)
+        private void OnRemove(IChangeList changeList)
         {
-            ChangeList list = this.CreateOrGetChangeList(ref changeList);
+            var list = (ChangeList)changeList;
             PersistenceEventSource.Log.RecordRemoval(list.Id, this.Id, this.Name);
             list.RecordRemove(this);
-        }
-
-        /// <summary>
-        /// Creates or retrieves an <see cref="ChangeList"/> that will be
-        /// used to record additions, updates and removals of this instance.
-        /// </summary>
-        /// <param name="changeList">A <see cref="IChangeList"/></param>
-        /// <returns>An <see cref="ChangeList"/></returns>
-        private ChangeList CreateOrGetChangeList(ref IChangeList changeList)
-        {
-            if (changeList == null)
-            {
-                changeList = this.Factory.CreateChangeList();
-            }
-
-            return (ChangeList)changeList;
         }
     }
 }

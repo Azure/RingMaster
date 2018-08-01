@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+       Generate the versioning on CDPx
+       Reference: https://onebranch.visualstudio.com/Pipeline/_wiki/wikis/Pipeline.wiki?wikiVersion=GBwikiMaster&pagePath=%2FWelcome%20to%20OneBranch%20Pipeline%2FCross%20Platform%20Cloud%20Delivery%20Pipeline%20(CDPx)%2FYAML%20Format%2FVersioning
+  -->
+  <PropertyGroup>
+    <_pipelineYml>$(EnlistmentRoot)\.pipelines\pipeline.user.yml</_pipelineYml>
+    <_major>$(CDP_MAJOR_NUMBER_ONLY)</_major>
+    <_major Condition="'$(_major)' == ''">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText("$(_pipelineYml)")), "major\s*:\s*(\d+)").Groups[1].Value)</_major>
+
+    <_minor>$(CDP_MINOR_NUMBER_ONLY)</_minor>
+    <_minor Condition="'$(_minor)' == ''">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText("$(_pipelineYml)")), "minor\s*:\s*(\d+)").Groups[1].Value)</_minor>
+
+    <!-- Uses the number of days since 2017-01-01 -->
+    <_build>$(CDP_BUILD_NUMBER)</_build>
+    <!-- Example: 513.21:38:27.9898150 -->
+    <_epoch Condition="'$(_build)' == ''">$([System.DateTime]::UtcNow.Subtract($([System.DateTime]::Parse("2017-01-01"))))</_epoch>
+    <_build Condition="'$(_build)' == ''">$(_epoch.Split('.')[0])</_build>
+
+    <_revision>$(CDP_REVISION_NUMBER)</_revision>
+    <_revision Condition="'$(_revision)' == ''">0</_revision>
+
+    <BuildNumber Condition="'$(BuildNumber)' == ''">$(_major).$(_minor).$(_build).$(_revision)</BuildNumber>
+    <!-- Change 5.4.11490.8-zhyao6557778 to 5.4.11490.8 in BuildTracker buddy build -->
+    <BuildNumber>$([System.Text.RegularExpressions.Regex]::Replace($(BuildNumber), "-.*", ""))</BuildNumber>
+
+    <!-- Versioning in assemblies and nuget packages -->
+
+    <!-- Fix nuget package version on CloudBuild -->
+    <PackageVersion Condition="'$(NOTQBUILD)'!='1'">$(BuildNumber)</PackageVersion>
+
+    <!-- Duplicated BuildNumber is not a mistake.  It is a workaround for a problem with buildver? -->
+    <AssemblyInformationalVersion>$(BuildNumber) ($(BuildNumber).$(GitRepositoryName)_$(GitBranchName).$(BuildDate) $(VersionCommitHash))</AssemblyInformationalVersion>
+
+    <FileVersion>$(BuildNumber)</FileVersion>
+    <AssemblyVersion>$(_major).$(_minor).0.0</AssemblyVersion>
+  </PropertyGroup>
+
+</Project>

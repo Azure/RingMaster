@@ -6,14 +6,15 @@ namespace Microsoft.Vega.Performance
 {
     using System;
     using System.Collections.Concurrent;
-    using System.Configuration;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Vega.Test.Helpers;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using static TestCommon;
 
     /// <summary>
     /// The Vega Bulk Watcher Performance test class
@@ -30,6 +31,8 @@ namespace Microsoft.Vega.Performance
         /// Prefix of the relative path, e.g. <h ref="/mappings/v4ca/123456" />
         /// </summary>
         private const string RelativePathPrefix = "mappings/v4ca";
+
+        private static IConfiguration appSettings;
 
         /// <summary>
         /// Number of times to repeat the test and wait for notification
@@ -102,37 +105,57 @@ namespace Microsoft.Vega.Performance
         private static Stopwatch stopwatch = Stopwatch.StartNew();
 
         /// <summary>
+        /// Setup of trace log at the assembly level
+        /// </summary>
+        /// <param name="context">Test context</param>
+        [AssemblyInitialize]
+        public static void Setup(TestContext context)
+        {
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            appSettings = builder.Build();
+
+            Helpers.SetupTraceLog(Path.Combine(appSettings["LogFolder"], "VegaServiceFabricPerf.LogPath"));
+        }
+
+        /// <summary>
         /// Test setup
         /// </summary>
         /// <param name="context">test context for logging</param>
         [ClassInitialize]
         public static void TestClassInitialize(TestContext context)
         {
-            log = s => context.WriteLine("{0} {1}", DateTime.UtcNow, s);
+            threadCount = int.Parse(appSettings["BulkWatcherThreadCount"]);
+            testRepetitions = int.Parse(appSettings["TestRepetitions"]);
+            minDataSize = int.Parse(appSettings["BulkWatcherMinDataSize"]);
+            maxDataSize = int.Parse(appSettings["BulkWatcherMaxDataSize"]);
+            requestTimeout = int.Parse(appSettings["BulkWatcherRequestTimeout"]);
+            partitionCount = int.Parse(appSettings["PartitionCount"]);
+            nodeCountPerPartition = int.Parse(appSettings["NodeCountPerPartition"]);
+            channelCount = int.Parse(appSettings["ChannelCount"]);
+            server = appSettings["ServerAddress"];
 
-            threadCount = int.Parse(ConfigurationManager.AppSettings["BulkWatcherThreadCount"]);
-            testRepetitions = int.Parse(ConfigurationManager.AppSettings["TestRepetitions"]);
-            minDataSize = int.Parse(ConfigurationManager.AppSettings["BulkWatcherMinDataSize"]);
-            maxDataSize = int.Parse(ConfigurationManager.AppSettings["BulkWatcherMaxDataSize"]);
-            requestTimeout = int.Parse(ConfigurationManager.AppSettings["BulkWatcherRequestTimeout"]);
-            partitionCount = int.Parse(ConfigurationManager.AppSettings["PartitionCount"]);
-            nodeCountPerPartition = int.Parse(ConfigurationManager.AppSettings["NodeCountPerPartition"]);
-            channelCount = int.Parse(ConfigurationManager.AppSettings["ChannelCount"]);
+            if (context.GetType().Name.StartsWith("Dummy"))
+            {
+                log = s => context.WriteLine(s);
+            }
+            else
+            {
+                log = s => Trace.TraceInformation(s);
+            }
 
             if (threadCount < 0)
             {
                 threadCount = Environment.ProcessorCount;
             }
 
-            var serviceInfo = TestCommon.GetVegaServiceInfo().Result;
+            var serviceInfo = default(Tuple<string, string>);
 
-            // Allow the endpoint address being specified from the command line
-            if (context.Properties.Contains("ServerAddress"))
+            if (string.IsNullOrEmpty(server))
             {
-                server = context.Properties["ServerAddress"] as string;
-            }
-            else
-            {
+                // Only queries the service info if the service address is not specified, e.g. when running in CloudTest
+                // on local machine.
+                serviceInfo = Helpers.GetVegaServiceInfo().Result;
                 server = serviceInfo.Item1;
             }
 
@@ -144,7 +167,7 @@ namespace Microsoft.Vega.Performance
                 watcher: null))
                 .ToArray();
 
-            MdmHelper.Initialize(serviceInfo.Item2);
+            VegaServiceFabricPerf.InitializeMdm(serviceInfo?.Item2, appSettings);
         }
 
         /// <summary>
@@ -194,13 +217,27 @@ namespace Microsoft.Vega.Performance
             var totalSizeMB = 0.5 * (maxDataSize + minDataSize) * partitionCount * nodeCountPerPartition / 1024 / 1024;
             log($"Creating {partitionCount} partitions, {nodeCountPerPartition} nodes in each partition, total amount of data {totalSizeMB} MB");
 
-            var cancel = new CancellationTokenSource();
-            var unused = ShowProgress(cancel.Token);
-            await this.CreateNodeTree().ConfigureAwait(false);
+            var cancelShowProgress = new CancellationTokenSource();
+            _ = ShowProgress(cancelShowProgress.Token);
+
+            if (!await this.CreateNodeTree(cancellation).ConfigureAwait(false))
+            {
+                cancelShowProgress.Cancel();
+                cancellationSource.Cancel();
+
+                Assert.Fail($"No progress in CreateNodeTree after {requestTimeout} ms");
+            }
 
             log("Reading all nodes...");
-            await this.ReadNodeTree().ConfigureAwait(false);
-            cancel.Cancel();
+            if (!await this.ReadNodeTree(cancellation).ConfigureAwait(false))
+            {
+                cancelShowProgress.Cancel();
+                cancellationSource.Cancel();
+
+                Assert.Fail($"No progress in ReadNodeTree after {requestTimeout} ms");
+            }
+
+            cancelShowProgress.Cancel();
 
             var watchers = new ConcurrentBag<IWatcher>();
             int watcherTriggerCount = 0;
@@ -210,12 +247,17 @@ namespace Microsoft.Vega.Performance
             log($"Installing bulk watchers...");
 
             long watcherId = 0;
-            await TestCommon.ForEachAsync(
+            var installTask = Helpers.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
                     foreach (var client in clients)
                     {
+                        if (cancellation.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
                         var path = $"{PartitionKeyPrefix}{partitionIndex}";
                         var watcher = new CallbackWatcher
                         {
@@ -248,8 +290,14 @@ namespace Microsoft.Vega.Performance
                         }
                     }
                 },
-                threadCount)
-                .ConfigureAwait(false);
+                threadCount);
+
+            await Task.WhenAny(installTask, Task.Delay(requestTimeout)).ConfigureAwait(false);
+            if (!installTask.IsCompleted && watcherTriggerCount == 0)
+            {
+                cancellationSource.Cancel();
+                Assert.Fail($"No watcher event received after {requestTimeout} ms");
+            }
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
             var installRate = watchers.Count / duration;
@@ -257,7 +305,7 @@ namespace Microsoft.Vega.Performance
             MdmHelper.LogWatcherCountProcessed(watchers.Count, OperationType.InstallBulkWatcher);
 
             // Make some random change, one node in each partition, and wait for watcher being triggered
-            for (int i = 0; i < testRepetitions; i++)
+            for (int i = 0; i < testRepetitions && !cancellation.IsCancellationRequested; i++)
             {
                 startTime = stopwatch.Elapsed;
                 totalDataSize = 0;
@@ -267,9 +315,11 @@ namespace Microsoft.Vega.Performance
                 var unused1 = Task.Run(() => this.ChangeRandomNodeInTree());
 
                 var timeoutClock = Stopwatch.StartNew();
-                while (watcherTriggerCount < partitionCount * clients.Length && timeoutClock.ElapsedMilliseconds < 30 * 1000)
+                while (watcherTriggerCount < partitionCount * clients.Length
+                    && timeoutClock.ElapsedMilliseconds < 30 * 1000
+                    && !cancellation.IsCancellationRequested)
                 {
-                    await Task.Delay(1000, cancellation).ConfigureAwait(false);
+                    await Task.Delay(1000).ConfigureAwait(false);
                     log($" -- watcher event received: {watcherTriggerCount}, data received: {watcherDataDelivered}");
                 }
 
@@ -280,25 +330,25 @@ namespace Microsoft.Vega.Performance
                 MdmHelper.LogBytesProcessed(watcherDataDelivered, OperationType.BulkWatcherTrigger);
             }
 
-            await this.DeleteNodeTree().ConfigureAwait(false);
+            Assert.IsTrue(await this.DeleteNodeTree(cancellation).ConfigureAwait(false));
         }
 
-        private async Task CreateNodeTree()
+        private async Task<bool> CreateNodeTree(CancellationToken cancellation)
         {
             totalDataCount = 0;
             totalDataSize = 0;
             var startTime = stopwatch.Elapsed;
 
-            await TestCommon.ForEachAsync(
+            var createTask = Helpers.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
                     var rnd = new Random();
 
-                    for (int i = 0; i < nodeCountPerPartition; i++)
+                    for (int i = 0; i < nodeCountPerPartition && !cancellation.IsCancellationRequested; i++)
                     {
                         var path = $"{PartitionKeyPrefix}{partitionIndex}/{RelativePathPrefix}/{i}";
-                        var data = TestCommon.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+                        var data = Helpers.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
 
                         try
                         {
@@ -316,14 +366,27 @@ namespace Microsoft.Vega.Performance
                         }
                     }
                 },
-                threadCount)
-                .ConfigureAwait(false);
+                threadCount);
+
+            await Task.WhenAny(createTask, Task.Delay(requestTimeout)).ConfigureAwait(false);
+            if (!createTask.IsCompleted && totalDataCount == 0)
+            {
+                // If no data is created successfully within timeout time, don't bother to read any more.
+                return false;
+            }
+            else
+            {
+                // It is making progress. Wait until it's completed.
+                await createTask.ConfigureAwait(false);
+            }
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
             var bps = totalDataSize / duration;
             var qps = totalDataCount / duration;
             log($"{nameof(this.CreateNodeTree)}: {totalDataCount} nodes created, total data size is {totalDataSize}. Rate: {bps:G4} byte/sec {qps:G4} /sec");
             MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherCreateNode);
+
+            return true;
         }
 
         private async Task ChangeRandomNodeInTree()
@@ -332,7 +395,7 @@ namespace Microsoft.Vega.Performance
             totalDataSize = 0;
             var startTime = stopwatch.Elapsed;
 
-            await TestCommon.ForEachAsync(
+            await Helpers.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
@@ -340,7 +403,7 @@ namespace Microsoft.Vega.Performance
 
                     var index = rnd.Next(nodeCountPerPartition);
                     var path = $"{PartitionKeyPrefix}{partitionIndex}/{RelativePathPrefix}/{index}";
-                    var data = MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
+                    var data = Helpers.MakeRandomData(rnd, rnd.Next(minDataSize, maxDataSize));
 
                     try
                     {
@@ -367,17 +430,17 @@ namespace Microsoft.Vega.Performance
             MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherChangeNode);
         }
 
-        private async Task ReadNodeTree()
+        private async Task<bool> ReadNodeTree(CancellationToken cancellation)
         {
             totalDataCount = 0;
             totalDataSize = 0;
             var startTime = stopwatch.Elapsed;
 
-            await TestCommon.ForEachAsync(
+            var readTask = Helpers.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
-                    for (int i = 0; i < nodeCountPerPartition; i++)
+                    for (int i = 0; i < nodeCountPerPartition && !cancellation.IsCancellationRequested; i++)
                     {
                         var path = $"{PartitionKeyPrefix}{partitionIndex}/{RelativePathPrefix}/{i}";
 
@@ -397,29 +460,46 @@ namespace Microsoft.Vega.Performance
                         }
                     }
                 },
-                threadCount)
-                .ConfigureAwait(false);
+                threadCount);
+
+            await Task.WhenAny(readTask, Task.Delay(requestTimeout)).ConfigureAwait(false);
+            if (!readTask.IsCompleted && totalDataCount == 0)
+            {
+                // If no data is read successfully within timeout time, don't bother to read any more.
+                return false;
+            }
+            else
+            {
+                // It is making progress. Wait until it's completed.
+                await readTask.ConfigureAwait(false);
+            }
 
             var duration = (stopwatch.Elapsed - startTime).TotalSeconds;
             var bps = totalDataSize / duration;
             var qps = totalDataCount / duration;
             log($"{nameof(this.ReadNodeTree)}: {totalDataCount} nodes read, total data size is {totalDataSize}. Rate: {bps:G4} byte/sec {qps:G4} /sec");
             MdmHelper.LogBytesProcessed(totalDataSize, OperationType.BulkWatcherReadNode);
+
+            return true;
         }
 
-        private async Task DeleteNodeTree()
+        private async Task<bool> DeleteNodeTree(CancellationToken cancellation)
         {
-            await TestCommon.ForEachAsync(
+            totalDataCount = 0;
+
+            var deleteTask = Helpers.ForEachAsync(
                 Enumerable.Range(0, partitionCount),
                 async (partitionIndex) =>
                 {
-                    for (int i = 0; i < nodeCountPerPartition; i++)
+                    for (int i = 0; i < nodeCountPerPartition && !cancellation.IsCancellationRequested; i++)
                     {
                         var path = $"{PartitionKeyPrefix}{partitionIndex}/";
 
                         try
                         {
                             await clients[partitionIndex % channelCount].Delete(path, -1, DeleteMode.CascadeDelete).ConfigureAwait(false);
+
+                            Interlocked.Increment(ref totalDataCount);
                         }
                         catch (Exception ex)
                         {
@@ -427,10 +507,22 @@ namespace Microsoft.Vega.Performance
                         }
                     }
                 },
-                threadCount)
-                .ConfigureAwait(false);
+                threadCount);
+
+            await Task.WhenAny(deleteTask, Task.Delay(requestTimeout)).ConfigureAwait(false);
+            if (!deleteTask.IsCompleted && totalDataCount == 0)
+            {
+                // If no data is deleted successfully within timeout time, don't bother to read any more.
+                return false;
+            }
+            else
+            {
+                // It is making progress. Wait until it's completed.
+                await deleteTask.ConfigureAwait(false);
+            }
 
             log($"DeleteNodeTree is completed.");
+            return true;
         }
     }
 }

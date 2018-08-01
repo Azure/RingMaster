@@ -125,6 +125,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 
             this.client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
+            // Discard any pending data when the connection is closed.
+            this.client.LingerState = new LingerOption(true, 0);
+
             // Disable the Nagle algorithm.  When NoDelay is set to true,
             // TcpClient does not wait until it has connected a significant
             // amount of outgoing data before sending a packet.
@@ -463,8 +466,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             byte[] versionBytes = new byte[sizeof(int)];
 
             await Task.WhenAll(
-                this.secureStream.WriteAsync(BitConverter.GetBytes(localProtocolVersion), 0, sizeof(int)).ContinueWith(_ => this.secureStream.FlushAsync()),
-                this.secureStream.ReadAsync(versionBytes, 0, sizeof(int)));
+                this.secureStream.WriteAsync(BitConverter.GetBytes(localProtocolVersion), 0, sizeof(int), this.cancellationToken).ContinueWith(_ => this.secureStream.FlushAsync(this.cancellationToken)),
+                this.secureStream.ReadAsync(versionBytes, 0, sizeof(int), this.cancellationToken));
 
             uint remoteProtocolVersion = BitConverter.ToUInt32(versionBytes, 0);
 

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RootNamespace>Microsoft.Vega.Test</RootNamespace>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Backend\Core\src\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="..\..\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <ProjectReference Include="..\..\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="..\..\Common\SecureTransport\src\SecureTransport.csproj" />
+    <ProjectReference Include="..\..\Persistence\InMemory\src\InMemoryPersistence.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

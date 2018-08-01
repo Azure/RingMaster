@@ -15,7 +15,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules
     [EventSource(Name = "Microsoft-Azure-Networking-Infrastructure-RingMaster-CertificateRules")]
     internal sealed class CertificateRulesEventSource : EventSource
     {
-        public CertificateRulesEventSource()
+        static CertificateRulesEventSource()
+        {
+        }
+
+        private CertificateRulesEventSource()
         {
         }
 

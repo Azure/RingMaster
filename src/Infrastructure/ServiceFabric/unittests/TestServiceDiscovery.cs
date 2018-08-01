@@ -8,7 +8,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabricUnit
     using System.Diagnostics;
     using System.IO;
     using System.Threading;
-    using FluentAssertions;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 

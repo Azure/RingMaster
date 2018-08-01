@@ -12,7 +12,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     using System.Threading.Tasks;
     using System.Xml;
     using Backend.Native;
-    using FluentAssertions;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
     using VisualStudio.TestTools.UnitTesting;
 
@@ -40,7 +39,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         public void TestInitialize()
         {
             Trace.Listeners.Clear();
-            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
         }
 
         [TestMethod]

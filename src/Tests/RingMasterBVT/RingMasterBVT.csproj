@@ -1,36 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{8AE88888-CCBB-4B08-89A7-BF77149CEF97}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Test.BVT</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
-    <OacrDisabled>true</OacrDisabled>
     <CoverageDisabled>true</CoverageDisabled>
-    <QTestType>Taef_Latest</QTestType>
-    <QTestDirToDeploy>$(BinariesBuildTypeArchDirectory)\$(AssemblyName)</QTestDirToDeploy>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.0-preview2-final" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0-preview2-final" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="RingMasterBVT.cs" />
-    <Compile Include="TestAccessControl.cs" />
-    <Compile Include="TestErrorPaths.cs" />
-    <Compile Include="TestExecutionQueue.cs" />
-    <Compile Include="TestFunctionality.cs" />
-    <Compile Include="TestRecursiveDeleter.cs" />
-    <Compile Include="TestWatcher.cs" />
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Tests\FakeFluentAssertions\FakeFluentAssertions.csproj" />
     <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\RingMasterBackendCore.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\HelperTypes.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\src\RingMasterBackendCore.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\SortedDictExt.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
@@ -40,35 +31,23 @@
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\testcases\RingMasterInterfaceTestCases.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Tools\RingMasterBackendTool\RingMasterBackendTool.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tools\RingMasterBackendTool\RingMasterBackendTool.csproj">
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
   </ItemGroup>
+
   <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
-      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
+    <None Update="appSettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="Default.runsettings">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <Target Name="AfterBuild">
+
+  <Target Name="CopyBackendTool" AfterTargets="Build">
     <ItemGroup>
-      <BackendTool Include="$(BinariesBuildTypeArchDirectory)\Microsoft.RingMaster.RingMasterBackendTool\**\*.*" />
+      <BackendTool Include="$(OutDir)\..\RingMasterBackendTool\**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(BackendTool)" DestinationFolder="$(BinariesBuildTypeArchDirectory)\$(AssemblyName)\backendtool" />
+    <Copy SourceFiles="@(BackendTool)" DestinationFolder="$(OutDir)\backendtool" />
   </Target>
+
 </Project>

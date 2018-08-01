@@ -13,14 +13,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
     public class RequestInit : AbstractRingMasterRequest
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestInit"/> class.
+        /// Initializes a new instance of the <see cref="RequestInit" /> class.
         /// </summary>
         /// <param name="sessionId">The session identifier.</param>
         /// <param name="sessionPwd">The session password.</param>
-        /// <param name="readOnlyInterfaceRequiresLocks"> if true (default) the session requires read operations to use locks. if false, reads will be lock free and <c>ApiError</c> may be returned upon concurrency issues</param>
+        /// <param name="readOnlyInterfaceRequiresLocks">if true (default) the session requires read operations to use locks. if false, reads will be lock free and <c>ApiError</c> may be returned upon concurrency issues</param>
         /// <param name="redirection">the redirection policy for this session</param>
-        public RequestInit(ulong sessionId, string sessionPwd, bool readOnlyInterfaceRequiresLocks = true, RedirectionPolicy redirection = RedirectionPolicy.ServerDefault)
-            : base(RingMasterRequestType.Init, string.Empty, 0)
+        /// <param name="uid">The unique request id</param>
+        public RequestInit(ulong sessionId, string sessionPwd, bool readOnlyInterfaceRequiresLocks = true, RedirectionPolicy redirection = RedirectionPolicy.ServerDefault, ulong uid = 0)
+            : base(RingMasterRequestType.Init, string.Empty, uid)
         {
             this.SessionId = sessionId;
             this.SessionPwd = sessionPwd;

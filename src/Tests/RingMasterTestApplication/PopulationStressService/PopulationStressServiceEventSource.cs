@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.PopulationStressService
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -14,6 +13,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.PopulationStressS
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class PopulationStressServiceEventSource : EventSource
     {
+        static PopulationStressServiceEventSource()
+        {
+        }
+
+        private PopulationStressServiceEventSource()
+        {
+        }
+
         public static PopulationStressServiceEventSource Log { get; } = new PopulationStressServiceEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]

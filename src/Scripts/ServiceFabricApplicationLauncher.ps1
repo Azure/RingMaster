@@ -6,10 +6,7 @@
     Specifies the action to take, Start - deploy and start the app, Stop - stop and deregister, Install - install service
     fabric and setup local cluster, Uninstall - uninstall service fabric
 
-.PARAMETER ServiceFabricReleaseShare
-    Specifies the location where public and internal version of released service fabric MSI files.
-
-.PARAMETER ServiceFabricPackages
+.PARAMETER ServiceFabricPackage
     Specifies the list of application package to deploy and start.
 
 .PARAMETER ClusterEndpoint
@@ -39,9 +36,7 @@ param(
     [ValidateSet("Start", "Upgrade", "Deploy", "Stop", "Upsize", "Install", "Uninstall")]
     [string] $Action = "Deploy",
 
-    [string] $ServiceFabricReleaseShare = "\\winfabfs\public\releases\v5.5\CU2",
-
-    [string[]] $ServiceFabricPackages = @("E:\RD\Networking\Vega\out\debug-AMD64\MdsAgentApplication-Pkg\MdsAgentApplication"),
+    [string] $ServiceFabricPackage = @("E:\RD\Networking\Vega\out\debug-AMD64\MdsAgentApplication-Pkg\MdsAgentApplication"),
 
     [string] $ApplicationParameterFile,
 
@@ -213,63 +208,6 @@ function IsLocalClusterRunning
     catch [System.Exception]
     {
         return $false;
-    }
-}
-
-function Uninstall($name, $quiet)
-{
-    $location = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-    $products = Get-ChildItem $location
-    
-    for ($i = 0; $i -lt $products.Count; $i++) {
-        $props = $products[$i] | Get-ItemProperty
-        try {
-            if (-not ([string]::IsNullOrEmpty($props.DisplayName)) -and $props.DisplayName -eq $name) {
-                if ($quiet) {
-                    & cmd.exe /c $props.QuietUninstallString
-                }
-                else {
-                    & cmd.exe /c "$($props.UninstallString) /passive"
-                }
-            }
-        }
-        catch {
-            # If error occurs, ignore it and keep going.
-        }
-    }
-}
-
-# Default value "/i" to install, "/x" to uninstall
-function InstallServiceFabricMsi($install = "/i")
-{
-    $installList = @()
-
-    # Name from nuget package
-    Get-ChildItem (Join-Path $ServiceFabricReleaseShare "MicrosoftServiceFabric.Internal\WindowsFabric.msi") | % {
-        $installList += $_.FullName
-    }
-    # Name from \\winfabfs\public, duplicated as above
-    Get-ChildItem (Join-Path $ServiceFabricReleaseShare "MicrosoftServiceFabric.Internal\MicrosoftServiceFabric.Internal.*.msi") | % {
-        $installList += $_.FullName
-    }
-    Get-ChildItem (Join-Path $ServiceFabricReleaseShare "MicrosoftServiceFabric.Internal\MicrosoftServiceFabricNativeSDK.*.msi") | % {
-        $installList += $_.FullName
-    }
-    Get-ChildItem (Join-Path $ServiceFabricReleaseShare "MicrosoftServiceFabric\MicrosoftServiceFabricSDK.*.msi") | % {
-        $installList += $_.FullName
-    }
-
-    if ($installList.Count -lt 2) {
-        throw "Unable to find ServiceFabric MSIs at $ServiceFabricReleaseShare : $installList"
-    }
-
-    if ($install -eq "/x") {
-        [Array]::Reverse($installList)
-    }
-
-    $installList | % {
-        Start-Process -wait -FilePath $msiExe -ArgumentList @($install, $_, "IACCEPTEULA=yes", "/passive", "/qn")
-        WriteLine "Installed $_"
     }
 }
 
@@ -556,7 +494,7 @@ if (($Action -eq "Deploy") -or ($Action -eq "Start") -or ($Action -eq "Upgrade")
 
     ConnectServiceFabric
 
-    $ServiceFabricPackages | % { StartService $_ -WaitForReady:$WaitForReady }
+    StartService $ServiceFabricPackage -WaitForReady:$WaitForReady
 }
 elseif ($Action -eq "Upsize") {
     if (-not $sfInstalled) {
@@ -565,7 +503,7 @@ elseif ($Action -eq "Upsize") {
 
     ConnectServiceFabric
 
-    $ServiceFabricPackages | % { UpsizeServices $_ }
+    UpsizeServices $ServiceFabricPackage
 }
 elseif ($Action -eq "Stop") {
     if (-not $sfInstalled) {
@@ -574,30 +512,5 @@ elseif ($Action -eq "Stop") {
 
     ConnectServiceFabric
 
-    $ServiceFabricPackages | % { StopService $_ }
-}
-elseif ($Action -eq "Install") {
-    if (-not $sfInstalled) {
-        InstallServiceFabricMsi
-    }
-
-    if ([string]::IsNullOrEmpty($ClusterEndpoint)) {
-        $hasLocalCluster = IsLocalClusterSetup
-        $isLocalClusterRunning = IsLocalClusterRunning
-
-        if ($hasLocalCluster -and $isLocalClusterRunning) {
-            WriteLine "Local cluster is set up and running"
-        }
-        else {
-            InstallServiceFabricLocalCluster
-        }
-    }
-}
-elseif ($Action -eq "Uninstall") {
-    if ($sfInstalled) {
-        InstallServiceFabricMsi "/x"
-    }
-    else {
-        WriteLine "Nothing to uninstall"
-    }
+    StopService $ServiceFabricPackage
 }

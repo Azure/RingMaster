@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+
+  <PropertyGroup>
+    <!-- Build sequentially so the packages can be restore before targets/props being used in subsequent projects -->
+    <BuildInParallel>false</BuildInParallel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Special project to deal with legacy packages.config. Only works on Windows. -->
+    <ProjectFile Include="src\CloudBuild\RestorePackages.proj" Condition="'$(OSSBUILD)' == ''" />
+
+    <ProjectFile Include="sandbox\dirs.proj" />
+    <ProjectFile Include="src\dirs.proj" />
+  </ItemGroup>
+
+  <Import Project="$(TraversalTargets)" />
+
+</Project>

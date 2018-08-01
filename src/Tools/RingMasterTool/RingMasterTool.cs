@@ -6,14 +6,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// Tool for interacting with RingMaster.
@@ -46,21 +47,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
 
             Console.WriteLine("RingMasterTool targetAddress={0}, command={1}", targetAddress, command);
 
-            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
             string[] clientThumbprints = null;
             string[] serviceThumbprints = null;
 
             try
             {
-                string useSslSetting = ConfigurationManager.AppSettings["SSL.UseSSL"];
+                var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+
+                var appSettings = builder.Build();
+                string useSslSetting = appSettings["SSL.UseSSL"];
                 if (useSslSetting != null && bool.Parse(useSslSetting))
                 {
-                    clientThumbprints = ConfigurationManager.AppSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
-                    serviceThumbprints = ConfigurationManager.AppSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
+                    clientThumbprints = appSettings["SSL.ClientCerts"].Split(new char[] { ';', ',' });
+                    serviceThumbprints = appSettings["SSL.ServerCerts"].Split(new char[] { ';', ',' });
                 }
             }
-            catch (ConfigurationErrorsException)
+            catch (Exception ex) when (ex is FileNotFoundException)
             {
                 // If there is no configuration, use default values.
             }
@@ -86,7 +91,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
                     {
                         if (args.Length < 4)
                         {
-                            Console.WriteLine("USAGE: RingMasterTool <targetAddress> createtree <path> <maxnodes>");
+                            Console.WriteLine("USAGE: RingMasterTool <targetAddress> createtree <path> <maxnodes> [flat]");
                             return 1;
                         }
 
@@ -121,7 +126,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
                     {
                         if (args.Length < 3)
                         {
-                            Console.WriteLine("USAGE: RingMasterTool <targetAddress> getchildcount <path>");
+                            Console.WriteLine("USAGE: RingMasterTool <targetAddress> getchildcount <path> [showpath <maxtoshow>]");
                             return 1;
                         }
 
@@ -197,9 +202,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
         private static async Task GetChildCount(RingMasterClient ringMaster, string path, bool showPath, int maxToShow = 100)
         {
             var subtree = await ringMaster.GetFullSubtree(path);
-            log($"Total number of children: {GetTotalNumberofChildren(subtree)}, direct children: {subtree.Children.Count}");
+            log($"Total number of children: {GetTotalNumberofChildren(subtree)}, direct children: {(subtree.Children == null ? 0 : subtree.Children.Count)}");
 
-            if (showPath)
+            if (showPath && subtree.Children != null)
             {
                 if (subtree.Children.Count > maxToShow)
                 {
@@ -220,17 +225,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
 
         private static int GetTotalNumberofChildren(TreeNode root)
         {
-            if (root == null)
+            if (root == null || root.Children == null)
             {
                 return 0;
             }
 
-            if (root.Children == null || root.Children.Count == 0)
-            {
-                return 1;
-            }
-
-            int num = 0;
+            int num = root.Children.Count;
             foreach (var child in root.Children)
             {
                 num += GetTotalNumberofChildren(child);

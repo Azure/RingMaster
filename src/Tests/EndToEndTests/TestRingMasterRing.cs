@@ -27,8 +27,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
     [TestClass]
     public sealed class TestRingMasterRing
     {
-        public TestRingMasterRing()
+        private static Action<string> log = Console.WriteLine;
+
+        [ClassInitialize]
+        public static void TestRingMasterRingSetup(TestContext context)
         {
+            log = s => context.WriteLine(s);
+
             LogFileEventTracing.Start(Path.Combine(Environment.CurrentDirectory, "TestLogs"));
             LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Backend-RingMasterEvents", EventLevel.Warning, "RingMasterBackendCore");
             LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence", EventLevel.Informational, "Persistence");
@@ -252,6 +257,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
         private static async Task VerifyRingMasterRingStateAfterAction(Func<IRingMasterRequestHandler, string, int> action)
         {
+            var clock = Stopwatch.StartNew();
+
             // Create a ringmaster ring with 3 members
             var ring = new RingMasterRing(1, memberCount: 3);
             await ring.Start();
@@ -263,7 +270,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
             using (var ringMaster = ring.Connect())
             {
                 await ringMaster.Create(rootPath, null, null, CreateMode.Persistent);
+
+                log($"{clock.Elapsed} - Starting action");
                 expectedNodes = action(ringMaster, rootPath);
+                log($"{clock.Elapsed} - action finished");
 
                 // Recreate the root path in case it was deleted by the action.
                 await ringMaster.Create(rootPath, null, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag);
@@ -272,12 +282,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
             // Verify that each ringmaster instance in each ringmaster ring creates a snapshot that contains exactly the
             // same nodes under the root path and which contains the same data as the tree in the primary.
             await ring.VerifyRingMasterDataConsistency(rootPath, expectedNodes + 1);
+            log($"{clock.Elapsed} - data consistency verified");
 
             // Verify that the snapshot produced by each ringmaster instance is identical.
             ring.VerifyRingMasterSnapshots();
+            log($"{clock.Elapsed} - snapshots verified");
 
             // Verify that each ringmaster instance applied the same change lists in the same order
             ring.VerifyCommittedChangeLists();
+            log($"{clock.Elapsed} - committed change lists verified");
         }
     }
 }

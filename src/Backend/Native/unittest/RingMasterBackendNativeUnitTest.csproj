@@ -1,40 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{370006A1-5DA6-4D93-AFE3-36C093D6D7E7}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackendNativeUnitTest</RootNamespace>
-    <AssemblyName>Microsoft.RingMaster.Backend.NativeUnitTest</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
+    <AssemblyName>Microsoft.RingMaster.Backend.SortedDictExtUnitTest</AssemblyName>
     <CoverageDisabled>true</CoverageDisabled>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll" />
-    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.dll" />
-    <Reference Include="$(PkgFluentAssertions)\lib\net45\FluentAssertions.Core.dll" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="TestSortedNameValueDictionary.cs" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\SortedDictExt.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\FakeFluentAssertions\FakeFluentAssertions.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\Native.vcxproj">
-      <Project>{236C5829-F892-44EE-9FC1-2D964221CB61}</Project>
-      <Name>Native</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
-  <PropertyGroup>
-    <QTestType>MsTest_Latest</QTestType>
-    <QTestDirToDeploy>$(OutputPath)</QTestDirToDeploy>
-  </PropertyGroup>
+
 </Project>

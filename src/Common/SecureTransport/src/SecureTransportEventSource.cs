@@ -13,7 +13,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
     [EventSource(Name = "Microsoft-Azure-Networking-Infrastructure-RingMaster-SecureTransport")]
     internal sealed class SecureTransportEventSource : EventSource
     {
-        private static readonly SecureTransportEventSource LogInstance = new SecureTransportEventSource();
+        static SecureTransportEventSource()
+        {
+        }
+
+        private SecureTransportEventSource()
+        {
+        }
 
         /// <summary>
         /// Gets or sets a value indicating whether packet receives are logged. False by default
@@ -23,10 +29,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Gets the singleton instance
         /// </summary>
-        public static SecureTransportEventSource Log
-        {
-            get { return LogInstance; }
-        }
+        public static SecureTransportEventSource Log { get; } = new SecureTransportEventSource();
 
         /// <summary>
         /// Server listening is about to start
@@ -783,6 +786,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public void OnConnectionLostNotificationCompleted(long transportId, long connectionId, long elapsedMilliseconds)
         {
             this.WriteEvent(64, transportId, connectionId, elapsedMilliseconds);
+        }
+
+        /// <summary>
+        /// Handles the connection failed.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <param name="exception">The exception.</param>
+        [Event(65, Level = EventLevel.Error, Version = 1)]
+        public void HandleConnectionFailed(long transportId, long connectionId, string exception)
+        {
+            this.WriteEvent(65, transportId, connectionId, exception);
         }
     }
 }

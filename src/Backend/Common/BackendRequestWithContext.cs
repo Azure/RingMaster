@@ -128,7 +128,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        protected override sealed void InvokeCallback(int resultCode, object result, IStat stat)
+        protected override sealed void InvokeCallback(int resultCode, object result, IStat stat, string responsePath)
         {
             TReturn resultAsT = null;
             if (result != null)
@@ -139,12 +139,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
                 catch (InvalidCastException)
                 {
-                    this.NotifyComplete((int)Code.Marshallingerror, default(TReturn), stat);
+                    this.NotifyComplete((int)Code.Marshallingerror, default(TReturn), stat, responsePath);
                     return;
                 }
             }
 
-            this.NotifyComplete(resultCode, resultAsT, stat);
+            this.NotifyComplete(resultCode, resultAsT, stat, responsePath);
         }
 
         /// <summary>
@@ -153,6 +153,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="resultCode">result code</param>
         /// <param name="result">The result</param>
         /// <param name="stat">The stat</param>
-        protected abstract void NotifyComplete(int resultCode, TReturn result, IStat stat);
+        /// <param name="responsePath">The response path</param>
+        protected abstract void NotifyComplete(int resultCode, TReturn result, IStat stat, string responsePath);
     }
 }

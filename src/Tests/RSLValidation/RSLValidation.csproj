@@ -1,56 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{8AC71971-FAE7-4528-8A5B-590F3123456A}</ProjectGuid>
+    <TargetFramework>net462</TargetFramework>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RSLValidation</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Test.RSLValidation</AssemblyName>
-    <RunCodeAnalysis>$(RunCA)</RunCodeAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
+    <EnableQTest>false</EnableQTest>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
+
   <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+    <PackageReference Include="Common.RSL.amd64" Version="1.2.18.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
   </ItemGroup>
+
   <ItemGroup>
-    <Reference Include="ManagedRSLib">
-      <HintPath>$(PkgCommon_RSL_amd64)\lib\net40\ManagedRSLib.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
-      <HintPath>$(PkgMsTest_Corext)\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AppDomainExtensions.cs" />
-    <Compile Include="TestTracer.cs" />
-    <Compile Include="TestRSL.cs" />
-    <Compile Include="BasicStateMachine.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="$(PkgCommon_RSL_amd64)\lib\rsl.dll">
+    <Content Include="$(NugetPackageRoot)\common.rsl.amd64\1.2.18\lib\rsl.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>False</Visible>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="RunRSLValidationUnitTest.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+
 </Project>

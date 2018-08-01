@@ -1,0 +1,47 @@
+# For full annotated example, please visit
+#   https://cloudes.visualstudio.com/CDPX/_wiki?pagePath=%2FHome%2FYAML-Format%2FAnnotated-Example
+environment:
+    host:
+        os: 'windows'
+    runtime:
+        provider: 'appcontainer'
+        image: 'cdpxtest.azurecr.io/global/vse2017u5-external-win14393.1884:1.0'
+        source_mode: 'link'
+
+versioning:
+    commands:
+
+build:
+    commands:
+        - !!buildcommand
+          name: 'Build Vega'
+          command: '.\build\build.cmd'
+          logs:
+              - include:
+                  - '**/msbuild*.log'
+          artifacts:
+              - from: 'out\\'
+                include:
+                    - '**/*.*'
+
+package:
+    commands:
+
+test:
+    commands:
+        - !!testcommand
+          name: 'Vega Unit Test'
+          command: 'build\unittests.cmd'
+          fail_on_stderr: false
+          testresults:
+              - from: 'out'
+                title: 'Vega Unit Test'
+                type: 'vstest'
+                include:
+                    - '**/*.trx'
+
+publish:
+    commands:
+
+user_cleanup:
+    commands:

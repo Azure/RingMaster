@@ -19,7 +19,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <summary>
         /// Work items to be invoked in order
         /// </summary>
-        private readonly Queue<Action> workItems = new Queue<Action>();
+        private readonly ConcurrentQueue<Action> workItems = new ConcurrentQueue<Action>();
 
         /// <summary>
         /// List of available threads to run the work item.
@@ -55,11 +55,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="workitem">work item to be queued</param>
         public void Queue(Action workitem)
         {
-            lock (this.workItems)
-            {
-                this.workItems.Enqueue(workitem);
-            }
-
+            this.workItems.Enqueue(workitem);
             this.TryScheduleNextWorkItem();
         }
 
@@ -78,18 +74,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         private void TryScheduleNextWorkItem()
         {
-            // Either no work to do or no worker available
-            if (this.workers.IsEmpty || this.workItems.Count == 0)
+            if (this.workers.TryPop(out var worker))
             {
-                return;
-            }
-
-            lock (this.workItems)
-            {
-                if (this.workItems.Count != 0 && this.workers.TryPop(out var worker))
+                // worker is available, now check if there is any work item
+                if (this.workItems.TryDequeue(out var workItem))
                 {
-                    worker.WorkItem = this.workItems.Dequeue();
+                    worker.WorkItem = workItem;
                     worker.Ready.Set();
+                }
+                else
+                {
+                    // return the worker and let it go
+                    this.workers.Push(worker);
                 }
             }
         }
@@ -113,6 +109,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 this.pool = pool;
                 this.cancellation = cancellation;
                 this.thread = new Thread(this.ThreadFunc);
+                this.thread.IsBackground = true;
                 this.thread.Start();
             }
 

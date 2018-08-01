@@ -1,34 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props') And '$(EnvironmentConfig)' == ''" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <ProjectGuid>{20583543-6391-4930-AB3A-52B04B022D8B}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Instrumentation</AssemblyName>
-    <RunAnalysis>true</RunAnalysis>
     <CoverageDisabled>true</CoverageDisabled>
-    <EnableStyleCop>true</EnableStyleCop>
-    <DocumentationFile>$(OutDir)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="IMetric0D.cs" />
-    <Compile Include="IMetric10D.cs" />
-    <Compile Include="IMetric1D.cs" />
-    <Compile Include="IMetric2D.cs" />
-    <Compile Include="IMetric3D.cs" />
-    <Compile Include="IMetric4D.cs" />
-    <Compile Include="IMetric5D.cs" />
-    <Compile Include="IMetric6D.cs" />
-    <Compile Include="IMetric7D.cs" />
-    <Compile Include="IMetric8D.cs" />
-    <Compile Include="IMetric9D.cs" />
-    <Compile Include="IMetricsFactory.cs" />
-  </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' != '' " />
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(EnvironmentConfig)' == '' " />
+  
+  <Import Project="$(StyleCopProps)" />
 </Project>

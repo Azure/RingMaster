@@ -23,7 +23,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
         private readonly ZooKeeperServer server;
         private readonly ulong sessionId;
         private readonly IConnection connection;
-        private readonly Func<RequestInit, IRingMasterRequestHandlerOverlapped> onInitSession;
+        private readonly Func<Requests.RequestInit, IRingMasterRequestHandlerOverlapped> onInitSession;
         private readonly IZooKeeperCommunicationProtocol protocol;
         private readonly IZooKeeperServerInstrumentation instrumentation;
 
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
         public ZooKeeperSession(
             ZooKeeperServer server,
             ulong sessionId,
-            Func<RequestInit, IRingMasterRequestHandlerOverlapped> onInitSession,
+            Func<Requests.RequestInit, IRingMasterRequestHandlerOverlapped> onInitSession,
             IConnection connection,
             IZooKeeperCommunicationProtocol protocol,
             IZooKeeperServerInstrumentation instrumentation)
@@ -178,7 +178,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
             {
                 case RingMasterRequestType.Init:
                     {
-                        var initRequest = (RequestInit)request;
+                        var initRequest = (Requests.RequestInit)request;
                         RequestResponse initResponse = null;
 
                         if (this.requestHandler == null)
@@ -205,21 +205,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
 
                 case RingMasterRequestType.GetData:
                     {
-                        var getDataRequest = (RequestGetData)request;
+                        var getDataRequest = (Requests.RequestGetData)request;
                         getDataRequest.Watcher = this.MakeWatcher(getDataRequest.Watcher);
                         break;
                     }
 
                 case RingMasterRequestType.GetChildren:
                     {
-                        var getChildrenRequest = (RequestGetChildren)request;
+                        var getChildrenRequest = (Requests.RequestGetChildren)request;
                         getChildrenRequest.Watcher = this.MakeWatcher(getChildrenRequest.Watcher);
                         break;
                     }
 
                 case RingMasterRequestType.Exists:
                     {
-                        var existsRequest = (RequestExists)request;
+                        var existsRequest = (Requests.RequestExists)request;
                         existsRequest.Watcher = this.MakeWatcher(existsRequest.Watcher);
                         break;
                     }

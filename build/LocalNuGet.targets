@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Poorman's restore before having MSBuild 15.8 to use nuget with credential provider -->
+  <Target Name="Restore" Condition="Exists($(_msbuildexe))">
+    <Exec Command="$(MSBuildThisFileDirectory)Local\NuGet\nuget.exe restore -NonInteractive -MSBuildPath &quot;$(MSBuildBinPath)&quot; $(MSBuildProjectFullPath)" />
+  </Target>
+</Project>

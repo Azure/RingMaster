@@ -14,6 +14,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class RingMasterWatchdogEventSource : EventSource
     {
+        static RingMasterWatchdogEventSource()
+        {
+        }
+
+        private RingMasterWatchdogEventSource()
+        {
+        }
+
         public static RingMasterWatchdogEventSource Log { get; } = new RingMasterWatchdogEventSource();
 
         [Event(2, Level = EventLevel.LogAlways, Version = 1)]

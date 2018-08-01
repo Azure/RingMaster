@@ -1,21 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(EnvironmentConfig)" />
-  <PropertyGroup>
-    <TargetName>RobocopyFiles</TargetName>
-    <BinariesBuildTypeArchDirectory Condition="'$(BinariesBuildTypeArchDirectory)' == ''">$(OUTPUTROOT)\$(BuildType)-$(BuildArchitecture)</BinariesBuildTypeArchDirectory>
-    <MdsAgentPkg>$(BinariesBuildTypeArchDirectory)\MdsAgentApplication-Pkg</MdsAgentPkg>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
 
-    <SF_Geneva_NugetPackage>$(PkgMicrosoft_ServiceFabric_Geneva)</SF_Geneva_NugetPackage>
-    <Geneva_MA_NugetPackage>$(PkgGenevaMonitoringAgent)</Geneva_MA_NugetPackage>
+  <PropertyGroup>
+    <OutputPath Condition="'$(OutputPath)' == ''">$(OutputRoot)\</OutputPath>
+    <OutDir Condition="'$(OutDir)' == ''">$(OutputPath)</OutDir>
+    <BuildDependsOn>RobocopyFiles</BuildDependsOn>
+
+    <MdsAgentPkg>$(OutputRoot)\MdsAgentApplication-Pkg</MdsAgentPkg>
+
+    <SF_Geneva_NugetPackage>$(NugetPackageRoot)\microsoft.servicefabric.geneva\6.1.467</SF_Geneva_NugetPackage>
+    <Geneva_MA_NugetPackage>$(NugetPackageRoot)\genevamonitoringagent\41.1.3</Geneva_MA_NugetPackage>
+    <ServiceFabricPackage>$(NugetPackageRoot)\servicefabric.xcopypackage\6.2.274-internal</ServiceFabricPackage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GenevaMonitoringAgent" Version="41.1.3.0" />
+    <PackageReference Include="Microsoft.ServiceFabric.Geneva" Version="6.1.467" />
+    <PackageReference Include="ServiceFabric.XCopyPackage" Version="6.2.274-internal" />
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <Robocopy>
+      <Options>/e</Options>
+    </Robocopy>
+  </ItemDefinitionGroup>
   
   <ItemGroup>
-    <Robocopy Include="$(PkgMicrosoft_WindowsFabric_External)\*.*">
-      <DestinationFolder>$(BinariesBuildTypeArchDirectory)\Msi\MicrosoftServiceFabric.Internal</DestinationFolder>
-    </Robocopy>
-    <Robocopy Include="$(PkgMicrosoft_ServiceFabric_SDK)\content\*.msi">
-      <DestinationFolder>$(BinariesBuildTypeArchDirectory)\Msi\MicrosoftServiceFabric</DestinationFolder>
+    <Robocopy Include="$(ServiceFabricPackage)\lib\ServiceFabric.XCopyPackage\">
+      <DestinationFolder>$(OutputRoot)\ServiceFabric.XCopyPackage</DestinationFolder>
+      <Options>/e</Options>
     </Robocopy>
   </ItemGroup>
   
@@ -23,44 +37,58 @@
     <!-- Copy the application package included in nuget package to build output  -->
     <Robocopy Include="$(SF_Geneva_NugetPackage)\MonitoringServiceWithMA">
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication</DestinationFolder>
-       <IsRecursive>true</IsRecursive>
+       <Options>/e</Options>
     </Robocopy>
     <!-- Copy the Geneva Monitoring Agent binaries from to the data package folder of MdsAgentService -->
     <Robocopy Include="$(Geneva_MA_NugetPackage)\Monitoring\agent">
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication\MdsAgentServicePackage\MdsAgent.Data</DestinationFolder>
-       <IsRecursive>true</IsRecursive>
+       <Options>/e</Options>
     </Robocopy>
     <!--Manifest files-->
     <!-- Copy the Manifest files from the ServiceFabric.Geneva nuget package to the build output -->
-    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\ApplicationManifest.xml">
+    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\">
+      <FileMatch>ApplicationManifest.xml</FileMatch>
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication</DestinationFolder>
-       <IsRecursive>false</IsRecursive>
+       <Options></Options>
     </Robocopy>
     <!-- Default app parameters -->
-    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\DefaultApplicationParameters.xml">
+    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\">
+      <FileMatch>DefaultApplicationParameters.xml</FileMatch>
       <DestinationFolder>$(MdsAgentPkg)</DestinationFolder>
+       <Options></Options>
     </Robocopy>
     <!--Robocopy Include="$(SF_Geneva_NugetPackage)\content\ManifestFiles\MdsAgentServicePackage\ServiceManifest.xml"-->
     <!-- patched version to run startup command -->
-    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\patch\ServiceManifest.xml">
+    <Robocopy Include="$(SRCROOT)\Applications\MdsAgentApplication\patch\">
+      <FileMatch>ServiceManifest.xml</FileMatch>
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication\MdsAgentServicePackage</DestinationFolder>
-       <IsRecursive>false</IsRecursive>
+       <Options></Options>
     </Robocopy>
-    <Robocopy Include="$(SF_Geneva_NugetPackage)\content\ManifestFiles\MonitoringServicePackage\ServiceManifest.xml">
+    <Robocopy Include="$(SF_Geneva_NugetPackage)\content\ManifestFiles\MonitoringServicePackage\">
+      <FileMatch>ServiceManifest.xml</FileMatch>
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication\MonitoringServicePackage</DestinationFolder>
-       <IsRecursive>false</IsRecursive>
+       <Options></Options>
     </Robocopy>
     <!-- Copy the ServiceFabricEvents.xml config file from ServiceFabric.Geneva nuget package to the data package folder of MdsAgentService -->
-    <Robocopy Include="$(SF_Geneva_NugetPackage)\content\MAConfig\ServiceFabricEvents.xml">
+    <Robocopy Include="$(SF_Geneva_NugetPackage)\content\MAConfig\">
+      <FileMatch>ServiceFabricEvents.xml</FileMatch>
        <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication\MdsAgentServicePackage\MdsAgent.Data</DestinationFolder>
-       <IsRecursive>false</IsRecursive>
+       <Options></Options>
     </Robocopy>
     <!-- Vega MA config -->
-    <Robocopy Include="$(SRCROOT)\Applications\Mds\VegaMAConfig.Test.xml">
+    <Robocopy Include="$(SRCROOT)\Applications\Mds\">
+      <FileMatch>VegaMAConfig.Test.xml</FileMatch>
       <DestinationFolder>$(MdsAgentPkg)\MdsAgentApplication\MdsAgentServicePackage\MdsAgent.Data</DestinationFolder>
+      <Options></Options>
     </Robocopy>
   </ItemGroup>
-  
-  <Import Project="$(ExtendedTargetsPath)\NoTarget.targets" />
 
+  <ItemGroup>
+    <QCustomInput Include="$(SRCROOT)\Applications\MdsAgentApplication\patch\fixscript.bat" />
+    <QCustomInput Include="$(SRCROOT)\Applications\MdsAgentApplication\patch\Startup.cmd" />
+  </ItemGroup>
+
+  <Target Name="Restore" />
+  
+  <Import Project="$(NoTargets)" Condition=" Exists('$(NoTargets)') "/>
 </Project>

@@ -5,20 +5,17 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EnumerationStressService
 {
     using System;
-    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Fabric;
     using System.Fabric.Description;
-    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.ServiceFabric.Services.Runtime;
+    using Microsoft.Vega.Test.Helpers;
 
     /// <summary>
     /// Service used to stress the RingMaster by enumerating random subsets of children of a given node.
@@ -42,14 +39,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EnumerationStress
             {
                 ConfigurationSection enumerationPerformanceTestConfiguration = this.Context.CodePackageActivationContext.GetConfigurationSection("EnumerationPerformanceTest");
                 string connectionString = enumerationPerformanceTestConfiguration.GetStringValue("TargetConnectionString");
+                connectionString = Helpers.GetServerAddressIfNotProvided(connectionString);
+
                 ulong timeStreamId = enumerationPerformanceTestConfiguration.GetUInt64Value("TimeStream");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    using (var ringMaster = ConnectToRingMaster(connectionString, cancellationToken))
-                    using (var timeStream = ringMaster.OpenTimeStream(timeStreamId))
+                    using (var ringMaster = new RetriableRingMasterClient(s => Helpers.CreateRingMasterTimeStreamRequestHandler(s, cancellationToken, timeStreamId), connectionString))
                     {
-                        await Task.Run(() => this.GetChildrenPerformanceTest(timeStream, enumerationPerformanceTestConfiguration, cancellationToken));
+                        await Task.Run(() => this.GetChildrenPerformanceTest(ringMaster, enumerationPerformanceTestConfiguration, cancellationToken));
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);

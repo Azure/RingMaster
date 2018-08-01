@@ -1,4 +1,4 @@
-﻿// <copyright file="SslWrapping.cs" company="Microsoft Corporation">
+﻿// <copyright file="SSLWrapping.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
