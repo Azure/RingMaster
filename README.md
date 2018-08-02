@@ -18,44 +18,59 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 Install the latest version of [Git for Windows](https://git-scm.com/download/win) for working with the repo.
 
-Install [Visual Studio 2017](https://www.visualstudio.com/downloads/) with Windows desktop C# and C++ support.
+Install [Visual Studio 2017](https://www.visualstudio.com/downloads/) with Windows desktop C# and dotnet core support.
 Either Professional or Enterprise edition will work, Community edition is not tested.
 
 [NuGet](https://www.nuget.org/downloads) should be already installed with Visual Studio 2017. If you choose to install
 MSBuild / .NET SDK / Windows SDK, then install the command line version. NuGet is required to restore several packages
 before the build.
 
+On Linux machine, install Dotnet Core SDK 2.1 or more recent version and download the latest nuget. To run nuget,
+install latest stable version of Mono from [official website](http://www.mono-project.com).
+
 ## Bootstrap the development environment
 
 In Start Menu (or whatever equivalent), find "Visual Studio 2017", open "visual Studio Tools" folder, click "Developer
-Command Prompt for VS 2017". A command prompt will show up, where one may run MSBuild, C# and C++ compilers.
+Command Prompt for VS 2017". A command prompt will show up, where one may run MSBuild, C# and C++ compilers. Then set
+the environment variable OSSBUILD to 1.
 
-Change to the `ossbuild` directory in the repo, for instance `C:\github\Azure\RingMaster\ossbuild`, start PowerShell,
-and run `ossbuild.ps1`. The script will restore all required packages, generate a file for package definitions, and set
-several environment variables.
+## Build on Windows platform
 
-## Build the source code
+To build all projects, simply run `build\build.cmd` in a Command Prompt after cleaning up the workspace.
 
-Go to any directory at root, `src`, or under `src`, run MSBuild like what you normally do. The binaries are saved at
-`out` directory under the repo root.
+To open project in Visual Studio IDE, assuming the workspace is stored at `C:\rd\Networking-Vega`, after openning
+"Developer Command Prompt for VS 2017" from Start Menu, run the following command to generate the solution file:
 
-The projects are designed to be built in parallel. If the number of processor is 8 (check the environment variable
-`NUMBER_OF_PROCESSOR`), the recommended command to build is:
+    cd C:\rd\Networking-Vega\src
+    set SRCROOT=C:\rd\Networking-Vega\src
+    powershell ..\ossbuild\proj2sln.ps1 -Sln .\src.sln dirs.proj
 
-    msbuild /m:8 /v:m /fl
+Then open `src.sln` in file explorer or command prompt.  Note that the conversion from project files to solution file
+can be performed to any `*.csproj` files.
 
-The second argument sets the verbosity to minimal.
+If any NuGet package is not restored automatically during the build, run the following at `src` directory:
 
-## Build in Visual Studio IDE
+    nuget restore packages.config
+    msbuild /v:m /t:restore
 
-Once in the bootstrapped PowerShell window, one can open any project in VS IDE, for instance:
+Recommended way to run MSBuild is:
 
-    devenv .\Backend\Common\RingMasterBackendCommon.csproj
+    msbuild /v:m /m /fl
 
-Because the VS solution file (`*.sln`) is not checked in, you may need to manually add depended projects to the default
-solution in order to *rebuild*.  If you build once in the command line using MSBuild, incremental build will work.  You
-may also write a script to parse all csproj files and generate a sln file.
+Which means:
 
-You may also use Visual Studio Code to build:
+* Verbosity level for console output is minimal.
+* Use all available processors to build projects in parallel.
+* Save detailed build log in msbuild.log.
 
-    code.exe .
+Building inside Visual Studio or using dotnet CLI also works.
+
+## Build on Linux platform
+
+On Linux only dotnet CLI is supported, use the following steps to build the code:
+
+    export OSSBUILD=1
+    cd src
+    nuget restore packages.config
+    dotnet build
+
