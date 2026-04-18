@@ -8,7 +8,6 @@
     <ProjectFile Include="FakeFluentAssertions\FakeFluentAssertions.csproj" />
     <ProjectFile Include="MiscellaneousTests\MiscellaneousTests.csproj" />
     <ProjectFile Include="PerformanceTestCases\PerformanceTestCases.csproj" />
-    <ProjectFile Include="RSLValidation\RSLValidation.csproj" Condition="'$(OSSBUILD)' == ''" />
     <ProjectFile Include="RingMasterBVT\RingMasterBVT.csproj" />
     <ProjectFile Include="RingMasterPerformance\RingMasterPerformance.csproj" />
     <ProjectFile Include="RingMasterTestApplication\RingMasterTestApplication.sfproj" />
