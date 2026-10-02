@@ -12,7 +12,7 @@ namespace Microsoft.Vega.Test
     using System.Linq;
     using System.Text;
     using System.Threading;
-    using Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster;
 
     /// <summary>
     /// Measures the tracing performance

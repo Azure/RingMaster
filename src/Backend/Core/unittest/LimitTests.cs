@@ -42,6 +42,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         private const int MaxNodeDataSize = 10240;
 
         /// <summary>
+        /// The maximum user metadata size
+        /// </summary>
+        private const int MaxUserMetadataSize = 10240;
+
+        /// <summary>
         /// Maximum amount of ACLs per node
         /// </summary>
         private const int MaxAclsPerNode = 5;
@@ -76,6 +81,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 { "RingMasterLimits.MaxNodeNameLength", MaxNodeNameLength.ToString() },
                 { "RingMasterLimits.MaxNodePathLength", MaxNodePathLength.ToString() },
                 { "RingMasterLimits.MaxNodeDataSize", MaxNodeDataSize.ToString() },
+                { "RingMasterLimits.MaxUserMetadataSize", MaxUserMetadataSize.ToString() },
                 { "RingMasterLimits.MaxAclsPerNode", MaxAclsPerNode.ToString() },
                 { "RingMasterLimits.MaxAclIdentiferLength", MaxAclIdentiferLength.ToString() }
             };
@@ -85,6 +91,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 { "RingMasterLimits.MaxNodeNameLength", "0" },
                 { "RingMasterLimits.MaxNodePathLength", "0" },
                 { "RingMasterLimits.MaxNodeDataSize", "0" },
+                { "RingMasterLimits.MaxUserMetadataSize", "0" },
                 { "RingMasterLimits.MaxAclsPerNode", "0" },
                 { "RingMasterLimits.MaxAclIdentiferLength", "0" }
             };
@@ -142,6 +149,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             SetData(backend, session, nodePath, new byte[MaxNodeDataSize + 1], Code.Badarguments);
             SetData(backend, rootSession, nodePath, new byte[MaxNodeDataSize + 1], Code.Ok);
             SetData(noLimitBackend, noLimitSession, nodePath, new byte[MaxNodeDataSize + 1], Code.Ok);
+        }
+
+        /// <summary>
+        /// Tests data length scenarios
+        /// </summary>
+        [TestMethod]
+        public void TestMetadataLengthScenarios()
+        {
+            var backend = CreateBackend(GetLimitSetting);
+            var session = CreateSession(backend);
+            var rootSession = CreateSession(backend, RingMasterBackendCore.RootDigest);
+            var noLimitBackend = CreateBackend(GetNoLimitSetting);
+            var noLimitSession = CreateSession(noLimitBackend);
+
+            var nodePath = "/MetadataLengthTest";
+
+            CreateNode(backend, session, nodePath, null, Code.Ok, userMetadata: new byte[MaxUserMetadataSize]);
+            DeleteNode(backend, session, nodePath);
+            CreateNode(backend, session, nodePath, null, Code.Badarguments, userMetadata: new byte[MaxUserMetadataSize + 1]);
+            CreateNode(backend, rootSession, nodePath, null, Code.Ok, userMetadata: new byte[MaxUserMetadataSize + 1]);
+            CreateNode(noLimitBackend, noLimitSession, nodePath, null, Code.Ok, userMetadata: new byte[MaxUserMetadataSize + 1]);
+
+            SetDataAndMetadata(backend, session, nodePath, null, new byte[MaxUserMetadataSize], Code.Ok);
+            SetDataAndMetadata(backend, session, nodePath, null, new byte[MaxUserMetadataSize + 1], Code.Badarguments);
+            SetDataAndMetadata(backend, rootSession, nodePath, null, new byte[MaxUserMetadataSize + 1], Code.Ok);
+            SetDataAndMetadata(noLimitBackend, noLimitSession, nodePath, null, new byte[MaxUserMetadataSize + 1], Code.Ok);
         }
 
         /// <summary>
@@ -322,9 +355,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         /// <param name="expectedResponseCode">Expected response for the operation</param>
         /// <param name="createMode">Creation mode</param>
         /// <param name="acls">ACLs for the node</param>
-        private static void CreateNode(RingMasterBackendCore backend, ClientSession session, string nodePath, byte[] data, Code expectedResponseCode, CreateMode createMode = CreateMode.Persistent, List<Acl> acls = null)
+        /// <param name="userMetadata">The user metadata.</param>
+        private static void CreateNode(RingMasterBackendCore backend, ClientSession session, string nodePath, byte[] data, Code expectedResponseCode, CreateMode createMode = CreateMode.Persistent, List<Acl> acls = null, byte[] userMetadata = null)
         {
-            ProcessRequest(backend, session, new RequestCreate(nodePath, null, data, acls, createMode, null), expectedResponseCode);
+            ProcessRequest(backend, session, new RequestCreate(nodePath, null, data, acls, createMode, null, userMetadata: userMetadata), expectedResponseCode);
         }
 
         /// <summary>
@@ -349,6 +383,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         private static void SetData(RingMasterBackendCore backend, ClientSession session, string nodePath, byte[] data, Code expectedResponseCode)
         {
             ProcessRequest(backend, session, new RequestSetData(nodePath, null, data, -1, null), expectedResponseCode);
+        }
+
+        private static void SetDataAndMetadata(RingMasterBackendCore backend, ClientSession session, string nodePath, byte[] data, byte[] metadata, Code expectedResponseCode)
+        {
+            ProcessRequest(backend, session, new RequestSetDataAndUserMetadata(nodePath, null, data, -1, metadata, -1, null), expectedResponseCode);
         }
 
         /// <summary>

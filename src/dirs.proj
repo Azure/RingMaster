@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="Applications\dirs.proj" />
-    <ProjectFile Include="Backend\dirs.proj" />
-    <ProjectFile Include="Binplace\dirs.proj" />
-    <ProjectFile Include="CloudUnitTests\CloudUnitTests.proj" Condition="'$(OSSBUILD)' == ''" />
-    <ProjectFile Include="Common\dirs.proj" />
-    <ProjectFile Include="Infrastructure\dirs.proj" />
-    <ProjectFile Include="PackageDefinitions\dirs.proj" />
-    <ProjectFile Include="Persistence\dirs.proj" />
-    <ProjectFile Include="Tests\dirs.proj" />
-    <ProjectFile Include="Tools\dirs.proj" />
+    <ProjectReference Include="Applications\dirs.proj" />
+    <ProjectReference Include="Backend\dirs.proj" />
+    <ProjectReference Include="Binplace\dirs.proj" />
+    <ProjectReference Include="CloudUnitTests\CloudUnitTests.proj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="Common\dirs.proj" />
+    <ProjectReference Include="Infrastructure\dirs.proj" />
+    <ProjectReference Include="MicroBenchmarks\MicroBenchmarks.csproj" />
+    <ProjectReference Include="PackageDefinitions\dirs.proj" Condition="'$(ENABLE_PRS_DELAYSIGN)' == ''" />
+    <ProjectReference Include="Persistence\dirs.proj" />
+    <ProjectReference Include="Tests\dirs.proj" />
+    <ProjectReference Include="Tools\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

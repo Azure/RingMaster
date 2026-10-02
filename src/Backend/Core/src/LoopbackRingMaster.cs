@@ -26,24 +26,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private ExecutionQueue executionQueue = null;
         private OnCompleteDelegate del = null;
 
+        private int sessionTimeout;
+        private int requestTimeout;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="LoopbackRingMaster"/> class.
+        /// Initializes a new instance of the <see cref="LoopbackRingMaster" /> class.
         /// </summary>
         /// <param name="backend">Backend core</param>
         /// <param name="readOnlyInterfaceRequiresLocks">Whether readonly interface requires locks</param>
-        public LoopbackRingMaster(RingMasterBackendCore backend, bool readOnlyInterfaceRequiresLocks = true)
-            : this(backend, readOnlyInterfaceRequiresLocks, true)
+        /// <param name="requestTimeout">The request timeout.</param>
+        public LoopbackRingMaster(RingMasterBackendCore backend, bool readOnlyInterfaceRequiresLocks = true, int requestTimeout = int.MaxValue)
+            : this(backend, readOnlyInterfaceRequiresLocks, true, requestTimeout)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LoopbackRingMaster"/> class.
+        /// Initializes a new instance of the <see cref="LoopbackRingMaster" /> class.
         /// </summary>
         /// <param name="backend">Backend core</param>
         /// <param name="readOnlyInterfaceRequiresLocks">Whether readonly interface requires locks</param>
         /// <param name="allowWrites">Whether write operation is allowed</param>
-        public LoopbackRingMaster(RingMasterBackendCore backend, bool readOnlyInterfaceRequiresLocks, bool allowWrites)
-            : base("loopback:0", 0, null)
+        /// <param name="requestTimeout">The request timeout.</param>
+        /// <exception cref="ArgumentNullException">backend</exception>
+        public LoopbackRingMaster(RingMasterBackendCore backend, bool readOnlyInterfaceRequiresLocks, bool allowWrites, int requestTimeout)
+            : base("loopback:0", 0, null, requestTimeout: requestTimeout)
         {
             this.backend = backend ?? throw new ArgumentNullException("backend");
             this.session = backend.GetLoopbackSession(string.Empty, false, allowWrites, readOnlyInterfaceRequiresLocks);
@@ -60,16 +66,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public delegate void OnCompleteDelegate(IRingMasterBackendRequest req, int resultcode, double timeInMillis);
 
         /// <inheritdoc />
-        public override int RequestTimeout
-        {
-            get;
-        }
+        public override int RequestTimeout => this.requestTimeout;
 
         /// <inheritdoc />
-        public override int SessionTimeout
-        {
-            get;
-        }
+        public override int SessionTimeout => this.sessionTimeout;
 
         /// <summary>
         /// Gets or sets the maximum thread used by the execution queue
@@ -124,9 +124,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <inheritdoc />
         public override void Initialize(int sessionTimeout, int requestTimeout)
         {
+            this.sessionTimeout = sessionTimeout;
+            this.requestTimeout = requestTimeout;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Enqueues the specified req.
+        /// </summary>
+        /// <param name="req">The req.</param>
         public override void Send(IRingMasterBackendRequest req)
         {
             this.executionQueue.Enqueue<IRingMasterBackendRequest>(this.SendSynchronously, req);

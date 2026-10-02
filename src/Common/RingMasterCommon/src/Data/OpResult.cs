@@ -7,8 +7,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using RingMaster.Data;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// OpResult contains the result of an <see cref="Op"/>.
@@ -76,7 +77,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                     var getDataResult = (OpResult.GetDataResult)operationResult;
                     response.ResponsePath = getDataResult.Path;
                     response.Stat = getDataResult.Stat;
-                    response.Content = getDataResult.Bytes;
+                    response.Content = new GetDataResponse(getDataResult.Data, getDataResult.UserMetadata, null); // stat already included in response.Stat
                     break;
                 }
 
@@ -97,6 +98,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 {
                     var setDataResult = (OpResult.SetDataResult)operationResult;
                     response.Stat = setDataResult.Stat;
+                    break;
+                }
+
+                case OpCode.SetDataAndUserMetadata:
+                {
+                    var setDataAndUserMetadataResult = (OpResult.SetDataAndUserMetadataResult)operationResult;
+                    response.Stat = setDataAndUserMetadataResult.Stat;
                     break;
                 }
 
@@ -148,9 +156,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <summary>
         /// Gets the OpResult appropriate for the given RequestResponse and request type
         /// </summary>
-        /// <param name="requestType">Type of request associated with the response</param>
-        /// <param name="response">Response to convert into <see cref="OpResult"/></param>
-        /// <returns>A <see cref="OpResult"/> that represents the response</returns>
+        /// <param name="requestType">Type of the request.</param>
+        /// <param name="response">Response to convert into <see cref="OpResult" /></param>
+        /// <returns>
+        /// A <see cref="OpResult" /> that represents the response
+        /// </returns>
+        /// <exception cref="ArgumentNullException">response</exception>
         public static OpResult GetOpResult(RingMasterRequestType requestType, RequestResponse response)
         {
             if (response == null)
@@ -163,6 +174,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 return new OpResult.ErrorResult(response.ResultCode);
             }
 
+            // for now, we don't support memory buffered responses in OpResult
+            var memoryBuffer = response.Content as IMemoryBuffer;
+            if (memoryBuffer != null)
+            {
+                using (memoryBuffer)
+                {
+                    var responseBytes = memoryBuffer.ToArray();
+                    response.Content = responseBytes;
+                }
+            }
+
             switch (requestType)
             {
                 case RingMasterRequestType.Check:
@@ -170,13 +192,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 case RingMasterRequestType.Create:
                     return new OpResult.CreateResult(response.Stat, (string)response.Content);
                 case RingMasterRequestType.GetData:
-                    return new OpResult.GetDataResult(response.Stat, (byte[])response.Content, response.ResponsePath);
+                    return OpResult.GetDataResult.ConvertToOpResultFromResponse(response);
                 case RingMasterRequestType.GetChildren:
                     return new OpResult.GetChildrenResult(response.Stat, (IList<string>)response.Content);
                 case RingMasterRequestType.Delete:
                     return new OpResult.DeleteResult();
                 case RingMasterRequestType.SetData:
                     return new OpResult.SetDataResult(response.Stat);
+                case RingMasterRequestType.SetDataAndUserMetadata:
+                    return new OpResult.SetDataAndUserMetadataResult(response.Stat);
                 case RingMasterRequestType.Move:
                     return new OpResult.MoveResult(response.Stat, (string)response.Content);
                 case RingMasterRequestType.SetAcl:
@@ -222,17 +246,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         public sealed class GetDataResult : OpResult
         {
             /// <summary>
-            /// Initializes a new instance of the <see cref="GetDataResult"/> class.
+            /// Initializes a new instance of the <see cref="GetDataResult" /> class.
             /// </summary>
-            /// <param name="stat">The <see cref="IStat"/> of the node at the time GetData operation was executed</param>
-            /// <param name="bytes">Content of the node</param>
+            /// <param name="stat">The <see cref="IStat" /> of the node at the time GetData operation was executed</param>
+            /// <param name="data">Content of the node</param>
             /// <param name="path">Path to the node</param>
-            public GetDataResult(IStat stat, byte[] bytes, string path)
+            /// <param name="userMetadata">The user metadata.</param>
+            public GetDataResult(IStat stat, byte[] data, string path, byte[] userMetadata)
                 : base(OpCode.GetData)
             {
                 this.Stat = stat;
-                this.Bytes = bytes;
+                this.Data = data;
                 this.Path = path;
+                this.UserMetadata = userMetadata;
             }
 
             /// <summary>
@@ -248,7 +274,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// <summary>
             /// Gets the content of the node.
             /// </summary>
-            public byte[] Bytes { get; private set; }
+            public byte[] Data { get; private set; }
+
+            /// <summary>
+            /// Gets the user metadata.
+            /// </summary>
+            /// <value>
+            /// The user metadata.
+            /// </value>
+            public byte[] UserMetadata { get; private set; }
+
+            /// <summary>
+            /// Converts to op result from response.
+            /// </summary>
+            /// <param name="response">The response.</param>
+            /// <returns>A GetDataResult instance</returns>
+            public static GetDataResult ConvertToOpResultFromResponse(RequestResponse response)
+            {
+                if (response == null)
+                {
+                    throw new ArgumentNullException(nameof(response));
+                }
+
+                var getDataResponse = GetDataResponse.ToGetDataResponse(response);
+
+                return new GetDataResult(getDataResponse.Stat, getDataResponse.Data, response.ResponsePath, getDataResponse.UserMetadata);
+            }
         }
 
         /// <summary>
@@ -339,6 +390,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// <summary>
             /// Gets the <see cref="IStat"/> of the node after the SetData operation was completed.
             /// </summary>
+            public IStat Stat { get; private set; }
+        }
+
+        /// <summary>
+        /// Result of a <see cref="OpCode.SetDataAndUserMetadata"/> operation.
+        /// </summary>
+        /// <seealso cref="Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.OpResult" />
+        public sealed class SetDataAndUserMetadataResult : OpResult
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="SetDataAndUserMetadataResult"/> class.
+            /// </summary>
+            /// <param name="stat">The stat.</param>
+            public SetDataAndUserMetadataResult(IStat stat)
+                : base(OpCode.SetDataAndUserMetadata)
+            {
+                this.Stat = stat;
+            }
+
+            /// <summary>
+            /// Gets the stat.
+            /// </summary>
+            /// <value>
+            /// The stat.
+            /// </value>
             public IStat Stat { get; private set; }
         }
 

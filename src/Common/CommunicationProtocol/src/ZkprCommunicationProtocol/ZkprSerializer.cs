@@ -303,7 +303,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 }
                 else
                 {
-                    this.binaryWriter.WriteBE((int)-1);
+                    this.binaryWriter.WriteBE(-1);
                 }
 
                 if (request.RequestType == ZooKeeperRequestType.GetChildren2)

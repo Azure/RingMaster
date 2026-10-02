@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
@@ -79,6 +80,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         public byte[] Data { get; set; }
 
         /// <summary>
+        /// Gets or sets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata { get; set; }
+
+        /// <summary>
         /// Gets or sets the ACL.
         /// </summary>
         public IReadOnlyList<Acl> Acl { get; set; }
@@ -135,17 +144,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 Array.Copy(this.Data, copiedData, this.Data.Length);
             }
 
+            byte[] copiedUserMetadata = null;
+            if (this.UserMetadata != null)
+            {
+                copiedUserMetadata = new byte[this.UserMetadata.Length];
+                Array.Copy(this.UserMetadata, copiedUserMetadata, this.UserMetadata.Length);
+            }
+
             List<Acl> copiedAcl = null;
             if (this.Acl != null)
             {
                 copiedAcl = this.Acl.Select(a => new Acl(a)).ToList();
             }
 
+            IMutableStat copiedStat = null;
+            if (this.Stat != null)
+            {
+                if (this.Stat is MutableStatWithMetadataVersion)
+                {
+                    copiedStat = new MutableStatWithMetadataVersion(this.Stat);
+                }
+                else
+                {
+                    // TODO: should we turn it to FirstStat if applicable?
+                    copiedStat = new MutableStat(this.Stat);
+                }
+            }
+
             return new PersistedData(this.Id)
             {
                 Name = this.Name,
-                Stat = this.Stat == null ? null : new MutableStat(this.Stat),
+                Stat = copiedStat,
                 Data = copiedData,
+                UserMetadata = copiedUserMetadata,
                 Acl = copiedAcl,
                 ParentId = this.ParentId,
             };
@@ -303,6 +334,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         }
 
         /// <summary>
+        /// Appends the set data and user metadata.
+        /// </summary>
+        /// <param name="changeList">The change list.</param>
+        public void AppendSetDataAndUserMetadata(IChangeList changeList)
+        {
+            PersistenceEventSource.Log.PersistedDataAppendSetDataAndUserMetadata(this.Id, this.Name);
+            this.OnUpdate(changeList);
+        }
+
+        /// <summary>
         ///  Associates the removal of this instance with the given <see cref="IChangeList"/>.
         /// </summary>
         /// <param name="changeList">The <see cref="IChangeList"/> to associate with</param>
@@ -370,7 +411,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                 if (this.Data == null)
                 {
                     RmAssert.IsTrue(this.Stat.DataLength == 0);
-                    binaryWriter.Write((int)-1);
+                    binaryWriter.Write(-1);
                 }
                 else
                 {
@@ -379,14 +420,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
                     binaryWriter.Write((byte[])this.Data);
                 }
 
-                // Note this may be called in both primary (most of time) and secondaries. The number should not
-                // contain ephemeral nodes. GetChildrenCount() checks the difference between total children and number
-                // of ephemeral nodes (which is 0 on secondaries), and it is the correct number on both primary and
-                // secondaries.
                 binaryWriter.Write((int)this.GetChildrenCount());
 
                 ////Trace.TraceInformation($"PersistedData.Write: Id={this.Id} ParentId={this.ParentId} Name={this.Name} #Children={this.GetChildrenCount()} M={this.Stat.Mzxid} NC={this.Stat.NumChildren}/{this.stat.NumEphemeralChildren}");
                 binaryWriter.Write((ulong)this.ParentId);
+
+                binaryWriter.Write((uint)PersistedDataSerializationVersion.CurrentVersion);
+                binaryWriter.Write((int)this.Stat.Uversion);
+                if (this.UserMetadata == null)
+                {
+                    binaryWriter.Write(-1);
+                }
+                else
+                {
+                    binaryWriter.Write((int)this.UserMetadata.Length);
+                    binaryWriter.Write((byte[])this.UserMetadata);
+                }
             }
         }
 
@@ -450,6 +499,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             loadedStat.NumChildren = binaryReader.ReadInt32();
             this.ParentId = binaryReader.ReadUInt64();
 
+            // If we have more data to read, this must be serialization version plus user metadata.
+            var memStream = binaryReader.BaseStream;
+            if (memStream.Length - memStream.Position >= sizeof(uint))
+            {
+                var serializationVersionUsed = binaryReader.ReadUInt32();
+                if (serializationVersionUsed >= PersistedDataSerializationVersion.Version1)
+                {
+                    loadedStat = new MutableStatWithMetadataVersion(loadedStat);
+                    loadedStat.Uversion = binaryReader.ReadInt32();
+                    var metadataLength = binaryReader.ReadInt32();
+                    if (metadataLength == -1)
+                    {
+                        this.UserMetadata = null;
+                    }
+                    else
+                    {
+                        this.UserMetadata = binaryReader.ReadBytes(metadataLength);
+                    }
+                }
+            }
+
             this.Stat = loadedStat;
             ////Trace.TraceInformation($"PersistedData.Read: Id={this.Id} ParentId={this.ParentId} Name={this.Name} #Children={loadedStat.NumChildren} M={this.Stat.Mzxid}");
         }
@@ -485,6 +555,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             var list = (ChangeList)changeList;
             PersistenceEventSource.Log.RecordRemoval(list.Id, this.Id, this.Name);
             list.RecordRemove(this);
+        }
+
+        private class PersistedDataSerializationVersion
+        {
+            public const uint CurrentVersion = Version1;
+
+            /// <summary>
+            /// Adding user metadata
+            /// </summary>
+            public const uint Version1 = 1;
         }
     }
 }

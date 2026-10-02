@@ -7,11 +7,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Text;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
-
+    using Microsoft.IO;
     using RequestDefinitions = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using RequestResponse = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestResponse;
     using RingMasterRequestType = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RingMasterRequestType;
@@ -26,6 +28,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Current marshal version
         /// </summary>
         public const uint CurrentMarshalVersion = SerializationFormatVersions.MaximumSupportedVersion;
+        private const int MaxStreamReadBufferSize = 65536;
 
         private static uint sProposedVersion;
 
@@ -41,22 +44,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private bool isDisposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MarshallerChannel"/> class.
+        /// Initializes a new instance of the <see cref="MarshallerChannel" /> class.
         /// </summary>
         /// <param name="ns">The ns.</param>
-        public MarshallerChannel(Stream ns)
-            : this(ns, ns)
+        /// <param name="memoryStreamFactory">The memory stream factory.</param>
+        public MarshallerChannel(Stream ns, IMemoryStreamFactory memoryStreamFactory)
+            : this(ns, ns, memoryStreamFactory)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MarshallerChannel"/> class.
+        /// Initializes a new instance of the <see cref="MarshallerChannel" /> class.
         /// </summary>
         /// <param name="strInput">The string input.</param>
         /// <param name="strOutput">The string output.</param>
-        public MarshallerChannel(Stream strInput, Stream strOutput)
+        /// <param name="memoryStreamFactory">The memory stream factory.</param>
+        /// <exception cref="ArgumentNullException">memoryStreamFactory</exception>
+        public MarshallerChannel(Stream strInput, Stream strOutput, IMemoryStreamFactory memoryStreamFactory)
         {
+            if (memoryStreamFactory == null)
+            {
+                throw new ArgumentNullException(nameof(memoryStreamFactory));
+            }
+
             Guid connectionId = FakeGuid.NewGuid();
+            this.protocol.MemoryStreamFactory = memoryStreamFactory;
 
             bool ign;
             this.SetStream(strInput, strOutput, out ign);
@@ -184,15 +196,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="requestPacket">Serialized request packet</param>
         /// <param name="flush">if true, it will flush the writer</param>
-        public void SendRequestPacket(byte[] requestPacket, bool flush)
+        public void SendRequestPacket(IMemoryBuffer requestPacket, bool flush)
         {
             if (requestPacket == null)
             {
                 throw new ArgumentNullException(nameof(requestPacket));
             }
 
-            this.writer.Write((int)requestPacket.Length);
-            this.writer.Write(requestPacket);
+            try
+            {
+                this.writer.Write(requestPacket.Length);
+                this.writer.Write(requestPacket.GetBuffer(), 0, requestPacket.Length);
+            }
+            finally
+            {
+                requestPacket.Dispose();
+            }
 
             if (flush)
             {
@@ -205,15 +224,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="responsePacket">Serialized response packet</param>
         /// <param name="flush">if true the stream will be flushed</param>
-        public void SendResponsePacket(byte[] responsePacket, bool flush)
+        public void SendResponsePacket(IMemoryBuffer responsePacket, bool flush)
         {
             if (responsePacket == null)
             {
                 throw new ArgumentNullException(nameof(responsePacket));
             }
 
-            this.writer.Write((int)responsePacket.Length);
-            this.writer.Write(responsePacket);
+            try
+            {
+                this.writer.Write(responsePacket.Length);
+                this.writer.Write(responsePacket.GetBuffer(), 0, responsePacket.Length);
+            }
+            finally
+            {
+                responsePacket.Dispose();
+            }
 
             if (flush)
             {
@@ -225,20 +251,58 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Receive a request packet from the client.
         /// </summary>
         /// <returns>Serialized request packet</returns>
-        public byte[] ReceiveRequestPacket()
+        public IMemoryBuffer ReceiveRequestPacket()
         {
             int length = this.reader.ReadInt32();
-            return this.reader.ReadBytes(length);
+
+            var ms = this.protocol.MemoryStreamFactory.CreateStream("Marshaller.ReceiveRequestPacket", length);
+
+            try
+            {
+                var bytesRemaining = length;
+                while (bytesRemaining > 0)
+                {
+                    var nextChunk = this.reader.ReadBytes(Math.Min(bytesRemaining, MaxStreamReadBufferSize));
+                    ms.Write(nextChunk, 0, nextChunk.Length);
+                    bytesRemaining -= nextChunk.Length;
+                }
+            }
+            catch (Exception)
+            {
+                ms.Dispose();
+                throw;
+            }
+
+            return new MemoryStreamBackedBuffer(ms);
         }
 
         /// <summary>
         /// Receive a response packet from the server with no concurrency control on the stream
         /// </summary>
         /// <returns>Serialized response packet</returns>
-        public byte[] ReceiveResponsePacket()
+        public IMemoryBuffer ReceiveResponsePacket()
         {
             uint length = this.reader.ReadUInt32();
-            return this.reader.ReadBytes((int)length);
+
+            var ms = this.protocol.MemoryStreamFactory.CreateStream("Marshaller.ReceiveResponsePacket", (int)length);
+
+            try
+            {
+                var bytesRemaining = (int)length;
+                while (bytesRemaining > 0)
+                {
+                    var nextChunk = this.reader.ReadBytes(Math.Min(bytesRemaining, MaxStreamReadBufferSize));
+                    ms.Write(nextChunk, 0, nextChunk.Length);
+                    bytesRemaining -= nextChunk.Length;
+                }
+            }
+            catch (Exception)
+            {
+                ms.Dispose();
+                throw;
+            }
+
+            return new MemoryStreamBackedBuffer(ms);
         }
 
         /// <summary>
@@ -246,7 +310,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="request">Request to serialize</param>
         /// <returns>Serialized data</returns>
-        public byte[] SerializeRequestAsBytes(RequestCall request)
+        public IMemoryBuffer SerializeRequestAsBytes(RequestCall request)
         {
             if (request == null)
             {
@@ -272,7 +336,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="requestBytes">Data to deserialize</param>
         /// <returns>Deserialized request</returns>
-        public RequestCall DeserializeRequestFromBytes(byte[] requestBytes)
+        public RequestCall DeserializeRequestFromBytes(IMemoryBuffer requestBytes)
         {
             if (requestBytes == null)
             {
@@ -282,7 +346,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             // Before deserializing, check if the request specifies a watcher.  If it does, create a proxy watcher and add an entry to
             // the tracking data structure.  When proxyWatcher.Process is called by the backend, the corresponding message with WatcherCall
             // will be sent to the other side.
-            RequestDefinitions.RequestCall call = this.protocol.DeserializeRequest(requestBytes, requestBytes.Length, this.UsedMarshalVersion);
+            RequestDefinitions.RequestCall call = this.protocol.DeserializeRequest(requestBytes.GetBuffer(), requestBytes.Length, this.UsedMarshalVersion);
 
             this.RegisterWatcher(call.Request, this.RegisterProxyWatcher);
 
@@ -298,7 +362,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="response">Response to serialize</param>
         /// <returns>Serialized data</returns>
-        public byte[] SerializeResponseAsBytes(RequestResponse response)
+        public IMemoryBuffer SerializeResponseAsBytes(RequestResponse response)
         {
             if (response == null)
             {
@@ -313,14 +377,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="responseBytes">Data to deserialize</param>
         /// <returns>Deserialized response</returns>
-        public RequestResponse DeserializeResponseFromBytes(byte[] responseBytes)
+        public RequestResponse DeserializeResponseFromBytes(IMemoryBuffer responseBytes)
         {
             if (responseBytes == null)
             {
                 throw new ArgumentNullException(nameof(responseBytes));
             }
 
-            RequestResponse response = this.protocol.DeserializeResponse(responseBytes, this.UsedMarshalVersion);
+            RequestResponse response = this.protocol.DeserializeResponse(responseBytes.GetBuffer(), responseBytes.Length, this.UsedMarshalVersion);
 
             // If the response is a message to the client with WatcherCall as the content then
             // set the registered watcher corresponding to the watcher id in the watcher call.
@@ -339,7 +403,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Set the response to enqueue
         /// </summary>
-        /// <param name="enqueue">Response to set</param>
+        /// <param name="enqueue">Response queue. Must dispose of response packet data after sending.</param>
         public void SetResponseQueue(Action<RequestResponse> enqueue)
         {
             this.enqueueResponse = enqueue;
@@ -610,7 +674,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             if (this.enqueueResponse == null)
             {
                 // queue == null is a corner case, so we can safely send and flush here.
-                byte[] bytes = this.SerializeResponseAsBytes(response);
+                var bytes = this.SerializeResponseAsBytes(response);
                 this.SendResponsePacket(bytes, true);
             }
             else

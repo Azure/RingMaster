@@ -8,7 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Threading;
-
+    using System.Threading.Tasks;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
@@ -42,7 +42,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         {
             if (this.Root != null)
             {
-                this.rootLock = this.Root.AcquireLockRw(0);
+                int retryCount = 0;
+                do
+                {
+                    try
+                    {
+                        this.rootLock = this.Root.AcquireLockRw(0, this.ServerInstrumentation.OnAcquireLock);
+                        break;
+                    }
+                    catch (RetriableOperationException ex)
+                    {
+                        string warning = $"Exception caught in IUnsafeTreeAccess.LockRootNoSync. {ex}";
+                        Trace.TraceWarning(warning);
+                        RingMasterEventSource.Log.IUnsafeTreeAccessAcquireWriteLockWarning(warning);
+
+                        if (retryCount >= 10)
+                        {
+                            string error = $"{warning} all retries have been exhausted. Rethrowing exception";
+                            Trace.TraceError(error);
+                            RingMasterEventSource.Log.IUnsafeTreeAccessAcquireWriteLockFailed(error);
+                            throw;
+                        }
+
+                        // Let's try after 500 ms.
+                        Task.Delay(TimeSpan.FromMilliseconds(500));
+                    }
+                }
+                while (++retryCount <= 10);
             }
         }
 
@@ -93,7 +119,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.UpdateStat(parent, xid, txtime, ChangeKind.ChildrenAdded);
             parent.Node.AddChild(child.Node);
 
-            parent.Node.ScheduleTriggerWatchers(ChangeKind.ChildrenAdded, path, locklist);
+            parent.Node.ScheduleTriggerWatchers(ChangeKind.ChildrenAdded, path, locklist, child.Name, child.Data, child.Stat, child.UserMetadata);
         }
 
         /// <inheritdoc />
@@ -149,10 +175,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
 
             ((IUnsafeTreeAccess)this).UnsafeRemoveChild(parent, node, txtime, path, xid, locklist, false);
-            ((IUnsafeTreeAccess)this).UnsafeDeleteNode(parent, node, txtime, path, xid, locklist, false);
+            ((IUnsafeTreeAccess)this).UnsafeDeleteNode(parent, node, txtime, path, xid, locklist);
 
             node.Node.ScheduleTriggerWatchers(ChangeKind.NodeDeleted, path, locklist);
-            parent.Node.ScheduleTriggerWatchers(ChangeKind.ChildrenRemoved, this.GetParentPath(path), locklist);
+            parent.Node.ScheduleTriggerWatchers(ChangeKind.ChildrenRemoved, this.GetParentPath(path), locklist, node.Name, null, null);
         }
 
         /// <summary>
@@ -208,8 +234,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="path">The path.</param>
         /// <param name="xid">The tx_id.</param>
         /// <param name="locklist">The locklist for this session.</param>
-        /// <param name="triggerWatcher">Whether to trigger watcher</param>
-        void IUnsafeTreeAccess.UnsafeDeleteNode(IPersistedData parent, IPersistedData node, long txtime, string path, long xid, ILockListTransaction locklist, bool triggerWatcher)
+        void IUnsafeTreeAccess.UnsafeDeleteNode(IPersistedData parent, IPersistedData node, long txtime, string path, long xid, ILockListTransaction locklist)
         {
             if (parent == null)
             {
@@ -241,11 +266,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             else
             {
                 this.Factory.Delete(node);
-            }
-
-            if (triggerWatcher)
-            {
-                node.Node.ScheduleTriggerWatchers(ChangeKind.NodeDeleted, path, locklist);
             }
         }
 
@@ -403,6 +423,68 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             }
 
             node.Node.ScheduleTriggerWatchers(ChangeKind.DataChanged, path, locklist);
+        }
+
+        /// <summary>
+        /// Fixes child stats and node structures when user metadata(byte[]) change.
+        /// </summary>
+        /// <param name="node">The node.</param>
+        /// <param name="data">The data.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <param name="txtime">The txtime.</param>
+        /// <param name="path">The path.</param>
+        /// <param name="xid">The xid.</param>
+        /// <param name="locklist">The locklist.</param>
+        /// <exception cref="ArgumentNullException">node</exception>
+        /// <exception cref="InvalidAclException">lockdown</exception>
+        void IUnsafeTreeAccess.UnsafeSetDataAndUserMetadata(IPersistedData node, byte[] data, byte[] userMetadata, long txtime, string path, long xid, ILockListTransaction locklist)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException(nameof(node));
+            }
+
+            if (locklist == null && this.IsPathLockedDown(path))
+            {
+                throw new InvalidAclException(path, "lockdown");
+            }
+
+            if (ForceWB || locklist == null)
+            {
+                this.secondarypreprocessor.AppendSetDataAndUserMetadata(node.Id, data, userMetadata, txtime, xid);
+            }
+
+            locklist?.ValidateLockList(null, Perm.NONE, node, Perm.WRITE);
+
+            int delta = -node.Stat.DataLength;
+            if (data != null)
+            {
+                delta += data.Length;
+            }
+
+            this.UpdateStat(node, xid, txtime, ChangeKind.DataAndUserMetadataChanged, delta);
+            node.Node.SetDataAndUserMetadata(data, userMetadata);
+
+            if (node.IsEphemeral)
+            {
+                this.EphemeralFactory.RecordDataDelta(delta);
+            }
+            else
+            {
+                if (locklist == null)
+                {
+                    this.Factory.RecordDataDelta(delta);
+                }
+                else
+                {
+                    locklist.RunOnCommit(() =>
+                    {
+                        this.Factory.RecordDataDelta(delta);
+                    });
+                }
+            }
+
+            node.Node.ScheduleTriggerWatchers(ChangeKind.DataAndUserMetadataChanged, path, locklist);
         }
 
         /// <summary>

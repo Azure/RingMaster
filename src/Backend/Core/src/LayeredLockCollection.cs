@@ -2,16 +2,18 @@
 //     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
+#nullable enable
+
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
-    using HelperTypes;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Collects of locks in the in-memory tree for processing a single request (simple or compound) from client.
@@ -137,7 +139,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="writeRequired">true if writer lock required, false if reader lock required</param>
         public void AddLock(Node n, int level, bool writeRequired)
         {
-            Debug.Assert(n != null, "node should not be null");
+            n.ThrowIfNull();
             Debug.Assert(level >= 0, "Level must be zero or positive integer");
 
             if (NoAddingAfterLockAcquisition && this.lockStage != LockStage.AddingLock)
@@ -168,8 +170,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Acquires all the locks in a top-down, left-right order.
         /// </summary>
         /// <param name="cancelled">Cancellation token to cancel the long-running lock acquisition</param>
-        public void Acquire(ref bool cancelled)
+        /// <param name="request">The request</param>
+        /// <param name="acquireLockInstrumentation">The acquire lock instrumentation method delegate</param>
+        public void Acquire(ref bool cancelled, IRingMasterRequest request, Action<bool, bool, int, TimeSpan> acquireLockInstrumentation)
         {
+            request.ThrowIfNull();
+            acquireLockInstrumentation.ThrowIfNull();
+
             if (this.lockStage != LockStage.AddingLock)
             {
                 throw new InvalidOperationException($"Cannot call {nameof(this.Acquire)} in stage {this.lockStage}");
@@ -191,13 +198,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             var locks = new List<KeyValuePair<ILockObject, byte>>();
 
             // For logging and debugging
-            var sb = new StringBuilder();
-            for (int level = 0; level < this.nodeToBeLocked.Length && !cancelled; level++)
+            var sb = CreateMessageBuilder();
+            for (int level = 0; level < this.nodeToBeLocked.Length && !Volatile.Read(ref cancelled); level++)
             {
+                if (request.IsRequestExpired())
+                {
+                    Volatile.Write(ref cancelled, true);
+                    break;
+                }
+
                 locks.Clear();
 
                 var idx = 0; // lock index for debugging
-                foreach (var nodeLock in this.nodeToBeLocked[level])
+
+                // Using 'AsStructEnumerable' to avoid boxing allocation, since SortedList<TKey, TValue> returns IEnumerable instead of a struct enumerator.
+                foreach (var nodeLock in this.nodeToBeLocked[level].AsStructEnumerable())
                 {
                     var lockRequired = nodeLock.Value;
                     var lockObj = nodeLock.Key.GetLockObject(level, lockRequired == WriterLockValue);
@@ -209,8 +224,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     }
 
                     // Lock collision found. No operation if current one is read because previous one is at least read.
-                    int existingLockObjIndex;
-                    if (lockSet.TryGetValue(lockObj, out existingLockObjIndex))
+                    if (lockSet.TryGetValue(lockObj, out var existingLockObjIndex))
                     {
                         // Ignore the collision if the reader is acquired.
                         if (lockRequired == WriterLockValue &&
@@ -218,7 +232,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         {
                             locks[existingLockObjIndex] = new KeyValuePair<ILockObject, byte>(lockObj, WriterLockValue);
 
-                            sb.AppendLine(string.Join(",", level.ToString(), nodeLock.Key.Name, nodeLock.Key.BuildPath(), lockRequired.ToString(), "C"));
+                            sb?.AppendLine(string.Join(",", level.ToString(), nodeLock.Key.Name, nodeLock.Key.BuildPath(), lockRequired.ToString(), "C"));
                         }
                     }
                     else
@@ -229,29 +243,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
                         locks.Add(new KeyValuePair<ILockObject, byte>(lockObj, lockRequired));
 
-                        sb.AppendLine(string.Join(",", level.ToString(), nodeLock.Key.Name, nodeLock.Key.BuildPath(), lockRequired.ToString()));
+                        sb?.AppendLine(string.Join(",", level.ToString(), nodeLock.Key.Name, nodeLock.Key.BuildPath(), lockRequired.ToString()));
                     }
                 }
 
                 idx = 0;
                 foreach (var lockOp in locks)
                 {
-                    if (cancelled)
+                    if (request.IsRequestExpired())
+                    {
+                        Volatile.Write(ref cancelled, true);
+                        break;
+                    }
+
+                    if (Volatile.Read(ref cancelled))
                     {
                         break;
                     }
 
+                    var acquireLockTimeout = MaxAcquireLockTime > request.TimeRemaining ? request.TimeRemaining : MaxAcquireLockTime;
                     var startTime = this.clock.Elapsed;
                     var succeeded = lockOp.Value == ReaderLockValue
-                        ? lockOp.Key.AcquireReaderLock(MaxAcquireLockTime)
-                        : lockOp.Key.AcquireWriterLock(MaxAcquireLockTime);
+                        ? lockOp.Key.AcquireReaderLock(acquireLockTimeout)
+                        : lockOp.Key.AcquireWriterLock(acquireLockTimeout);
 
-                    RingMasterServerInstrumentation.Instance.OnAcquireLock(true, succeeded, level, this.clock.Elapsed - startTime);
+                    var elapsed = this.clock.Elapsed - startTime;
+                    acquireLockInstrumentation(true, succeeded, level, elapsed);
 
                     if (!succeeded)
                     {
                         throw new RetriableOperationException(
-                            $"Lock acquisition timed out after {MaxAcquireLockTime.TotalMilliseconds}: level {level} index {idx} in {sb}");
+                            $"Lock acquisition timed out after {elapsed.TotalMilliseconds} ms: level {level} index {idx} in {sb}");
                     }
 
                     this.nodeHaveBeenLocked.Push(lockOp);
@@ -259,7 +281,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
             }
 
-            RingMasterEventSource.Log.LockCollectionAcquired(Thread.CurrentThread.ManagedThreadId, sb.ToString());
+            RingMasterEventSource.Log.LockCollectionAcquired(Thread.CurrentThread.ManagedThreadId, sb?.ToString() ?? string.Empty);
+
+            // Local helper that creates a message builder.
+            // The message is used in LockCollectionAcquired which is a Verbose message
+            // that we don't trace.
+            // That's why we're creating the builder only in Debug mode in order to avoid extra work.
+            // And the work is quire significant. The profiling from a production system shows
+            // that we allocate 10Gb of strings just to create the 'pathList' which we never use.
+            static StringBuilder? CreateMessageBuilder()
+            {
+#if DEBUG
+                return new StringBuilder();
+#else
+                return null;
+#endif
+            }
         }
 
         /// <summary>
@@ -337,7 +374,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     nodesToRemove.IntersectWith(nodeList.Keys.Select(n => n.Persisted.Id));
 
                     // Convert ID to node object, since we cannot remove element during enumeration
-                    var nodes = nodeList.Where(n => nodesToRemove.Contains(n.Key.Persisted.Id));
+                    var nodes = nodeList.Where(n => nodesToRemove.Contains(n.Key.Persisted.Id)).ToList();
 
                     foreach (var nodeKvp in nodes)
                     {
@@ -345,19 +382,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     }
 
                     // Find out all new nodes that require writer locks at this level
+                    var nodesRequiresRWLock = new List<Node>();
                     foreach (var nodeKvp in nodeList)
                     {
                         if (nodeKvp.Value > ReaderLockValue)
                         {
-                            nodesToRemove.Add(nodeKvp.Key.Persisted.Id);
+                            nodesRequiresRWLock.Add(nodeKvp.Key);
                         }
                     }
 
                     // Childrens of removed nodes and childrens of nodes that require writer locks
-                    nodesToRemove = new HashSet<ulong>(nodesToRemove
-                        .OfType<CompleteNode>()
-                        .SelectMany(node => node.ChildrenNodes)
-                        .Select(node => node.Id));
+                    // This is effectively the equivalent of previous code that doesn't remove any redundant locks.
+                    // We'll make proper fix later.
+                    nodesToRemove = new HashSet<ulong>();
                 }
             }
         }
@@ -398,17 +435,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// <param name="x">The first node to compare</param>
             /// <param name="y">The second node to compare</param>
             /// <returns>A signed integer to indicate the relative values of x and y</returns>
-            public int Compare(Node x, Node y)
+#nullable enable
+            public int Compare(Node? x, Node? y)
             {
-                if (x == null)
-                {
-                    throw new ArgumentNullException(nameof(x));
-                }
-
-                if (y == null)
-                {
-                    throw new ArgumentNullException(nameof(y));
-                }
+                x.ThrowIfNull();
+                y.ThrowIfNull();
 
                 var px = x.Persisted;
                 var py = y.Persisted;

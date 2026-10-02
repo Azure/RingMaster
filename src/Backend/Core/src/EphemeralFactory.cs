@@ -344,6 +344,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
             public byte[] Data { get; set; }
 
             /// <summary>
+            /// Gets or sets the user metadata.
+            /// </summary>
+            /// <value>
+            /// The user metadata.
+            /// </value>
+            public byte[] UserMetadata { get; set; }
+
+            /// <summary>
             /// Gets or sets the acl.
             /// </summary>
             /// <value>The acl.</value>
@@ -483,6 +491,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
             /// </summary>
             /// <param name="chgs">The CHGS.</param>
             public void AppendSetData(IChangeList chgs)
+            {
+            }
+
+            /// <summary>
+            /// Appends the set data and user metadata.
+            /// </summary>
+            /// <param name="chgs">The CHGS.</param>
+            public void AppendSetDataAndUserMetadata(IChangeList chgs)
             {
             }
 

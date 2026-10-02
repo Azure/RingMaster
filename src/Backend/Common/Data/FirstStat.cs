@@ -121,6 +121,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         }
 
         /// <summary>
+        /// Gets or sets the version number of the most recent change to this node's user metadata.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Set is not allowed</exception>
+        public int Uversion
+        {
+            get { return this.Version; }
+            set { throw new InvalidOperationException();  }
+        }
+
+        /// <summary>
         /// Gets or sets the length of the data.
         /// </summary>
         /// <value>The length of the data.</value>
@@ -164,6 +174,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
                 value.Version == 1 &&
                 value.Aversion == 1 &&
                 value.Cversion == 1 &&
+                value.Uversion == 1 &&
                 value.NumChildren == 0 &&
                 value.Ctime == value.Mtime &&
                 value.Czxid == value.Mzxid &&
@@ -195,6 +206,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
                 this.Version == other.Version &&
                 this.Cversion == other.Cversion &&
                 this.Aversion == other.Aversion &&
+                this.Uversion == other.Uversion &&
                 this.DataLength == other.DataLength &&
                 this.NumChildren == other.NumChildren &&
                 this.NumEphemeralChildren == other.NumEphemeralChildren &&
@@ -214,6 +226,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
             hash ^= this.Version.GetHashCode();
             hash ^= this.Cversion.GetHashCode();
             hash ^= this.Aversion.GetHashCode();
+            hash ^= this.Uversion.GetHashCode();
             hash ^= this.DataLength.GetHashCode();
             hash ^= this.Pzxid.GetHashCode();
             return hash;

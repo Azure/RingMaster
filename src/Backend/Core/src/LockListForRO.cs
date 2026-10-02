@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
-
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using IOperationOverrides = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.IOperationOverrides;
     using ISessionAuth = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.ISessionAuth;
     using Perm = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.Acl.Perm;
@@ -123,7 +123,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        public void LockAll(ref bool cancelled)
+        public void LockAll(ref bool cancelled, IRingMasterRequest request)
         {
         }
 
@@ -176,6 +176,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         /// <inheritdoc />
         public void AppendSetData(IPersistedData persisted, long txTime, byte[] prevData, IMutableStat prevStat)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Appends the set user metadata.
+        /// </summary>
+        /// <param name="persisted">The persisted.</param>
+        /// <param name="txTime">The tx time.</param>
+        /// <param name="prevData">The previous data.</param>
+        /// <param name="prevUserMetadata">The previous user metadata.</param>
+        /// <param name="prevStat">The previous stat.</param>
+        public void AppendSetDataAndUserMetadata(IPersistedData persisted, long txTime, byte[] prevData, byte[] prevUserMetadata, IMutableStat prevStat)
         {
             throw new NotSupportedException();
         }

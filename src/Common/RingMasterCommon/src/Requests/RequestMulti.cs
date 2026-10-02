@@ -18,8 +18,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="operations">List of <see cref="Op"/>s to include in the batch</param>
         /// <param name="completeSynchronously"><c>true</c> if the server must ensure durability before returning</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestMulti(IReadOnlyList<Op> operations, bool completeSynchronously, ulong uid = 0)
-            : this(AbstractRingMasterCompoundRequest.GetRequests(operations), completeSynchronously, null, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestMulti(IReadOnlyList<Op> operations, bool completeSynchronously, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : this(AbstractRingMasterCompoundRequest.GetRequests(operations), completeSynchronously, null, uid, invokeCallbackBeforeComplete)
         {
         }
 
@@ -30,8 +31,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="completeSynchronously"><c>true</c> if the server must ensure durability before returning</param>
         /// <param name="scheduledName">if not null makes this command be inserted with the given name (must be unique) into the RingMaster backend scheduler command queue for later background execution</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestMulti(IReadOnlyList<Op> operations, bool completeSynchronously, string scheduledName, ulong uid = 0)
-            : this(AbstractRingMasterCompoundRequest.GetRequests(operations), completeSynchronously, scheduledName, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestMulti(IReadOnlyList<Op> operations, bool completeSynchronously, string scheduledName, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : this(AbstractRingMasterCompoundRequest.GetRequests(operations), completeSynchronously, scheduledName, uid, invokeCallbackBeforeComplete)
         {
         }
 
@@ -42,8 +44,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="completeSynchronously"><c>true</c> if the server must ensure durability before returning</param>
         /// <param name="scheduledName">if not null makes this command be inserted with the given name (must be unique) into the RingMaster backend scheduler command queue for later background execution</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestMulti(IReadOnlyList<IRingMasterRequest> requests, bool completeSynchronously, string scheduledName = null, ulong uid = 0)
-            : base(RingMasterRequestType.Multi, requests, completeSynchronously, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestMulti(IReadOnlyList<IRingMasterRequest> requests, bool completeSynchronously, string scheduledName = null, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : base(RingMasterRequestType.Multi, requests, completeSynchronously, uid, invokeCallbackBeforeComplete)
         {
             this.ScheduledName = scheduledName;
         }

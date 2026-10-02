@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppVer)</TargetFramework>
     <IsPackable>false</IsPackable>
     <RootNamespace>Microsoft.Vega.Test</RootNamespace>
     <AssemblyName>VegaUpgradeTest</AssemblyName>
@@ -11,11 +11,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.0-preview2-final" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0-preview2-final" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Microsoft.ServiceFabric" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,12 +31,6 @@
     <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
     <ProjectReference Include="$(SRCROOT)\Infrastructure\IfxInstrumentation\IfxInstrumentation.csproj" />
     <ProjectReference Include="..\TestHelpers\TestHelpers.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="appSettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <Target Name="dummy" AfterTargets="Build" DependsOnTargets="Publish" Condition="'$(BuildingInsideVisualStudio)' == ''" />

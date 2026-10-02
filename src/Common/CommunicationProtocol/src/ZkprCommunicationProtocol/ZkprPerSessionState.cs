@@ -5,7 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
 {
     using System;
-    using Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
 
     /// <summary>
     /// State per ZooKeeper client session

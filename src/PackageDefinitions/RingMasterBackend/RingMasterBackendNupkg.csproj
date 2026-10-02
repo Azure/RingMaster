@@ -12,7 +12,6 @@
     <Title>Vega Backend components</Title>
     <Description>Vega Backend Component</Description>
     <Copyright>Copyright (c) Microsoft Corporation</Copyright>
-    <PackageLicenseUrl>https://b</PackageLicenseUrl>
     <PackageProjectUrl>https://b</PackageProjectUrl>
     <PackageTags>RingMaster;VegaBackend</PackageTags>
     <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
@@ -22,12 +21,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Core\src\RingMasterBackendCore.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\SortedDictExt.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Common\RingMasterBackendCommon.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Core\src\RingMasterBackendCore.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Instrumentation\RingMasterBackendInstrumentation.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Backend\Native\src\SortedDictExt.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterServer\src\RingMasterServer.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

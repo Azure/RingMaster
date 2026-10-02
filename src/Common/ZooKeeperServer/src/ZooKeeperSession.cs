@@ -118,7 +118,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
                 byte[] responsePacket = this.protocol.SerializeResponse(response, connection.ProtocolVersion, call.ProtocolRequest as IZooKeeperRequest);
                 if (responsePacket != null)
                 {
-                    connection.Send(responsePacket);
+                    connection.Send(new ByteArrayBackedBuffer(responsePacket));
                 }
                 else
                 {
@@ -157,7 +157,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
             messageToClient.Content = watcherCall;
             messageToClient.ResultCode = (int)RingMasterException.Code.Ok;
             byte[] packet = this.protocol.SerializeWatcherResponse(messageToClient, this.connection.ProtocolVersion);
-            this.connection.Send(packet);
+            this.connection.Send(new ByteArrayBackedBuffer(packet));
 
             this.instrumentation?.OnWatcherNotified(this.sessionId);
         }

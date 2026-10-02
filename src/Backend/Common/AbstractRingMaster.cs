@@ -211,7 +211,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 executionQueueId,
                 executionQueueTimeoutMillis);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Multi, string.Empty);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -246,7 +251,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 executionQueueId,
                 executionQueueTimeout);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Batch, string.Empty);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -309,7 +319,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Create, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -344,7 +359,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Move, nodePath);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -414,7 +434,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 null,
                 mode);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Delete, path);
+            }
+
             if (code == Code.Ok)
             {
                 return true;
@@ -477,7 +502,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Exists, path);
+            }
+
             if (e != null)
             {
                 if (throwIfNotFound && e is KeyNotFoundException)
@@ -524,7 +554,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Exists, path);
+            }
+
             if (e != null)
             {
                 if (throwIfNotFound && e is KeyNotFoundException)
@@ -570,7 +605,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetAcl, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -621,7 +661,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetChildren, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -676,7 +721,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetChildren, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -707,7 +757,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetChildren, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -774,7 +829,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetData, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -817,7 +877,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.GetData, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -852,7 +917,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.SetData, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -887,7 +957,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.SetData, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -921,7 +996,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.SetAcl, path);
+            }
+
             if (e != null)
             {
                 throw e;
@@ -947,7 +1027,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 },
                 null);
 
-            ManualResetEventPool.InstancePool.WaitOneAndReturn(ref ev);
+            var succeed = ManualResetEventPool.InstancePool.WaitOneAndReturn(this.RequestTimeout, ref ev);
+            if (!succeed)
+            {
+                throw new RingMasterRequestTimeoutException(RingMasterRequestType.Sync, path);
+            }
+
             if (e != null)
             {
                 throw e;

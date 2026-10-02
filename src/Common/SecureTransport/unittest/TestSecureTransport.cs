@@ -13,6 +13,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -116,6 +117,61 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
                     SecureTransportException.Code.NotStarted,
                     () => transport.Stop(),
                     "Stop without start throws SecureTransportException with code NotStarted");
+            }
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestSendThrowsWhenOutgoingQueueIsFull()
+        {
+            TcpListener listener = null;
+            TcpClient client = null;
+            TcpClient serverClient = null;
+
+            try
+            {
+                listener = new TcpListener(IPAddress.Loopback, GetAvailablePort(9000));
+                listener.Start();
+
+                Task<TcpClient> acceptTask = listener.AcceptTcpClientAsync();
+                client = new TcpClient();
+                client.Connect((IPEndPoint)listener.LocalEndpoint);
+                serverClient = acceptTask.GetAwaiter().GetResult();
+
+                var configuration = new Connection.Configuration
+                {
+                    MaxLifeSpan = TimeSpan.MaxValue,
+                    MaxConnectionIdleTime = TimeSpan.MaxValue,
+                    SendBufferSize = 8192,
+                    ReceiveBufferSize = 8192,
+                    SendQueueLength = 1,
+                    MaxUnflushedPacketsCount = 10000,
+                };
+
+                using (var connection = new Connection(
+                    transportId: 1,
+                    connectionId: 1,
+                    serverClient,
+                    new MemoryStream(),
+                    configuration,
+                    CancellationToken.None,
+                    new NoOpInstrumentation()))
+                {
+                    serverClient = null;
+
+                    connection.Send(new ByteArrayBackedBuffer(new byte[] { 1 }));
+
+                    VerifySecureTransportException(
+                        SecureTransportException.Code.SendQueueFull,
+                        () => connection.Send(new ByteArrayBackedBuffer(new byte[] { 2 })),
+                        "Send should throw SendQueueFull when the outgoing queue remains full");
+                }
+            }
+            finally
+            {
+                serverClient?.Close();
+                client?.Close();
+                listener?.Stop();
             }
         }
 
@@ -738,6 +794,53 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportUn
             };
 
             return new SecureTransport(configuration, null, cancellationToken);
+        }
+
+        private sealed class NoOpInstrumentation : ISecureTransportInstrumentation
+        {
+            public void ListenerStarted(long transportId, EndPoint endpoint)
+            {
+            }
+
+            public void ListenerStopped(long transportId, EndPoint endpoint)
+            {
+            }
+
+            public void ConnectionEstablished(IPEndPoint serverEndPoint, string serverIdentity, TimeSpan setupTime)
+            {
+            }
+
+            public void EstablishConnectionFailed(TimeSpan processingTime)
+            {
+            }
+
+            public void ConnectionAccepted(IPEndPoint clientEndPoint, string clientIdentity, TimeSpan setupTime)
+            {
+            }
+
+            public void ConnectionCreated(long connectionId, IPEndPoint remoteEndPoint, string remoteIdentity)
+            {
+            }
+
+            public void ConnectionClosed(long connectionId, IPEndPoint remoteEndPoint, string remoteIdentity)
+            {
+            }
+
+            public void AcceptConnectionFailed(IPEndPoint clientEndPoint, TimeSpan processingTime)
+            {
+            }
+
+            public void OutgoingPacketQueued(long transportId, long connectionId, int queueLength, int packetLength)
+            {
+            }
+
+            public void OutgoingQueueFull(long transportId, long connectionId, int pendingPacketCount)
+            {
+            }
+
+            public void OutgoingPacketSent(long transportId, long connectionId, int packetLength)
+            {
+            }
         }
     }
 }

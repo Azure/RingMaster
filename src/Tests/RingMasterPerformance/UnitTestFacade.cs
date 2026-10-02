@@ -2,13 +2,15 @@
 //    Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
+[assembly: Microsoft.VisualStudio.TestTools.UnitTesting.Parallelize(Workers = 0, Scope = Microsoft.VisualStudio.TestTools.UnitTesting.ExecutionScope.MethodLevel)]
+
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
 {
     using System.IO;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Vega.Test.Helpers;
-    using VisualStudio.TestTools.UnitTesting;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
     /// Unit test facade so CloudTest can directly run this executable

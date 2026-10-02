@@ -30,7 +30,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             CancellationRequested = 0,
 
             /// <summary>
-            /// Data is incompleted
+            /// Data is incomplete
             /// </summary>
             IncompleteData,
 
@@ -90,9 +90,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             SendQueueFull,
 
             /// <summary>
-            /// The accept connection timedout
+            /// The accept connection timed out
             /// </summary>
             AcceptConnectionTimedout,
+
+            /// <summary>
+            /// Too many consecutive accept connection failures
+            /// </summary>
+            TooManyConsecutiveAcceptFailures,
         }
 
         /// <summary>
@@ -118,7 +123,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>Exception object</returns>
         public static Exception IncompleteData(int expectedLength, int actualLength)
         {
-            return new SecureTransportException(Code.IncompleteData, string.Format("Failed to read complete data from the connection. expected={0} actual={1}", expectedLength, actualLength));
+            return new SecureTransportException(Code.IncompleteData, $"Failed to read complete data from the connection. expected={expectedLength} actual={actualLength}");
         }
 
         /// <summary>
@@ -174,7 +179,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>Exception object</returns>
         public static Exception DuplicateCertificates(string thumbprint)
         {
-            return new SecureTransportException(Code.DuplicateCertificates, string.Format("Two or more certificates with the thumbprint {0} were found in the same path", thumbprint));
+            return new SecureTransportException(Code.DuplicateCertificates, $"Two or more certificates with the thumbprint {thumbprint} were found in the same path");
         }
 
         /// <summary>
@@ -184,7 +189,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>Exception object</returns>
         public static Exception MissingCertificate(string thumbprint)
         {
-            return new SecureTransportException(Code.MissingCertificate, string.Format("Certificate with thumbprint {0} was not found", thumbprint));
+            return new SecureTransportException(Code.MissingCertificate, $"Certificate with thumbprint {thumbprint} was not found");
         }
 
         /// <summary>
@@ -206,6 +211,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         }
 
         /// <summary>
+        /// Returns an exception with error code of <see cref="Code.TooManyConsecutiveAcceptFailures"/>
+        /// </summary>
+        /// <param name="failureCounts">Count of failures</param>
+        /// <returns>Exception object</returns>
+        public static Exception TooManyConsecutiveAcceptFailures(int failureCounts)
+        {
+            return new SecureTransportException(Code.TooManyConsecutiveAcceptFailures, $"Consecutive accept failures exceeded the limit: {failureCounts}");
+        }
+
+        /// <summary>
         /// Returns an exception with error code of <see cref="Code.StopTimedout"/>
         /// </summary>
         /// <returns>Exception object</returns>
@@ -217,14 +232,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Returns an exception with error code of <see cref="Code.SendQueueFull"/>
         /// </summary>
+        /// <param name="outgoingPacketsCount">The number of packages in the outgoing queue</param>
         /// <returns>Exception object</returns>
-        public static Exception SendQueueFull()
+        public static Exception SendQueueFull(int outgoingPacketsCount)
         {
-            return new SecureTransportException(Code.SendQueueFull, "Send queue is full");
+            return new SecureTransportException(Code.SendQueueFull, $"Send queue is full. OutgoingPacketsCount: {outgoingPacketsCount}");
         }
 
         /// <summary>
-        /// Accepts the connection timedout.
+        /// Accepts the connection timed out.
         /// </summary>
         /// <returns>Exception object</returns>
         public static Exception AcceptConnectionTimedout()
@@ -239,7 +255,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 
             if (info == null)
             {
-                throw new ArgumentNullException("info");
+                throw new ArgumentNullException(nameof(info));
             }
 
             info.AddValue("Code", this.ErrorCode);

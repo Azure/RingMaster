@@ -8,7 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
-    using RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// RingMaster Interface
@@ -29,8 +29,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="data">Data to associate with the node</param>
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
-        /// <returns>Task that will resolve on success to the path to the newly created node</returns>
-        Task<string> Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode);
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that will resolve on success to the path to the newly created node
+        /// </returns>
+        Task<string> Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, byte[] userMetadata = null);
 
         /// <summary>
         /// Moves a node with the given path.

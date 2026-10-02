@@ -131,7 +131,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             {
                 if (value < 0 || value > 1)
                 {
-                    throw new ArgumentException("MaxCapaciotyPercentageForSorting needs to be in [0.0 .. 1.0]");
+                    throw new ArgumentException("MaxCapacityPercentageForSorting needs to be in [0.0 .. 1.0]");
                 }
 
                 this.maxCapacityPercentageForSorting = value;

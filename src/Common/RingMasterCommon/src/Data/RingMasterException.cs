@@ -7,7 +7,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
     using System;
     using System.Runtime.Serialization;
     using System.Text;
-    using Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Exception type that can be thrown by RingMaster.
@@ -172,6 +172,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             /// Operation timeout in backend
             /// </summary>
             ServerOperationTimeout,
+
+            /// <summary>
+            /// Root is null.
+            /// </summary>
+            RootNull,
         }
 
         /// <summary>

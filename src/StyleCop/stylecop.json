@@ -3,7 +3,9 @@
   "settings": {
     "documentationRules": {
       "companyName": "Microsoft Corporation",
-      "copyrightText": "Copyright (c) {companyName}. All rights reserved."
+      "copyrightText": "Copyright (c) {companyName}. All rights reserved.",
+      "excludeFromPunctuationCheck": ["seealso", "param", "typeparam", "exception", "remarks", "returns", "summary"],
+      "documentInternalElements": false
     },
     "indentation": {
       "useTabs": false

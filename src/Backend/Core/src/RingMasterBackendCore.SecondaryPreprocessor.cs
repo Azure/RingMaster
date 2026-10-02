@@ -49,6 +49,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// </summary>
             private readonly string thisCommandPathOneSecondary;
 
+            private readonly IRingMasterServerInstrumentation serverInstrumentation;
+
             /// <summary>
             /// the wire backup object
             /// </summary>
@@ -96,14 +98,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// <param name="backend">Backend core</param>
             /// <param name="runOnTxIdMultiplesOf">The action will be run whenever txId % runOnTxIdMultiplesOf == 0.</param>
             /// <param name="runOnTxIdMultiples">The action to run whenever txId % runOnTxIdMultiplesOf == 0.</param>
-            public SecondaryPreprocessor(RingMasterBackendCore backend, int runOnTxIdMultiplesOf, RunOnTxIdMultiplesFunction runOnTxIdMultiples)
+            /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+            public SecondaryPreprocessor(RingMasterBackendCore backend, int runOnTxIdMultiplesOf, RunOnTxIdMultiplesFunction runOnTxIdMultiples, IRingMasterServerInstrumentation serverInstrumentation)
             {
-                if (backend == null)
-                {
-                    throw new ArgumentNullException(nameof(backend));
-                }
-
-                this.backend = backend;
+                this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
+                this.serverInstrumentation = serverInstrumentation ?? throw new ArgumentNullException(nameof(serverInstrumentation));
 
                 if (runOnTxIdMultiplesOf < 0)
                 {
@@ -297,6 +296,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 if (this.wirebackup != null)
                 {
                     this.wirebackup.AppendSetData(id, data, txtime, xid);
+                }
+
+                this.DoActionsOnApply(txtime, xid, this.runOnTxIdMultiples);
+            }
+
+            /// <summary>
+            /// Appends the set user metadata.
+            /// </summary>
+            /// <param name="id">The identifier.</param>
+            /// <param name="data">The data.</param>
+            /// <param name="userMetadata">The user metadata.</param>
+            /// <param name="txtime">The txtime.</param>
+            /// <param name="xid">The xid.</param>
+            internal void AppendSetDataAndUserMetadata(ulong id, byte[] data, byte[] userMetadata, long txtime, long xid)
+            {
+                if (this.wirebackup != null)
+                {
+                    this.wirebackup.AppendSetDataAndUserMetadata(id, data, userMetadata, txtime, xid);
                 }
 
                 this.DoActionsOnApply(txtime, xid, this.runOnTxIdMultiples);
@@ -506,7 +523,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
 
                 // first produce an instrumentation signal indicating we are applying this transaction
-                RingMasterServerInstrumentation.Instance.OnApply(txtime, xid);
+                this.serverInstrumentation.OnApply(txtime, xid);
 
                 // if we don't have a function, exit now
                 if (func == null)

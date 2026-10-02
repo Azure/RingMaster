@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="RingMasterApplication\RingMasterApplication.sfproj" />
-    <ProjectFile Include="RingMasterApplication\RingMasterService\RingMasterService.csproj" />
-    <ProjectFile Include="RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
-    <ProjectFile Include="RingMasterApplication\Utilities\Utilities.csproj" />
+    <ProjectReference Include="RingMasterApplication\RingMasterApplication.sfproj" />
+    <ProjectReference Include="RingMasterApplication\RingMasterService\RingMasterService.csproj" />
+    <ProjectReference Include="RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
+    <ProjectReference Include="RingMasterApplication\Utilities\Utilities.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

@@ -27,6 +27,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     /// </summary>
     public class RingMasterClientUnitTest : IDisposable
     {
+        public const int MaxNodeDataSize = 1024 * 1024 * 100;
+        public const int MaxUserMetadataSize = 102400;
+
         /// <summary>
         /// Guid that identifies RingMasterClient event source.
         /// </summary>
@@ -146,6 +149,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             if (settingName == "RingMasterLimits.MaxGetChildrenEnumerationCount")
             {
                 return "256";
+            }
+
+            if (settingName == "RingMasterLimits.MaxNodeDataSize")
+            {
+                return MaxNodeDataSize.ToString();
+            }
+
+            if (settingName == "RingMasterLimits.MaxUserMetadataSize")
+            {
+                return MaxUserMetadataSize.ToString();
             }
 
             return null;

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestMap>
+  <TestJobGroup Name="VMTestGroup" TestSystem="Default" ConfigPath="[BuildRoot]\outputs\build\Release-x64\CloudUnitTests\VmTestGroup.xml" IsActive="true"/>
+</TestMap>

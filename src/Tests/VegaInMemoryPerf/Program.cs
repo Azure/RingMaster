@@ -5,9 +5,11 @@
 namespace Microsoft.Vega.Performance
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+    using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
@@ -26,7 +28,10 @@ namespace Microsoft.Vega.Performance
             Console.WriteLine(string.Join(Environment.NewLine, testMethods.Select(m => m.Name)));
 
             var context = new DummyTestContext();
+
             VegaInMemoryPerf.Setup(context);
+
+            // CallbackBeforeCompleteTests.Setup(context);
             foreach (var methodName in args)
             {
                 var method = testMethods.FirstOrDefault(m => string.Compare(m.Name, methodName, StringComparison.OrdinalIgnoreCase) == 0);
@@ -34,7 +39,12 @@ namespace Microsoft.Vega.Performance
                 {
                     var inst = Activator.CreateInstance(method.DeclaringType);
                     Console.WriteLine($"Start running test {method.Name}");
-                    method.Invoke(inst, null);
+                    var result = method.Invoke(inst, null) as Task;
+                    if (result != null)
+                    {
+                        result.GetAwaiter().GetResult();
+                    }
+
                     Console.WriteLine($"Finished running test {method.Name}");
                 }
             }
@@ -60,7 +70,19 @@ namespace Microsoft.Vega.Performance
         private class DummyTestContext : TestContext
         {
             /// <inheritdoc />
-            public override IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
+            public override IDictionary Properties { get; } = new Dictionary<string, object>();
+
+            /// <inheritdoc />
+            public override void AddResultFile(string fileName)
+            {
+                throw new NotImplementedException();
+            }
+
+            /// <inheritdoc />
+            public override void Write(string message) => Console.Write(message);
+
+            /// <inheritdoc />
+            public override void Write(string format, params object[] args) => Console.Write(format, args);
 
             /// <inheritdoc />
             public override void WriteLine(string message) => Console.WriteLine(message);

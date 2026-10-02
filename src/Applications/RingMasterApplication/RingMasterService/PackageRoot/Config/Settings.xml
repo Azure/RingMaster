@@ -5,6 +5,7 @@
     <Parameter Name="ReplicatorEndpoint" Value="ReplicatorEndpoint" />
     <Parameter Name="MaxPrimaryReplicationQueueSize" Value="1073741824" />
     <Parameter Name="MaxSecondaryReplicationQueueSize" Value="1073741824" />
+    <Parameter Name="MaxReplicationMessageSize" Value="209715200" /> <!-- 200 MB -->
   </Section>
   <!-- This is used for securing StateManager's replication traffic. -->
   <Section Name="ReplicatorSecurityConfig" />
@@ -16,5 +17,45 @@
     <Parameter Name="IfxSession" Value="" MustOverride="true" />
     <Parameter Name="MdmAccount" Value="" MustOverride="true" />
     <Parameter Name="MdmNamespace" Value="RingMasterWorker" />
+  </Section>
+
+  <Section Name="RingMasterService">
+    <Parameter Name="AppConfigOverrides" Value="" />
+    <Parameter Name="DebuggerAttachTimeout" Value="" />
+    <Parameter Name="InMemoryPersistence" Value="" />
+    <Parameter Name="SSL.UseSSL" Value="" />
+    <Parameter Name="RingMaster.SecondaryPreprocessor.RunOnMultiplesOf" Value="" />
+    <Parameter Name="RingMaster.DontStartPseudoNodes" Value="" />
+    <Parameter Name="RingMaster.StartMainEndpointOnSecondary" Value="" />
+    <Parameter Name="RingMaster.StartExtraEndpointsOnSecondary" Value="" />
+    <Parameter Name="WireBackup.Enable" Value="" />
+    <Parameter Name="WireBackup.Path" Value="" />
+    <Parameter Name="WireBackup.MaxEvents" Value="" />
+    <Parameter Name="WireBackup.MaxTimeInSeconds" Value="" />
+    <Parameter Name="WireBackup.MaxEventsBetweenSnapshots" Value="" />
+    <Parameter Name="WireBackup.MaxTimeBetweenSnapshotsInSeconds" Value="" />
+    <Parameter Name="WireBackup.RetentionSeconds" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedMillis" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedResponses" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxThreadsPerConnection" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.BufferSizeInBytes" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionIdleTime" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionLifespan" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedMillis" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedResponses" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxThreadsPerClient" Value="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.BufferSizeInBytes" Value="" />
+    <Parameter Name="RingMaster.Transport.Server.MaxAllowedConnections" Value="" />
+    <Parameter Name="RingMaster.Paths.NotAllowedToFail" Value="" />
+    <Parameter Name="RingMaster.Paths.IgnoreForLockDown" Value="" />
+    <Parameter Name="RingMaster.LockStrategy" Value="" />
+    <Parameter Name="WinFabPersistence.HotSecondary" Value="" />
+    <Parameter Name="WinFabPersistence.EnableSFNotificationHandler" Value="" />
+    <Parameter Name="WinFabPersistence.FixStatDuringLoad" Value="" />
+    <Parameter Name="WinFabPersistence.IgnoreErrorsDuringLoad" Value="" />
+    <Parameter Name="RingMasterLimits.MaxGetChildrenEnumerationCount" Value="" /> 
+    <Parameter Name="RingMaster.MaxRetryOperationMillis" Value="" /> 
+    <Parameter Name="RingMaster.MaxSessionIdleSeconds" Value="" />
+    <Parameter Name="RingMaster.LockSizesPerLevel" Value="1,50,2500,10000,100000,500000" />
   </Section>
 </Settings>

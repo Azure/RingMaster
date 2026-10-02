@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Instrumentation;
 
     /// <summary>
@@ -260,6 +261,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
         private readonly IMetric0D responseWaitForReplication;
 
         /// <summary>
+        /// Used by <see cref="OnCompleteTerminationFailure"/>
+        /// </summary>
+        private readonly IMetric0D completeTerminationFailure;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RingMasterBackendInstrumentation"/> class.
         /// </summary>
         /// <param name="metricsFactory">Interface that can be used to create metrics</param>
@@ -334,6 +340,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
             this.acquireLock = metricsFactory.Create3D("acquireLock", "ReadOnly", "Succeeded", "Level");
 
             this.responseWaitForReplication = metricsFactory.Create0D("responseWaitForReplication");
+            this.completeTerminationFailure = metricsFactory.Create0D("completeTerminationFailure");
         }
 
         /// <summary>
@@ -786,6 +793,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Instrumen
         public void OnResponseWaitForReplication(TimeSpan elapsed)
         {
             this.responseWaitForReplication.LogValue(elapsed.Ticks / (TimeSpan.TicksPerMillisecond / 1000));
+        }
+
+        /// <inheritdoc/>
+        public void CallbackBeforeComplete(string path, byte[] data, IStat stat, byte[] userMetadata)
+        {
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleteTerminationFailure()
+        {
+            this.completeTerminationFailure.LogValue(1);
         }
 
         /// <summary>

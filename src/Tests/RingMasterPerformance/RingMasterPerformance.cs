@@ -17,6 +17,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Vega.Test.Helpers;
 
     /// <summary>
     /// RingMaster performance test
@@ -109,7 +110,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
         public static void Main(string[] args)
         {
             string testType = "getdata";
-            string ringMasterAddress = "127.0.0.1:99";
+            string ringMasterAddress = string.Empty;
             string path = "/Performance";
 
             var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
@@ -124,6 +125,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             if (args.Length > 1)
             {
                 ringMasterAddress = args[1];
+            }
+
+            if (string.IsNullOrEmpty(ringMasterAddress))
+            {
+                var serviceInfo = Helpers.GetVegaServiceInfo().Result;
+                ringMasterAddress = serviceInfo.Item1;
             }
 
             if (args.Length > 2)
@@ -297,7 +304,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             {
                 if (!ex.Flatten().InnerExceptions.Any(e => e is OperationCanceledException))
                 {
-                    throw ex;
+                    throw;
                 }
             }
         }
@@ -849,6 +856,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Performance
             }
 
             public void AcceptConnectionFailed(IPEndPoint clientEndPoint, TimeSpan processingTime)
+            {
+            }
+
+            public void OutgoingPacketQueued(long transportId, long connectionId, int queueLength, int packetLength)
+            {
+            }
+
+            public void OutgoingQueueFull(long transportId, long connectionId, int pendingPacketCount)
+            {
+            }
+
+            public void OutgoingPacketSent(long transportId, long connectionId, int packetLength)
+            {
+            }
+
+            public void ListenerStarted(long transportId, EndPoint endpoint)
+            {
+            }
+
+            public void ListenerStopped(long transportId, EndPoint endpoint)
             {
             }
         }

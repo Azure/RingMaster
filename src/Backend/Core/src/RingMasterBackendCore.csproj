@@ -1,10 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;$(NetCoreAppVer)</TargetFrameworks>
     <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend</RootNamespace>
     <AssemblyName>Microsoft.RingMaster.Backend.Core</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />

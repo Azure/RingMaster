@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -105,13 +104,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(15, Level = EventLevel.Verbose, Version = 1)]
         public void PersistedDataAppendSetParent(ulong id, string name)
         {
-            this.WriteEvent(15, id, name);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(15, id, name);
+            }
         }
 
         [Event(16, Level = EventLevel.Verbose, Version = 1)]
         public void PersistedDataAppendRead(ulong id, string name)
         {
-            this.WriteEvent(16, id, name);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(16, id, name);
+            }
         }
 
         [Event(17, Level = EventLevel.LogAlways, Version = 1)]
@@ -159,13 +164,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(24, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessAdd_Started(ulong replicationId, ulong id)
         {
-            this.WriteEvent(24, replicationId, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(24, replicationId, id);
+            }
         }
 
         [Event(25, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessAdd_RootNodeCreated(ulong replicationId, ulong id)
         {
-            this.WriteEvent(25, replicationId, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(25, replicationId, id);
+            }
         }
 
         [Event(26, Level = EventLevel.Informational, Version = 3)]
@@ -183,7 +194,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(28, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessUpdate_Started(ulong replicationId, ulong id)
         {
-            this.WriteEvent(28, replicationId, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(28, replicationId, id);
+            }
         }
 
         [Event(29, Level = EventLevel.Informational, Version = 3)]
@@ -201,7 +215,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(31, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessRemove_Started(ulong replicationId, ulong id)
         {
-            this.WriteEvent(31, replicationId, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(31, replicationId, id);
+            }
         }
 
         [Event(32, Level = EventLevel.Error, Version = 2)]
@@ -231,7 +248,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(36, Level = EventLevel.Verbose, Version = 1)]
         public void CreateNew(ulong id)
         {
-            this.WriteEvent(36, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(36, id);
+            }
         }
 
         [Event(37, Level = EventLevel.LogAlways, Version = 1)]
@@ -243,7 +263,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(38, Level = EventLevel.Verbose, Version = 1)]
         public void TryGetValue_Found(ulong id, string name, ulong parentId, int childrenCount)
         {
-            this.WriteEvent(38, id, name, parentId, childrenCount);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(38, id, name, parentId, childrenCount);
+            }
         }
 
         [Event(39, Level = EventLevel.LogAlways, Version = 1)]
@@ -255,13 +278,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(40, Level = EventLevel.Verbose, Version = 1)]
         public void PersistedDataAppendAddChild_SkippingEphemeralNode(ulong id, string name, ulong childId, string childName, int childrenCount)
         {
-            this.WriteEvent(40, id, name, childId, childName, childrenCount);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(40, id, name, childId, childName, childrenCount);
+            }
         }
 
         [Event(41, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessAdd_ConnectWithParent(ulong replicationId, ulong id, string name, ulong parentId, string parentName, int childrenCount)
         {
-            this.WriteEvent(41, replicationId, id, name, parentId, parentName, childrenCount);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(41, replicationId, id, name, parentId, parentName, childrenCount);
+            }
         }
 
         [Event(42, Level = EventLevel.Error, Version = 3)]
@@ -273,25 +302,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(43, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessAdd_NodeIsParentOfDanglingSiblings(ulong replicationId, ulong id, string name, int siblingCount)
         {
-            this.WriteEvent(43, replicationId, id, name, siblingCount);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(43, replicationId, id, name, siblingCount);
+            }
         }
 
         [Event(44, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessAdd_InstanceIsPrimary(ulong id, string name)
         {
-            this.WriteEvent(44, id, name);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(44, id, name);
+            }
         }
 
         [Event(45, Level = EventLevel.Verbose, Version = 2)]
         public void ProcessAdd_NodeHasNoParent(ulong replicationId, ulong id, string name)
         {
-            this.WriteEvent(45, replicationId, id, name);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(45, replicationId, id, name);
+            }
         }
 
         [Event(46, Level = EventLevel.Verbose, Version = 1)]
         public void TryGetValue_NotFound(ulong id)
         {
-            this.WriteEvent(46, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(46, id);
+            }
         }
 
         [Event(47, Level = EventLevel.Informational, Version = 4)]
@@ -339,7 +380,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(54, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessUpdate_KeepSameParent(ulong id, string name, ulong parentId)
         {
-            this.WriteEvent(54, id, name, parentId);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(54, id, name, parentId);
+            }
         }
 
         [Event(55, Level = EventLevel.LogAlways, Version = 1)]
@@ -453,7 +497,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(73, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessLoad_Started(ulong id)
         {
-            this.WriteEvent(73, id);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(73, id);
+            }
         }
 
         [Event(74, Level = EventLevel.Error, Version = 1)]
@@ -462,10 +509,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.WriteEvent(74, id, name, parentId);
         }
 
-        [Event(75, Level = EventLevel.Informational, Version = 2)]
-        public void ProcessLoad_Completed(ulong id, ulong parentId, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren)
+        [Event(75, Level = EventLevel.Verbose, Version = 3)]
+        public void ProcessLoad_Completed(ulong id, ulong parentId, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren, int uversion)
         {
-            this.WriteEvent(75, id, parentId, czxid, mzxid, pzxid, version, cversion, aversion, numChildren);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(75, id, parentId, czxid, mzxid, pzxid, version, cversion, aversion, numChildren, uversion);
+            }
         }
 
         [Event(76, Level = EventLevel.Error, Version = 1)]
@@ -483,7 +533,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         [Event(78, Level = EventLevel.Verbose, Version = 1)]
         public void CompleteRebuild_ConnectWithParent(ulong id, string name, ulong parentId, string parentName, int childrenCount)
         {
-            this.WriteEvent(78, id, name, parentId, parentName, childrenCount);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(78, id, name, parentId, parentName, childrenCount);
+            }
         }
 
         [Event(79, Level = EventLevel.Error, Version = 1)]
@@ -558,16 +611,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
             this.WriteEvent(90);
         }
 
-        [Event(92, Level = EventLevel.Error, Version = 1)]
-        public void CompleteRebuild_DuplicateFound(ulong id, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren)
+        [Event(92, Level = EventLevel.Error, Version = 2)]
+        public void CompleteRebuild_DuplicateFound(ulong id, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren, int uversion)
         {
-            this.WriteEvent(92, id, czxid, mzxid, pzxid, version, cversion, aversion, numChildren);
+            this.WriteEvent(92, id, czxid, mzxid, pzxid, version, cversion, aversion, numChildren, uversion);
         }
 
-        [Event(93, Level = EventLevel.Error, Version = 1)]
-        public void CompleteRebuild_OrphanFound(ulong id, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren)
+        [Event(93, Level = EventLevel.Error, Version = 2)]
+        public void CompleteRebuild_OrphanFound(ulong id, long czxid, long mzxid, long pzxid, int version, int cversion, int aversion, int numChildren, int uversion)
         {
-            this.WriteEvent(93, id, czxid, mzxid, pzxid, version, cversion, aversion, numChildren);
+            this.WriteEvent(93, id, czxid, mzxid, pzxid, version, cversion, aversion, numChildren, uversion);
         }
 
         [Event(94, Level = EventLevel.LogAlways, Version = 1)]
@@ -598,6 +651,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence
         public void GroupCommit_Failed(ulong firstChangeListId, ulong lastChangeListId, int changeCount, double totalDurationMs, string exception)
         {
             this.WriteEvent(98, firstChangeListId, lastChangeListId, changeCount, totalDurationMs, exception);
+        }
+
+        [Event(99, Level = EventLevel.Informational, Version = 1)]
+        public void PersistedDataAppendSetDataAndUserMetadata(ulong id, string name)
+        {
+            this.WriteEvent(99, id, name);
         }
     }
 }

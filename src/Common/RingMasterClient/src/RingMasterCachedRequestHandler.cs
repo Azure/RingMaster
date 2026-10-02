@@ -250,7 +250,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="cache">The cache.</param>
         /// <param name="auto_invalidate">if true, the cache gets invalidated from change notifications from RM service automatically</param>
         /// <returns>a task with the completion of the action, indicating true if the cache was properly set. False otherwise.</returns>
-        private async Task<bool> CacheStart(IRingMasterClientCache cache, bool auto_invalidate)
+        private Task<bool> CacheStart(IRingMasterClientCache cache, bool auto_invalidate)
         {
             Task<bool> registration = null;
 
@@ -258,7 +258,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             {
                 if (this.cacheInflight != cache)
                 {
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 this.cache = null;
@@ -290,20 +290,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                             return;
                         }
 
-                        Task.Delay(1000).ContinueWith(t =>
-                        {
-                            return this.CacheStart(cache, auto_invalidate);
-                        });
+                        // TODO: this needs to be stressed to check if stack overflow will ever happen.
+                        Task.Delay(1000).ContinueWith(_ => this.CacheStart(cache, auto_invalidate));
                     });
                 }
             }
 
-            if (registration != null)
-            {
-                return await registration;
-            }
-
-            return true;
+            return registration ?? Task.FromResult(true);
         }
 
         private void CacheInvalidate(IRingMasterClientCache cache, IRingMasterRequest req)

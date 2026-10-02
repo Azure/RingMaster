@@ -114,8 +114,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
 
                 ManualResetEventPool.InstancePool.ReturnOne(ref ev);
             }
-
-            GC.SuppressFinalize(this);
         }
     }
 }

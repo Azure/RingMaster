@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -45,7 +44,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Signals the stopping of the server
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="isListening">If TCP listener exists</param>
         /// <param name="activeConnections">Count of active connections</param>
         [Event(3, Level = EventLevel.LogAlways, Version = 2)]
@@ -57,7 +56,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Secure transport is stopped
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(4, Level = EventLevel.LogAlways, Version = 2)]
         public void Stopped(long transportId)
         {
@@ -67,7 +66,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection is being established
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="serverEndpoint">Endpoint of server</param>
         /// <param name="timeoutMilliseconds">Timeout in millisecond</param>
@@ -80,7 +79,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// TCP connection is accepted, will authenticate the other party
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="remoteEndpoint">Endpoint of the other party</param>
         [Event(6, Level = EventLevel.Informational, Version = 3)]
@@ -92,7 +91,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// New connection is established, will start to receive packets
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="elapsedMilliseconds">Duration of the new connection callback</param>
         [Event(7, Level = EventLevel.Informational, Version = 4)]
@@ -104,7 +103,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection is lost
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="elapsedMilliseconds">Duration of the connection lost callback</param>
         [Event(8, Level = EventLevel.Informational, Version = 4)]
@@ -116,7 +115,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Transport protocol is negotiated
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="localProtocolVersion">Protocol version of this party</param>
         /// <param name="remoteProtocolVersion">Protocol version of the other party</param>
@@ -130,20 +129,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// A packet has been sent
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="packetId">Packet ID</param>
         /// <param name="packetLength">Length of packet</param>
         [Event(10, Level = EventLevel.Verbose, Version = 4)]
         public void Send(long transportId, long connectionId, long packetId, int packetLength)
         {
-            this.WriteEvent(10, transportId, connectionId, packetId, packetLength);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(10, transportId, connectionId, packetId, packetLength);
+            }
         }
 
         /// <summary>
         /// Connection is closed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         [Event(11, Level = EventLevel.Informational, Version = 3)]
         public void ConnectionClose(long transportId, long connectionId)
@@ -154,7 +156,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// A packet is received
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="packetLength">Length of the packet</param>
         [Event(12, Level = EventLevel.Verbose, Version = 3)]
@@ -169,7 +171,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to pull packets in the async task
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="exception">Exception message</param>
         [Event(13, Level = EventLevel.Error, Version = 3)]
@@ -181,7 +183,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// No more data received, pull packets is completed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         [Event(14, Level = EventLevel.Informational, Version = 4)]
         public void PullPacketsCompleted(long transportId, long connectionId)
@@ -192,7 +194,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Received an incompleted packet
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="expectedLength">Length of expected packet</param>
         /// <param name="actualLength">Length of actual packet</param>
@@ -205,7 +207,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// TCP listner is failed.
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="message">Error message</param>
         [Event(16, Level = EventLevel.Error, Version = 2)]
         public void ListenerFailed(long transportId, string message)
@@ -216,7 +218,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to establish connection
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="host">Host name or IP</param>
         /// <param name="port">Port number</param>
@@ -231,7 +233,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to establish connection to all endpoints
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="endpointCount">Number of server endpoints</param>
         /// <param name="message">Error message</param>
@@ -245,7 +247,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Client is already started
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(19, Level = EventLevel.Error, Version = 2)]
         public void StartClientFailed_AlreadyStarted(long transportId)
         {
@@ -255,7 +257,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Server is already started
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(20, Level = EventLevel.Error, Version = 2)]
         public void StartServerFailed_AlreadyStarted(long transportId)
         {
@@ -265,7 +267,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Not started so cannot stop
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(21, Level = EventLevel.Error, Version = 2)]
         public void StopFailed_NotStarted(long transportId)
         {
@@ -275,7 +277,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Active connection is being closed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         [Event(22, Level = EventLevel.Informational, Version = 3)]
         public void CloseActiveConnection(long transportId, long connectionId)
@@ -286,7 +288,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Secure transport is being closed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(23, Level = EventLevel.Informational, Version = 2)]
         public void SecureTransportClose(long transportId)
         {
@@ -296,7 +298,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Server certificate is successfully validated
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
@@ -310,7 +312,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Skipped server certificate validation
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(25, Level = EventLevel.Warning, Version = 2)]
         public void ValidateServerCertificateSkipped(long transportId)
         {
@@ -320,7 +322,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to validate the server certificate
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
@@ -334,7 +336,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Client certificate is successfully validated
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
@@ -348,7 +350,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Skipped client certificate validation
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(28, Level = EventLevel.Warning, Version = 2)]
         public void ValidateClientCertificateSkipped(long transportId)
         {
@@ -358,7 +360,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to validate the client certificate
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
@@ -372,7 +374,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Server certificates were not provided
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(30, Level = EventLevel.Error, Version = 2)]
         public void ServerCertificatesWereNotProvided(long transportId)
         {
@@ -382,7 +384,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Client certificates were not provided
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(31, Level = EventLevel.Warning, Version = 2)]
         public void ClientCertificatesWereNotProvided(long transportId)
         {
@@ -392,7 +394,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Supported client certificate
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the client certificate</param>
         [Event(32, Level = EventLevel.Informational, Version = 3)]
         public void SupportedClientCertificate(long transportId, string serialNumber)
@@ -403,7 +405,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Supported server certificate
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="serialNumber">Serial number of the server certificate</param>
         [Event(33, Level = EventLevel.Informational, Version = 3)]
         public void SupportedServerCertificate(long transportId, string serialNumber)
@@ -424,7 +426,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Authenticate and consider this party as a client
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="timeoutInMilliseconds">Authentication timeout in millisecond</param>
         /// <param name="mustCheckCertificateRevocation">True if certificate revocation must be checked</param>
         /// <param name="mustCheckCertificateTrustChain">True if certificate trust chain must be checked</param>
@@ -437,7 +439,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to authenticate as a client
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="exception">Exception message</param>
         [Event(36, Level = EventLevel.Error, Version = 3)]
         public void AuthenticateAsClientFailed(long transportId, string exception)
@@ -448,7 +450,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Authenticate and consider this party as a server
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="timeoutInMilliseconds">Authentication timeout in millisecond</param>
         /// <param name="mustCheckCertificateRevocation">True if certificate revocation must be checked</param>
         /// <param name="mustCheckCertificateTrustChain">True if certificate trust chain must be checked</param>
@@ -461,7 +463,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to authenticate as a server
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="exception">Exception message</param>
         [Event(38, Level = EventLevel.Error, Version = 3)]
         public void AuthenticateAsServerFailed(long transportId, string exception)
@@ -472,7 +474,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to accept a connection
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="remoteEndpoint">Endpoint of the other party</param>
         /// <param name="elapsedMilliseconds">Duration of accepting connection including authentication</param>
@@ -486,7 +488,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// TCP listener is stopped
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(40, Level = EventLevel.Warning, Version = 2)]
         public void ListenerStopped(long transportId)
         {
@@ -496,7 +498,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Either the server or client start timed out
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(41, Level = EventLevel.Error, Version = 2)]
         public void StartTimedout(long transportId)
         {
@@ -506,7 +508,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Timed out stopping the secure transport
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         [Event(42, Level = EventLevel.Error, Version = 3)]
         public void StopTimedout(long transportId)
         {
@@ -516,7 +518,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to accept the TCP client
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="consecutiveFailureCount">Consecutive failure count</param>
         /// <param name="exception">Exception message</param>
@@ -529,7 +531,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Client is about to start
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="endpointCount">Number of server endpoints</param>
         [Event(44, Level = EventLevel.LogAlways, Version = 2)]
         public void StartClient(long transportId, int endpointCount)
@@ -540,7 +542,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Set the connection life time
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="maxConnectionLifetimeInMs">Max connection life time in millisecond</param>
         [Event(45, Level = EventLevel.Informational, Version = 2)]
@@ -552,7 +554,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection life time limit is expired
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="elapsedMilliseconds">Life time of this connection</param>
         [Event(46, Level = EventLevel.Informational, Version = 3)]
@@ -564,7 +566,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Failed to push the packets to the other party
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="exception">Exception message</param>
         [Event(47, Level = EventLevel.Error, Version = 2)]
@@ -576,7 +578,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Push packets task is completed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         [Event(48, Level = EventLevel.Informational, Version = 3)]
         public void PushPacketsCompleted(long transportId, long connectionId)
@@ -587,7 +589,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Set connection idle time limit
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="maxConnectionIdleTimeInMs">Max connetion idle time in millisecond</param>
         [Event(49, Level = EventLevel.Informational, Version = 1)]
@@ -599,7 +601,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection idle time limit is expired
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="elapsedMilliseconds">Time since the last activity</param>
         [Event(50, Level = EventLevel.Informational, Version = 1)]
@@ -611,7 +613,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection is being disconnected
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         [Event(51, Level = EventLevel.Informational, Version = 1)]
         public void Disconnect(long transportId, long connectionId)
@@ -622,14 +624,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Send queue is full
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="packetId">Packet ID</param>
         /// <param name="packetLength">Length of the packet</param>
-        [Event(52, Level = EventLevel.Error, Version = 1)]
-        public void SendQueueFull(long transportId, long connectionId, long packetId, int packetLength)
+        /// <param name="outgoingPacketsCount">Number of packets in the outgoing queue</param>
+        [Event(52, Level = EventLevel.Error, Version = 2)]
+        public void SendQueueFull(long transportId, long connectionId, long packetId, int packetLength, int outgoingPacketsCount)
         {
-            this.WriteEvent(52, transportId, connectionId, packetId, packetLength);
+            this.WriteEvent(52, transportId, connectionId, packetId, packetLength, outgoingPacketsCount);
         }
 
         /// <summary>
@@ -657,7 +660,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Successfully established connection
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="host">Host name of IP address</param>
         /// <param name="port">Port number</param>
@@ -671,7 +674,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Successfully established connection to the given server
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="host">Host name or IP address</param>
         /// <param name="elapsedMilliseconds">Duration of establishing the connection</param>
@@ -684,7 +687,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection that is not established successfully is being closed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="elapsedMilliseconds">Duration of establishing the connection to failure</param>
         [Event(57, Level = EventLevel.Error, Version = 1)]
@@ -696,11 +699,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Successfully accepted an connection
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="remoteEndpoint">Endpoint of the remote party</param>
         /// <param name="elapsedMilliseconds">Duration of accepting connection</param>
-        [Event(58, Level = EventLevel.Error, Version = 1)]
+        [Event(58, Level = EventLevel.Informational, Version = 1)]
         public void AcceptConnectionSucceeded(long transportId, int iteration, string remoteEndpoint, long elapsedMilliseconds)
         {
             this.WriteEvent(58, transportId, iteration, remoteEndpoint, elapsedMilliseconds);
@@ -709,7 +712,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection that is not accepted successfully is being closed
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="iteration">Number of attempts</param>
         /// <param name="remoteEndpoint">Endpoint of the remote party</param>
         /// <param name="elapsedMilliseconds">Duration of accepting the connection to failure</param>
@@ -722,7 +725,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Certificate has no chain status
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
@@ -736,7 +739,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Certificate CRL is offline
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
@@ -750,7 +753,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Certificate SSL policy errors
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
@@ -765,7 +768,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Certificate trust chain validation is skipped
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="issuer">Issuer of the certificate</param>
         /// <param name="subject">Subject name of the certificate</param>
         /// <param name="serialNumber">Serial number of the certificate</param>
@@ -779,7 +782,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <summary>
         /// Connection lost notification callback is completedj
         /// </summary>
-        /// <param name="transportId">Monotically incrementing transport ID</param>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
         /// <param name="connectionId">Connection ID</param>
         /// <param name="elapsedMilliseconds">Duration of connection lost notification</param>
         [Event(64, Level = EventLevel.Informational, Version = 1)]
@@ -798,6 +801,53 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public void HandleConnectionFailed(long transportId, long connectionId, string exception)
         {
             this.WriteEvent(65, transportId, connectionId, exception);
+        }
+
+        /// <summary>
+        /// The Send method is skipped because the connection was closed.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <param name="packetId">The id of the packet.</param>
+        [Event(66, Level = EventLevel.Error, Version = 1)]
+        public void SendIsSkippedDueToCompletion(long transportId, long connectionId, long packetId)
+        {
+            this.WriteEvent(66, transportId, connectionId, packetId);
+        }
+
+        /// <summary>
+        /// Server is already started
+        /// </summary>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
+        /// <param name="exception">Exception string that failed the start</param>
+        [Event(71, Level = EventLevel.Error, Version = 1)]
+        public void StartServerFailed_Exception(long transportId, string exception)
+        {
+            this.WriteEvent(71, transportId, exception);
+        }
+
+        /// <summary>
+        /// Disconnect new connection immediately as there are too many connections already.
+        /// </summary>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
+        /// <param name="iteration">Number of attempts</param>
+        /// <param name="exception">Exception message</param>
+        [Event(100, Level = EventLevel.Warning, Version = 1)]
+        public void DisconnectOverlimitConnection(long transportId, int iteration, string exception)
+        {
+            this.WriteEvent(100, transportId, iteration, exception ?? "<null>");
+        }
+
+        /// <summary>
+        /// Got connection reset from remote. This happens when forcibly disconnected by remote.
+        /// </summary>
+        /// <param name="transportId">Monotonically incrementing transport ID</param>
+        /// <param name="iteration">Number of attempts</param>
+        /// <param name="exception">Exception message</param>
+        [Event(101, Level = EventLevel.Warning, Version = 1)]
+        public void ConnectionIsReset(long transportId, int iteration, string exception)
+        {
+            this.WriteEvent(101, transportId, iteration, exception ?? "<null>");
         }
     }
 }

@@ -9,6 +9,9 @@
         <Program>Microsoft.RingMaster.RingMasterWatchdog.exe</Program>
       </ExeHost>
     </EntryPoint>
+    <EnvironmentVariables>
+      <EnvironmentVariable Name="RINGMASTER_LOG_PATH" Value="overridden" />
+    </EnvironmentVariables>
   </CodePackage>
   <ConfigPackage Name="Config" Version="@BUILDNUMBER@" />
 </ServiceManifest>

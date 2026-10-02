@@ -5,6 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
 
     /// <summary>
@@ -21,7 +22,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Stat"/> class.
+        /// Initializes a new instance of the <see cref="Stat" /> class.
         /// </summary>
         /// <param name="czxid">The id of the transaction that created the node</param>
         /// <param name="mzxid">The id of the most recent transaction that modified the node's data</param>
@@ -29,12 +30,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <param name="mtime">The time at which the last modification of this node's data was performed</param>
         /// <param name="version">Version number of the most recent change to the node's data</param>
         /// <param name="cversion">Version number of the most recent change to the node's children</param>
-        /// <param name="aversion">Version number of the most recent change to the node's <see cref="Acl"/></param>
+        /// <param name="aversion">Version number of the most recent change to the node's <see cref="Acl" /></param>
         /// <param name="ephemeralOwner">The ephemeral owner.</param>
         /// <param name="dataLength">Length of the data associated with the node</param>
         /// <param name="numChildren">The number children</param>
         /// <param name="pzxid">The id of the most recent transaction that modified the node's children</param>
-        public Stat(long czxid, long mzxid, long ctime, long mtime, int version, int cversion, int aversion, long ephemeralOwner, int dataLength, int numChildren, long pzxid)
+        /// <param name="uversion">The uversion.</param>
+        public Stat(long czxid, long mzxid, long ctime, long mtime, int version, int cversion, int aversion, long ephemeralOwner, int dataLength, int numChildren, long pzxid, int uversion)
         {
             this.Czxid = czxid;
             this.Mzxid = mzxid;
@@ -47,6 +49,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             this.DataLength = dataLength;
             this.NumChildren = numChildren;
             this.Pzxid = pzxid;
+            this.Uversion = uversion;
         }
 
         /// <summary>
@@ -71,6 +74,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             this.DataLength = other.DataLength;
             this.NumChildren = other.NumChildren;
             this.Pzxid = other.Pzxid;
+            this.Uversion = other.Uversion;
         }
 
         /// <summary>
@@ -134,6 +138,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// Gets or sets the version number of the most recent change to this node's <see cref="Acl"/>.
         /// </summary>
         public int Aversion { get; set; }
+
+        /// <summary>
+        /// Gets or sets the version number of the most recent change to this node's user metadata.
+        /// </summary>
+        public int Uversion { get; set; }
 
         /// <summary>
         /// Gets or sets the length of the data associated with this node.
@@ -209,11 +218,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         }
 
         /// <summary>
-        /// Deserializes the object from <see cref="BinaryReader"/> object
+        /// Deserializes the object from <see cref="BinaryReader" /> object
         /// </summary>
         /// <param name="reader">binary reader object</param>
-        /// <returns>Deserialized object</returns>
-        public static Stat ReadStat(BinaryReader reader)
+        /// <param name="hasUversion">if set to <c>true</c> [has uversion].</param>
+        /// <returns>
+        /// Deserialized object
+        /// </returns>
+        /// <exception cref="ArgumentNullException">reader</exception>
+        public static Stat ReadStat(BinaryReader reader, bool hasUversion)
         {
             if (reader == null)
             {
@@ -231,14 +244,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 0L,
                 0,
                 0,
-                reader.ReadInt64());
+                reader.ReadInt64(),
+                hasUversion ? reader.ReadInt32() : 0);
         }
 
         /// <summary>
-        /// Serializes to a <see cref="BinaryWriter"/> object
+        /// Serializes to a <see cref="BinaryWriter" /> object
         /// </summary>
         /// <param name="writer">binary writer object</param>
-        public void Write(BinaryWriter writer)
+        /// <param name="apiVersion">The API version.</param>
+        /// <exception cref="ArgumentNullException">writer</exception>
+        public void Write(BinaryWriter writer, int apiVersion)
         {
             if (writer == null)
             {
@@ -253,6 +269,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             writer.Write(this.Cversion);
             writer.Write(this.Aversion);
             writer.Write(this.Pzxid);
+
+            if (apiVersion >= ApiVersion.Version1)
+            {
+                writer.Write(this.Uversion);
+            }
         }
 
         /// <summary>
@@ -275,6 +296,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 this.Version == other.Version &&
                 this.Cversion == other.Cversion &&
                 this.Aversion == other.Aversion &&
+                this.Uversion == other.Uversion &&
                 this.DataLength == other.DataLength &&
                 this.NumChildren == other.NumChildren &&
                 this.Pzxid == other.Pzxid;
@@ -293,6 +315,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
             hash ^= this.Version.GetHashCode();
             hash ^= this.Cversion.GetHashCode();
             hash ^= this.Aversion.GetHashCode();
+            hash ^= this.Uversion.GetHashCode();
             hash ^= this.EphemeralOwner.GetHashCode();
             hash ^= this.DataLength.GetHashCode();
             hash ^= this.NumChildren.GetHashCode();
@@ -306,7 +329,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return string.Format("[STAT czxid:{0} mzxid:{1} pzxid:{2} ctime:{3} mtime:{4} version:{5} cversion:{6} aversion:{7} ephemeralOwner:{8} dataLength:{9} numChildren:{10} uniqueIncId:{11} uniqueExtIncId:{12}]", this.Czxid, this.Mzxid, this.Pzxid, ConvertTime(this.Ctime).ToString("o"), ConvertTime(this.Mtime).ToString("o"), this.Version, this.Cversion, this.Aversion, this.EphemeralOwner, this.DataLength, this.NumChildren, this.UniqueIncarnationId, this.UniqueExtendedIncarnationId);
+            return string.Format("[STAT czxid:{0} mzxid:{1} pzxid:{2} ctime:{3} mtime:{4} version:{5} cversion:{6} aversion:{7} ephemeralOwner:{8} dataLength:{9} numChildren:{10} uniqueIncId:{11} uniqueExtIncId:{12} uversion:{13}]", this.Czxid, this.Mzxid, this.Pzxid, ConvertTime(this.Ctime).ToString("o"), ConvertTime(this.Mtime).ToString("o"), this.Version, this.Cversion, this.Aversion, this.EphemeralOwner, this.DataLength, this.NumChildren, this.UniqueIncarnationId, this.UniqueExtendedIncarnationId, this.Uversion);
         }
     }
 }

@@ -17,6 +17,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         private readonly StringBuilder stringBuffer = new StringBuilder(64 * 1024);
 
+        private readonly bool useLogFileEventTracingV2;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LogFileTraceListener"/> class.
+        /// </summary>
+        /// <param name="useLogFileEventTracingV2">Whether to use <see cref="LogFileEventTracingV2"/> or not.</param>
+        public LogFileTraceListener(bool useLogFileEventTracingV2 = false)
+        {
+            this.useLogFileEventTracingV2 = useLogFileEventTracingV2;
+        }
+
         /// <summary>
         /// Writes incomplete message to trace
         /// </summary>
@@ -43,7 +54,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 this.stringBuffer.Clear();
             }
 
-            LogFileEventTracing.Trace(messageLine);
+            if (this.useLogFileEventTracingV2)
+            {
+                LogFileEventTracingV2.Trace(messageLine);
+            }
+            else
+            {
+                LogFileEventTracing.Trace(messageLine);
+            }
         }
     }
 }

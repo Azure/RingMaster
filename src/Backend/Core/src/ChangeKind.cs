@@ -46,6 +46,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         AclChanged,
 
         /// <summary>
+        /// The data and user metadata changed
+        /// </summary>
+        DataAndUserMetadataChanged,
+
+        /// <summary>
         /// The node deleted
         /// </summary>
         NodeDeleted,

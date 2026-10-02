@@ -78,5 +78,10 @@ namespace Microsoft.Vega.Test.Helpers
         /// The LNM vnet publishing scenario
         /// </summary>
         LnmVnetPublishingScenario,
+
+        /// <summary>
+        /// The set data and user metadata
+        /// </summary>
+        SetDataAndUserMetadata,
     }
 }

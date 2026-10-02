@@ -24,7 +24,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         public const uint MinimumSupportedVersion = SerializationFormatVersions.MinimumSupportedVersion;
 
         /// <summary>
-        /// Gets a function that receives a packet from the wire. return null if you want to use the default receiver
+        /// Gets or sets the factory to use for creating memory streams.
+        /// </summary>
+        public IMemoryStreamFactory MemoryStreamFactory { get; set; } = new RecyclableMemoryStreamFactory();
+
+        /// <summary>
+        /// Gets a function that recieves a packet from the wire. return null if you want to use the default reciever
         /// </summary>
         public PacketReceiveDelegate PacketReciever { get; } = null;
 
@@ -44,9 +49,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <param name="request">Request to serialize</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>Serialized representation of the given request</returns>
-        public byte[] SerializeRequest(RequestCall request, uint version)
+        public IMemoryBuffer SerializeRequest(RequestCall request, uint version)
         {
-            using (var serializer = new Serializer(version))
+            using (var serializer = new Serializer(version, this.MemoryStreamFactory))
             {
                 serializer.SerializeRequest(request);
                 return serializer.GetBytes();
@@ -59,9 +64,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <param name="response">Response to serialize</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>Serialized representation of the given response</returns>
-        public byte[] SerializeResponse(RequestResponse response, uint version)
+        public IMemoryBuffer SerializeResponse(RequestResponse response, uint version)
         {
-            using (var serializer = new Serializer(version))
+            using (var serializer = new Serializer(version, this.MemoryStreamFactory))
             {
                 serializer.SerializeResponse(response);
                 return serializer.GetBytes();
@@ -87,16 +92,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Deserialize a <see cref="RequestResponse"/>.
         /// </summary>
         /// <param name="serializedResponse">Serialized representation of the response</param>
+        /// <param name="serializedResponseLength">Length of serialized response</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>The deserialized <see cref="RequestResponse"/></returns>
-        public RequestResponse DeserializeResponse(byte[] serializedResponse, uint version)
+        public RequestResponse DeserializeResponse(byte[] serializedResponse, int serializedResponseLength, uint version)
         {
             if (serializedResponse == null)
             {
                 throw new ArgumentNullException("serializedResponse");
             }
 
-            using (var deserializer = new Deserializer(serializedResponse, serializedResponse.Length, version))
+            using (var deserializer = new Deserializer(serializedResponse, serializedResponseLength, version))
             {
                 return deserializer.DeserializeResponse();
             }

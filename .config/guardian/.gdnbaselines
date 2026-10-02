@@ -1,0 +1,1203 @@
+{
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/baselines"
+  },
+  "version": "1.0.0",
+  "baselines": {
+    "default": {
+      "name": "default",
+      "createdDate": "2026-04-07 00:18:33Z",
+      "lastUpdatedDate": "2026-04-07 00:18:33Z"
+    }
+  },
+  "results": {
+    "fc0820f64bfd24d26f662fd4eda96b35229267745bd95e445d20df74045e35a4": {
+      "signature": "fc0820f64bfd24d26f662fd4eda96b35229267745bd95e445d20df74045e35a4",
+      "alternativeSignatures": [
+        "ba64ad3630b19c37923aafa08f9d14e996c6c7388f7c296f04ee53307a1457c7",
+        "4053a82623925a080040c99af8eb258e3403675360030e6e89af2d6fd4445894",
+        "7bb3c992c7af13c1f9365eea305d7c55212fdf0d08f2cf49bbc4f8293917bcb3"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "5e92da85cdee85526a8660558d3a06896ff090522473f2c5e6eb59f219d9e8f9": {
+      "signature": "5e92da85cdee85526a8660558d3a06896ff090522473f2c5e6eb59f219d9e8f9",
+      "alternativeSignatures": [
+        "686e8f55c02930620ba5035eb60f4d172217305fea3d56b3cbb266ca6d9c9e72",
+        "3221854171acd09b0688500e0d9ee31a89b91127c914e849f4b77d81ee248602",
+        "0b5fc8105f34185076bd12ad64005bd7a8a749a7f77465344ebd1220cbad5d6b"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "5f1114ad0af92b51048d9bbac6976e7567f37cc656949751e630cc9645d08f32": {
+      "signature": "5f1114ad0af92b51048d9bbac6976e7567f37cc656949751e630cc9645d08f32",
+      "alternativeSignatures": [
+        "d1d3b1144633a95c1d16b6bc6a00810a6b794ada725049bc51c15a6cab71d10f",
+        "a95bc7be54bc4fbb163a520c4669e22f90b06433568b23279c1510c11d2414e6",
+        "365c15aa570ca0174a1e88836286ff9051a0852bce2be288a8ae679515a677eb"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "fa83933330c6750b9734725ad3d388ea800bd6e372a0d0eeb3ecbc1fb83b1d04": {
+      "signature": "fa83933330c6750b9734725ad3d388ea800bd6e372a0d0eeb3ecbc1fb83b1d04",
+      "alternativeSignatures": [
+        "09c180f385442ca24200feaa532e3c20cbca1822f14c2eaf639fd1084391b6ce",
+        "df8ee7d7fc360e16942cda0fa7591fffe7e01f0d2661f46e2297f67df5dd7c7c",
+        "c4830d67b2d5472452ae3869473ec97a09966a4ff20ff287f3f2053f7fcb699c"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "1db021e643b819c6222c8c9770d51f46226b1754c7cfad4854ccab7e53743c95": {
+      "signature": "1db021e643b819c6222c8c9770d51f46226b1754c7cfad4854ccab7e53743c95",
+      "alternativeSignatures": [
+        "6ff1f5e3f2ee8695c22b4d2ce2ec3e0fb82b5388bc308b0346637d21ccc5f103",
+        "0b4be745feef7efc60a2b62fcd8697b0209f4d6517679c68a0a5ed707655c1f0",
+        "501946e61e142231c18334d15d3acd1d05b7921c6392f679a7526a01bea29266"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "1ef4e30dd91b6d8e7baaf6781abd84397f3e3cb773096190d274f98913feb239": {
+      "signature": "1ef4e30dd91b6d8e7baaf6781abd84397f3e3cb773096190d274f98913feb239",
+      "alternativeSignatures": [
+        "19acbcf868faf74e124f43dca79b4f8c17334b80e3f4634cdb8d0410f11128c0",
+        "3a809fb27b2da73e552f0e305189bbac436cea5878ffca0e4b5292d2f4bca9b5",
+        "6f13a81e09a3384ae68a8a555d759d83620d4b6233b45a599e232bb8454a3b37"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "f48b7d7a71150e7bb72dfb9d82dff666f36dd02cd4fb64e16ed3d1071332edca": {
+      "signature": "f48b7d7a71150e7bb72dfb9d82dff666f36dd02cd4fb64e16ed3d1071332edca",
+      "alternativeSignatures": [
+        "d68cd0890eee265a4be725cda2aeddba942b1bc36f7f36e7d3afe99be8d7efaf",
+        "11c825d8599c99c5e066e28ac88fa359569ce6b976fea3a7100e5e140728ff09",
+        "af43d3296630c53415913cceb80383cd3915a44db458b774d231f4f944c1b6ba"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "be8b989495518038411e7b0018135b52b8861e0c4316334bce34cfd1b272499f": {
+      "signature": "be8b989495518038411e7b0018135b52b8861e0c4316334bce34cfd1b272499f",
+      "alternativeSignatures": [
+        "05d129cb25258a68ab8d717ff50bf7d9d09e71e9c8535104ee40e6b659e00feb",
+        "b6e93c49ac387b353cedac7715ef3a236a3ba3a1cf7a23425f5197e347d4dfde",
+        "4b14750cd799b82399d290ec1ab775009f9010c7a0a7ded43037e95387bbda93"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "316c482d1003e7b8e3eaf09d86dc257d258cd35330c4fbda3ec2159e9729d8d6": {
+      "signature": "316c482d1003e7b8e3eaf09d86dc257d258cd35330c4fbda3ec2159e9729d8d6",
+      "alternativeSignatures": [
+        "0975e71646ceb3661795ce817358be0fb00ae13b2ffc99d7b85d4434c8157ff3",
+        "aa9d0f4b4282fb266e9007570819b789af9df568d8f3619b0e410d542d9f215a",
+        "a739d5a7d0102cf1d0a272c787196cd6cdbe7b7b9694af21036c310dc0571228"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "936e973a3cd71af57e6c01ee3a1291006508cb03c5db615dcfb405750c0f4a59": {
+      "signature": "936e973a3cd71af57e6c01ee3a1291006508cb03c5db615dcfb405750c0f4a59",
+      "alternativeSignatures": [
+        "46b5855a0578e869aec5ec7382b5b38d116fce43bd162c43571a02c9df5df482",
+        "ea94111dfd7e8dbc56230f140d76f084a7252b6be27b59f4a5c960cf6c437f8a",
+        "0c09c42b27f7fdb0a2f4a9738af40c62b64c6134c64144eeaf0eea7656315095"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "2d38cff80018deb4322b816bb4e638b674b4cbb895b94b198c3d433e0e9e8b7e": {
+      "signature": "2d38cff80018deb4322b816bb4e638b674b4cbb895b94b198c3d433e0e9e8b7e",
+      "alternativeSignatures": [
+        "6cce433625ba890b7d415dca9589bbb4b702871339e37806b4d360714710d9a9",
+        "d062e069b18c473f7f189a82f54aa031ff91f0f12e47540b43eb0033ade19637",
+        "3443fe07cbdfc98f1d7ba72b5e4c23abf6699f60483a9518732460a80e8b2159"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "26fa17a60b48ce126884716e45ce770129fd58d5d04cd7b012a8fdb383e49ea5": {
+      "signature": "26fa17a60b48ce126884716e45ce770129fd58d5d04cd7b012a8fdb383e49ea5",
+      "alternativeSignatures": [
+        "84d83b18cf146427cbbfe1e724e036d273811988f804be3653ee7658a1dcdfaa",
+        "f25cdfac86ca8fae9facadb2d1eb15238b8608a0d8869dc67ac9d5d21afa771e",
+        "67c864e538f6f7c7baa900a967608dfddb473dc0ed9d11b5eaced139f93c0b69"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "ca011d657a6f33f57cea3389d7d1de3317835a12d6531638a0251dc35f18767b": {
+      "signature": "ca011d657a6f33f57cea3389d7d1de3317835a12d6531638a0251dc35f18767b",
+      "alternativeSignatures": [
+        "40e78e0a4f004bb209432a9371be065491df9f2ca5179cf9dc5c789f3a0f1c2d",
+        "3d8e68ec260b6663ea51fd3d00335af8a6438f5469f4ccbb0943c9bf6902596f",
+        "a50e0109e7a9918385bb31d530fe7305d34c7e3b53db17917382b4ba60e34a89"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c386ece0947d9c8508b60d3c3daad3fbff26b1ea4ed60effe4741c12871e52ce": {
+      "signature": "c386ece0947d9c8508b60d3c3daad3fbff26b1ea4ed60effe4741c12871e52ce",
+      "alternativeSignatures": [
+        "9799884a9414b40043addaddc52882e46f801c3637e5585ccf6fab15e0243796",
+        "a3bafa8f88dd776426724c37317500d1207529606e6009f6ca9277c6f2f40d5f",
+        "7c5fe6b8a7af11db9f5c68f3cf20cbc586661351bda1ffe5fe40ada127f21952"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "b88fa45e19504f6e1aec913a12abdef7de5294bb9a41d4105b126298730c1fda": {
+      "signature": "b88fa45e19504f6e1aec913a12abdef7de5294bb9a41d4105b126298730c1fda",
+      "alternativeSignatures": [
+        "9a93e303c03a7d5c87881359358674cd90f118622181a4219d97f331279c3970",
+        "0236024422b592c7d3eeffa98b146df13ef9208bd8670c867a63dcf41233d6b7",
+        "e88c5b7a218051926deb77116157760da83a31ee3ff8735cd6e17ee67d944608"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "f5d22ac949ab3f9982f76a0b6c4c34181eac361aea66d3be107d9c000398a3c0": {
+      "signature": "f5d22ac949ab3f9982f76a0b6c4c34181eac361aea66d3be107d9c000398a3c0",
+      "alternativeSignatures": [
+        "2686a1cc1fd2eaa2583e63455a8ff98c23a613d9e2a75eb890cc83c06e964591",
+        "1c9fa37329fc260e2077594a8fa38dc1ac5d55c3910e28045963a4186279b483",
+        "7347cb7f295fc7bafa19d4466af5f8ec9b6a64ed1e813d7f011b15675521959c"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "4f053889c9a0ee4a65a678cd3de46bd17124c2929f4b9948901b15cbfbb2b880": {
+      "signature": "4f053889c9a0ee4a65a678cd3de46bd17124c2929f4b9948901b15cbfbb2b880",
+      "alternativeSignatures": [
+        "625da6c7340656cf40e2a1cbfe31493947c0e9a34e382270c46de2c02fc84e18",
+        "eb99c6ee767e4d73a67953137e5f0ac790a4f6582b0c47902627594d1d9cc2d3",
+        "77b29e7c9f7b43ae430e8f159edc49e944bef3967d20d427a34c2eca612ae903"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "00bead8a97ac739bf390e81199f624ad4fc4566bde951dfb565df0ba59600a2b": {
+      "signature": "00bead8a97ac739bf390e81199f624ad4fc4566bde951dfb565df0ba59600a2b",
+      "alternativeSignatures": [
+        "2350019c1ce497a7fba7958222da67315101ee1f21b93b4291178c7f497f1e09",
+        "5be6ba178faaa0ec88f3c0226f6feafc52d8a3142df12e093652f247c3495c5d",
+        "7c7ffe767256d2803175188e61a3e7eae9ca7325c5f7cff75739c975aa67ea77"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "1643877edcaf3e6474b43e2b4c51b667817a404bf9207990c02de3732f46b293": {
+      "signature": "1643877edcaf3e6474b43e2b4c51b667817a404bf9207990c02de3732f46b293",
+      "alternativeSignatures": [
+        "a0f0fb935564a71936dcb2a5da3054c87f11793f0b3911b9fa0435668c37e3de",
+        "3b4a823a87e1acf4b363d4079953b586ac3bbea675b8444ecc17e87641a2a649",
+        "11fe26e66371a0cbcc86d41da4893568adc7fd2f2469330eb2ba9b6fb917d946"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "9027a96a31c1d0d8e3fa6e83095b0f43417d05b141cb4ae30a0e3b65b4fb6044": {
+      "signature": "9027a96a31c1d0d8e3fa6e83095b0f43417d05b141cb4ae30a0e3b65b4fb6044",
+      "alternativeSignatures": [
+        "83cf10cc2ea13cb79c75442ffe9e99f641061070597361f0dd2c8024afc95260",
+        "891228af12ec441f1c637cfbec66953279b4176095bcd213fb4464fb31e6091f",
+        "15fa564dd545065fbea2acebeb4190d1264b7139f13eecc91415f8c61c32e119"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "6f1eb4813f4871942215bb3d30418d1dd6aa581fb2a0f07a2b66207409661f90": {
+      "signature": "6f1eb4813f4871942215bb3d30418d1dd6aa581fb2a0f07a2b66207409661f90",
+      "alternativeSignatures": [
+        "1c2791ac306655d9fecfa8f087c079f6ad342b4356d48e6a0ddba1174327e480",
+        "83be53e9d5a6d0277cc227d70b4dd908fc3067a130d6e5c7833cfedad1beb16a",
+        "5b6fd7879dd32424504d41acde7dde699aa8febd4a1fba98e0a03b12a0ab8822"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/libeay32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c4a923897f687e70c74e7785afa5b08ead7441ebaf526c2d049477ef216b41fc": {
+      "signature": "c4a923897f687e70c74e7785afa5b08ead7441ebaf526c2d049477ef216b41fc",
+      "alternativeSignatures": [
+        "4145fea908582d7b2b2da1c0765947ac060708ebf056c359a94e962d0bf464ec",
+        "03e26ea528382fe8304a87ab7f4e98a660f22d8f8f48688cbc95fc6588a5969f",
+        "51b42ad81b0f5a8dee1a72b8a17d688ba2ec694705e5046617650eba05e8c5c4"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/ssleay32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "3fb2bd430d130138e62f5c3f0fe2008cacbf84fbfd5beac98077bd6b44bb2ba7": {
+      "signature": "3fb2bd430d130138e62f5c3f0fe2008cacbf84fbfd5beac98077bd6b44bb2ba7",
+      "alternativeSignatures": [
+        "1d137ae94fafe8315ecd4a94660f483b10b561652ab283d794203a14dc53d77d",
+        "d950c31f0ffb52b29ba1a5db627c5810c48841537dfa035134b1c1228948b03c",
+        "7008a28364d5fdea2e18ea4e0d3d074bde2b8d881cf3cc33e567858a717f4e90"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "403bfd73ab83fd4974978a2f7b440a289baeeae380bdb1c96a1bf7abbb805019": {
+      "signature": "403bfd73ab83fd4974978a2f7b440a289baeeae380bdb1c96a1bf7abbb805019",
+      "alternativeSignatures": [
+        "16cd331bfaf972a2a633c089d02d0619672f6b14d452df357578e2ccaf484789",
+        "01cba0981e84d9b111ed6c1b8f186ec1a2f9d10f414cdcd858f9a837749603ea",
+        "de9a54df93ba28a6282f53507763b38d0c6727361c2def28f7cf698591971cc2"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/covrun32.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "d8a8084f42247718e0e9e9e21626a5fec18b8c46ae2eedebaa739038534f2b83": {
+      "signature": "d8a8084f42247718e0e9e9e21626a5fec18b8c46ae2eedebaa739038534f2b83",
+      "alternativeSignatures": [
+        "3a4f4fcac1b6c8033510bc83eefbc33948709985dc4aad625dcd072ebe0eb3e9",
+        "9edb853adf1e1b86eab2444d01a3f0219f78d37bdee8307c13fd3b0014141494",
+        "e88db903fc212a180e1f0e865e64b9138cd9ede00cdb4e1f7da6cf4a53c6fffd"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "d2048aa48d223d3633c4f124ff92f41eb67dae2ee1340001819c16e951e64678": {
+      "signature": "d2048aa48d223d3633c4f124ff92f41eb67dae2ee1340001819c16e951e64678",
+      "alternativeSignatures": [
+        "520a91446341a34ff1d10a761c16e95bd22eea40938a09230143436b07233caa",
+        "51c5388c2d7153d0f794999cf7f3e2db8849c917044c660804a5a3cb8a6107c0",
+        "8b1f4739aace9106f039ce30650ad96f7185fec16bc4543ae2d2d185389b21a5"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c1452ed9c6792eaaee922b7b4e7b77efc7f042e73836de0ab70f7ac40a119d98": {
+      "signature": "c1452ed9c6792eaaee922b7b4e7b77efc7f042e73836de0ab70f7ac40a119d98",
+      "alternativeSignatures": [
+        "5fbcafd5bed52ea6da61f1eb0238f6de04888c5de08e5477a03cb6a9309f2414",
+        "8914e4867867708371394c523e8146f5cf1a469f60f07a567141fc2bea20f302",
+        "3fd1c158ab36468e89e40ea4bebd4a40666336e2542b2b552420f7136fbb625a"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "7b786ce48bfc5bae5ab02e067ae52a559ac594767db7c28ae1481e512a3fdd77": {
+      "signature": "7b786ce48bfc5bae5ab02e067ae52a559ac594767db7c28ae1481e512a3fdd77",
+      "alternativeSignatures": [
+        "bad80858437c4dc356c8621d767f04865d217b75c49a4b9611583753cec3dbe5",
+        "5f7d84169bf15d9ca05fcd5a6acd8500711fa7c9701b0327a4b2b85812e5f50c",
+        "d1b942ea0a1e38ff86c747a17c59b118cd835cb0090a54f22a3e62a8459d80c4"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "1f9bd08d4f0317b9a4429da59388ca8e3e811d3485c721dcf5d94b68c29a6a52": {
+      "signature": "1f9bd08d4f0317b9a4429da59388ca8e3e811d3485c721dcf5d94b68c29a6a52",
+      "alternativeSignatures": [
+        "86dbe3e37f68643805a99065aea4db79947259ce59c32e4dd6d420d50299836a",
+        "7ad6260b22d99192793e8b5914f7f69756565b4d510b8afd2ee4ac93a1c8d6df",
+        "cca5bb2e91709886a0b2c66c0b9e4938cf98faa787c639bf6e1c31241bf60bfc"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "5c61d3354dc01068f35443308fd88cfa087eb17b1295bfd077a541ef2e1f662e": {
+      "signature": "5c61d3354dc01068f35443308fd88cfa087eb17b1295bfd077a541ef2e1f662e",
+      "alternativeSignatures": [
+        "f38c558dd97b8ff0b34536f0fb787f2ab305b1f99acda64b4ed7abec433907ad",
+        "7d53ecfa95daa9a298461199b0ba6374326bc93f88f3b4cc405dba4277de1a1d",
+        "7b3dbca9b85ce7f015d58717d34d381827bb95d02442e49150981c383b98b9f0"
+      ],
+      "target": "out/release-x64/RingMasterPerformance/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "8b4577f45cd6ecde08506d2edbd7e7b21870c231bb2e1aee50b973806e8dba04": {
+      "signature": "8b4577f45cd6ecde08506d2edbd7e7b21870c231bb2e1aee50b973806e8dba04",
+      "alternativeSignatures": [
+        "08258be2a193f824c20d94bae2b8564d1ec11e7d9162c0f762fd08705d42a2e8",
+        "ef769ce9b614d9fad0151cc37c12a3127619b2b482e133cad1af85695900cf1a",
+        "19a94a3d6db792a38985af09964ca02be5ea445a90fe01a21a50bc0e73aaa214"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "7dfd1a8a64f2f54335710fddc270d55f3d0ec8cf0576f2c83974c7c3aae718cf": {
+      "signature": "7dfd1a8a64f2f54335710fddc270d55f3d0ec8cf0576f2c83974c7c3aae718cf",
+      "alternativeSignatures": [
+        "a198d8d0ec649490860767813c687c5d814df9db669e97d25982143d97b1f37e",
+        "c1f2315b6abf623111d5d539907a30b2942a42b02cdf9366906809f8b9b6f05f",
+        "f28b2182707456d904efe2e7cebc3cd6e3050fb3b383bbeecdb8dca147b0e228"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "bac7166a0712fb0cd678a7a915ca3ba325596e266275ec6d2e1cd47256ac9b09": {
+      "signature": "bac7166a0712fb0cd678a7a915ca3ba325596e266275ec6d2e1cd47256ac9b09",
+      "alternativeSignatures": [
+        "12be0af4fe9a90d790ed26f6395be1320e2a8f51c5ed44712775ce0f75ed3db5",
+        "d37f9af85bac99aca7d250e20eafaf64b95554e24d7ac85cdb939c4d6cf38e90",
+        "eaa2c84cba82437a8201aedabd4c8c630547f0058571871418253c206bc8cd9f"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "684b02531aa4a50cfc6a01e1076f28976065ef6354734437ded725e4daf219c4": {
+      "signature": "684b02531aa4a50cfc6a01e1076f28976065ef6354734437ded725e4daf219c4",
+      "alternativeSignatures": [
+        "a6f17e53fffc660b9764b36364ea5fe67fd549d4dc6ea113be6ab59962c4c0bd",
+        "d3f7b6fa87d3b3c08f2def32173b75682eb867ae4d2d5000f801d0046ce69307",
+        "08e5caaed2495f9496825e1d42b40200641d847aa3279af04ddb22fbd91e2bb9"
+      ],
+      "target": "out/release-x64/VegaFailoverCorrectness/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "04596ae9c3b9acf1dc266605a2f38a403cc789f7493f5f0c63d6cf74e6404481": {
+      "signature": "04596ae9c3b9acf1dc266605a2f38a403cc789f7493f5f0c63d6cf74e6404481",
+      "alternativeSignatures": [
+        "539d7a71b9706f20e1a13eabe50fd664469360bc45ef2733cbc1cb06afd97952",
+        "431605bb30b1cb645d4ee8c245269d860ed76310075e528dad0751dceeb950f9",
+        "5aa66553839b97d053bb3a476933f773e83ac22b19a50d60e965aa81107a3ecd"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "fe9c226dc78e6c44f86c6fc1f97fdfe1682c3271b8ef00691d0e756ab65c7960": {
+      "signature": "fe9c226dc78e6c44f86c6fc1f97fdfe1682c3271b8ef00691d0e756ab65c7960",
+      "alternativeSignatures": [
+        "9622c3e8c107849a6896a995202eaa863633511fe5e5e635b604426b45433f08",
+        "7b145cdf9c1d0ed28e4e391e64bc7d73cfcf7e3a7980aad47cdc6cf6ed6fc35a",
+        "7432d8a0cca192d9c5e0ed0e9ee1482be336144f6e27dc15a51a5910748b9784"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "7a6ce115a444fbd69e5314c4ba06fcd08ffa63be5e0c279f41bb459ec5b9374f": {
+      "signature": "7a6ce115a444fbd69e5314c4ba06fcd08ffa63be5e0c279f41bb459ec5b9374f",
+      "alternativeSignatures": [
+        "06fe4ff4d35203a19d40cb0322f13fdc34f389a705a5b8c67c683b2a68fc983a",
+        "b3b2197179622a10d523a6151f0b9ea04ed1638ad6ae63c5e0fd55bdf98bf6dc",
+        "e5e2314117516f00c9f44a25d1b1b40ece8cd0d4974d1c4c009f368ba59bcbbf"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "43f3aacda201f1983fe04f4cf1a022970098e239c13aceed73775c8a63ec31c6": {
+      "signature": "43f3aacda201f1983fe04f4cf1a022970098e239c13aceed73775c8a63ec31c6",
+      "alternativeSignatures": [
+        "6f9760ad2db99d4be82de72dade863ca676e2a0a5e5bb12be64175f2075c41af",
+        "947960a9a0edca8ea2003fe7098aed426d55477403a6cebc0d9bf528f9cda8f8",
+        "54bc9c82638523baf35d2eab8f2a9b7da983753454866eaaf8820e1ce41fded0"
+      ],
+      "target": "out/release-x64/VegaInMemoryPerf/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c8277a4d30cb31484534f13a2ef951fb060262db7ad48da2c356538806ce24c3": {
+      "signature": "c8277a4d30cb31484534f13a2ef951fb060262db7ad48da2c356538806ce24c3",
+      "alternativeSignatures": [
+        "98bbd2e1edd254251588f7d0411f3383333cffe6c3c3df45bacb7e0660c5f9a3",
+        "b668dc335bf467f5e2962465c3e90b50418689855946b6fbccaaa79c962f5f7a",
+        "84f8539f1f35a4ab5d9d3ed09faf6d66e99923f09d74fae906b1b68623233094"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "4290be98eecb7f722d9b57902810adff747cd182dfd60d75de1c24af20f4f65e": {
+      "signature": "4290be98eecb7f722d9b57902810adff747cd182dfd60d75de1c24af20f4f65e",
+      "alternativeSignatures": [
+        "7c645af9a64638cbe17f924700906511985b7538774003b715f4a2986fee1a9f",
+        "b5ae917d73b8dc970b6a746d7ccce38e1724714a051ca04114d32c341715e432",
+        "3ce8371a5e06babc48a1de6258b4d2467e2e2e15f98b9c472c69ef646aac8ff2"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "b4509fde5b76163356f0e9704615bf9b2463347359b4d7a47869f2c7370aeae4": {
+      "signature": "b4509fde5b76163356f0e9704615bf9b2463347359b4d7a47869f2c7370aeae4",
+      "alternativeSignatures": [
+        "467b399b21ecf95dd5f7d1b6b823687580cdb7f045e1957f0a61964758e56c1c",
+        "217708139754bb657dce2999ec9632e2f9dbbaa005571dec4d0e31d8f722c7b2",
+        "116dd47f01bc9bbb9c49d79d1db9c282fa027a58eee07df8de3ece0610d24ab1"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "ee9055bd34ee49e8c83a6faff8fa039b4ff9cc38c06c5ad583451bead8eb039e": {
+      "signature": "ee9055bd34ee49e8c83a6faff8fa039b4ff9cc38c06c5ad583451bead8eb039e",
+      "alternativeSignatures": [
+        "f9f89a4c80d5e37b610304925ba2c23ddb1882c9bf442777920b391e8e871d2e",
+        "4b30095104c4081c5661a860c2a200bab1b9588b5adcc42b8f4cd9308bd56790",
+        "a6529cec7a2fa1e34e77cfea0b8dace4f5fdfc79c3134655d619992ed0b92e7c"
+      ],
+      "target": "out/release-x64/VegaServiceFabricPerf/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "41cefdf452dfa889aab319f64eea7e9c8e41d710fd8550a0624c1ac3ff77e53d": {
+      "signature": "41cefdf452dfa889aab319f64eea7e9c8e41d710fd8550a0624c1ac3ff77e53d",
+      "alternativeSignatures": [
+        "f150345d70816c9f9ac180c29795f9c0f35126051f025a1aafe23ff28cb3f6be",
+        "92e282891c4180d7ceede375ec78e49f80a90d296cc5f0a34989d8afc1805455",
+        "08f0dc53d118be06419707c0d4b8a5fa69c48e7ee359ebe06a59fcab925adf0d"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "2328f7a1b8125d859bf10c82ab17a1370f3a89df625d4c2b3f3a5d8fa0a5a3cd": {
+      "signature": "2328f7a1b8125d859bf10c82ab17a1370f3a89df625d4c2b3f3a5d8fa0a5a3cd",
+      "alternativeSignatures": [
+        "f1474df4ca70b54fe242ef2aea00c828c66e6073d3d76e650b8511f97d07ffcf",
+        "0c2c51589cfb43c8f055cd714429d99f42043bd803adcea7c65b91bfdebae486",
+        "7b4020121e2212046851f74d55965a3588e4a93e73ccd76bf2973471422a3ccd"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "006cd6b6d528e218edc914a452e25144a6f1b87adaa1e476c482d77a4961e780": {
+      "signature": "006cd6b6d528e218edc914a452e25144a6f1b87adaa1e476c482d77a4961e780",
+      "alternativeSignatures": [
+        "ead5f4c031356a9a34a5db1381581f3fb226e8c07b987ac0aedd6182402e3983",
+        "16c9ba898da5562f92baaf756cbeed1dc4f5dd195936000a8c0fc1421c13de81",
+        "8792341b71f79b49ef783525f9dd2311913590519653251840d0156a3c168928"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "fd2d55760243bd927c296706449cf74e655824d0860c9bd79b86fa2603fb3b1b": {
+      "signature": "fd2d55760243bd927c296706449cf74e655824d0860c9bd79b86fa2603fb3b1b",
+      "alternativeSignatures": [
+        "2ba4cc97f1ece0ccd6746dff1e57b4b54b8c39bf8ea0ac038155d8835b0bd81b",
+        "a73cffafdfd8a9808d5dce35047a7bd7b400125ee67c203f876844b646a4b0d3",
+        "1de8936ed528405e56d46699eb304e0049dcbb029f02a0d80bd526e5fe9a2979"
+      ],
+      "target": "out/release-x64/VegaUpgradeTest/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c7226615e3141e425f165ce89a58acf1e50208d6ed58f3c57fddca434cebc272": {
+      "signature": "c7226615e3141e425f165ce89a58acf1e50208d6ed58f3c57fddca434cebc272",
+      "alternativeSignatures": [
+        "c0dda2e61ce0460f128a09b053558feb1f684edd5d0ba73a75956ba1d664120e",
+        "9be35d1205469f3e01dec29689f01677c898c9502b2516a129a50f2b570b208b",
+        "88f2f6beb4aad73db0e47c7afc58f95cd34398b18b11a11d3687728c7028c881"
+      ],
+      "target": "out/release-x64/MicroBenchmarks/runtimes/win-arm64/native/capstone.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "c3669997ae01944ff17df1baccd847f563aadec9952f498c7d8165332aceb32e": {
+      "signature": "c3669997ae01944ff17df1baccd847f563aadec9952f498c7d8165332aceb32e",
+      "alternativeSignatures": [
+        "741f7a236c3a687a81e36d3a093d9dc22f775a438a8e11a43c6748c5bddfe300",
+        "5961837502d12d41633a625abd5259ede6583c3965304b14f6bf16820d1fc47d",
+        "b848c04e08f515b240798089b697cbfe35258814ba98fefed380a2e188a9fda7"
+      ],
+      "target": "out/release-x64/MicroBenchmarks/runtimes/win-x64/native/capstone.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "1803d3364f5e95066a61a19f7fc961115f8450d27debb18633b8a49456e50384": {
+      "signature": "1803d3364f5e95066a61a19f7fc961115f8450d27debb18633b8a49456e50384",
+      "alternativeSignatures": [
+        "27a7a5fff31f85e45efc6d6887bd687397f1c63faa5c56094646f3d735820b57",
+        "2f8e97a798be59da5dda572532e8a539bb05167acb0bf89e1373707ff76ca4a0",
+        "d76e43b716396e8bbc89c1ea8a38728982aa1cb2e7c2de752ddcd6c0fb2ceb0f"
+      ],
+      "target": "out/release-x64/MicroBenchmarks/runtimes/win-x86/native/capstone.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "2bf4a21b09b307f6ca3ff9c4437925f01be8060db66e90435bb4a30d66c4ff60": {
+      "signature": "2bf4a21b09b307f6ca3ff9c4437925f01be8060db66e90435bb4a30d66c4ff60",
+      "alternativeSignatures": [
+        "4e9552853bf73b4c709cd2546fe8b8f4dbcb9cf2d1da58d1eedb6fffc7cefd7d",
+        "77a5be44c96c0b1d547983dbb3570352ea888a8c3f28641e565c0086e9b0eefd",
+        "ced1c475a2b39e55f64a27035e249af6a9255a9f37dd7183b358208456bd95e4"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/amd64/CodeCoverage.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "cb75f9132468d14b64c9f919a8c55c7c62ab0f49d823dea730b7b251b3bedef4": {
+      "signature": "cb75f9132468d14b64c9f919a8c55c7c62ab0f49d823dea730b7b251b3bedef4",
+      "alternativeSignatures": [
+        "ec47d157ad75b9db44ff1d2bdad3931c97f35f661afd9b38dc32469c74f59775",
+        "c60ed169538d13a0b5a39a117eb264b6c880a99a11520ea5341b062126cb4ed2",
+        "d459f948bcbb45a8b20fd54fad483f4b814218b90877115902508dbfc1acf20a"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/amd64/covrun64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "ca0494c160ba986729aedca72ed156f5a1e40728a1cf4e3fe8be9632dfa791e5": {
+      "signature": "ca0494c160ba986729aedca72ed156f5a1e40728a1cf4e3fe8be9632dfa791e5",
+      "alternativeSignatures": [
+        "a6c364db1b967aeddc227deca2955001073ce343741ff1f5d5a0a62b9d488e3d",
+        "c9070328696925b42aaca6c5424d239151ebe70609a80b41505b983af3c6c067",
+        "7653b21a5bb3ffb2fa01d23f0c85082d0bed77a0dfc75b680d5b3993ac7787a1"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/amd64/msdia140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "e3e20bb49187fd07123285c2d65679b3a57f5b211587877c69063173b1665ead": {
+      "signature": "e3e20bb49187fd07123285c2d65679b3a57f5b211587877c69063173b1665ead",
+      "alternativeSignatures": [
+        "9af93f7c1a43dc423776c4650cad60969ef4d8df5aa240b1cd65c25f2b13bc22",
+        "8deb64bdd851d73e8ae7cbc6db5016add8ff6e40e3d22ed526e59ec6d0659ddd",
+        "0907efef406bd33a9dad7cc725e86d355649ad7fed15b2945d9ef830418b01e2"
+      ],
+      "target": "out/release-x64/MiscellaneousTests/publish/CodeCoverage/amd64/msvcdis140.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "10ffe447aea75a862bb3d009e0f7c1722a14416eae7236071ea1bf9a7cf950b1": {
+      "signature": "10ffe447aea75a862bb3d009e0f7c1722a14416eae7236071ea1bf9a7cf950b1",
+      "alternativeSignatures": [
+        "7502345cdecb9f1cda2b5ce472a03fbb5b1ef41292557326c00f91c7fe818a41",
+        "c3677784456a56c4bf2ce83282559c847cee02e9cc669c111455c56de3b1ec6f",
+        "97199d851ffc0742f76ff9c0e2d6aef0b0a05f4c6299c855280e14f1f90239e9"
+      ],
+      "target": "out/release-x64/VegaDistributedTestClient/runtimes/win-x64/native/grpc_csharp_ext.x64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "aed1d3f36e3dfdd1bb5cad74356828ab033172a2e95e161dd324eef5d63c4065": {
+      "signature": "aed1d3f36e3dfdd1bb5cad74356828ab033172a2e95e161dd324eef5d63c4065",
+      "alternativeSignatures": [
+        "ab1dbcbabd16c469f77c90a315f22e3a29eaf19642ce807d07d7b536b1394037",
+        "cb484a5ce8e2fe8f4eebee96aa2bd69ca11811f5c55f64e8e2a0be9e1d090de2",
+        "62f28dd8f518494c540b37f0a2fa1653e629a0ebaeb48578174c5ab88f71abfa"
+      ],
+      "target": "out/release-x64/VegaDistributedTestClient/runtimes/win-x86/native/grpc_csharp_ext.x86.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "e50ca08b526e965c540f0c4c9e176a7730b286e5c9c7c2be3fcbcd43978966de": {
+      "signature": "e50ca08b526e965c540f0c4c9e176a7730b286e5c9c7c2be3fcbcd43978966de",
+      "alternativeSignatures": [
+        "f4fbb46629ecb4a8db881c714ecc6787810e934c821635bf3f08134962f4ab99",
+        "8f1f9ef48df4a46552ef92dcf06947b4d26c47b6ec5d481d665f340eb271ad16",
+        "2a97f9013306f344c8004059c3b13449928f3df1057b00d8f3c945255a42ec32"
+      ],
+      "target": "out/release-x64/VegaDistributedTestService/runtimes/win-x64/native/grpc_csharp_ext.x64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "ed954da81c18779e0a5c1d113693cbe62c59f766ee4cfb54634f93d6a9d77c43": {
+      "signature": "ed954da81c18779e0a5c1d113693cbe62c59f766ee4cfb54634f93d6a9d77c43",
+      "alternativeSignatures": [
+        "9730e259911b14891ce5ac232e29cfbbaf85019edff5157db9ac72eb1ebe80cb",
+        "eba1d9186da8d4e55714f168389ed2b5a6122ca6a72e82fbceb34a1a673a8c21",
+        "e0dea855ecbdd88a5b7df4c2a44c1ad6454dee111f32d92c51daf607126b913a"
+      ],
+      "target": "out/release-x64/VegaDistributedTestService/runtimes/win-x86/native/grpc_csharp_ext.x86.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "f8330b9c669ba4e820cc7319796f6a3a5e59eb34b4ea36b85aede5bd5b1b6cd5": {
+      "signature": "f8330b9c669ba4e820cc7319796f6a3a5e59eb34b4ea36b85aede5bd5b1b6cd5",
+      "alternativeSignatures": [
+        "fdc147bfc8b931ed6ec81c8a35ddebd5488e6ae90229b6918223094333ec62d8",
+        "8f319cd17ba5709eccde1224035b44f673c58c997d374280340d3ea15c9ec9f4",
+        "edbeb9fc8c97c9066014155b4b2c7993af87d41e8440eb94fbfb58f6864d9605"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/Extensions/AzureSecurityPack/7zr.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "db429b580a33f9c2371f81ae8b18ec1a8877c5b1fc58d20742233831118aaceb": {
+      "signature": "db429b580a33f9c2371f81ae8b18ec1a8877c5b1fc58d20742233831118aaceb",
+      "alternativeSignatures": [
+        "9484a14bf348e0274f7cd45ea853b01a5b645831daf9f2e55623d0f3bd4e2723",
+        "5291ec72bdecb0e075bc65cf8d2c2c8aafd29a0b92228dd63d105ac35dfa1d46",
+        "2847b77ce028f9badc6747d3d9e029ddfcd01c361e3f018c4154ea73d9a04a96"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/Extensions/AzureSecurityPack/WDATPLauncher.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "14449aea1c8e47717a05bfff35e68b79cc7a61e597e93c8429e3c28aa45e3638": {
+      "signature": "14449aea1c8e47717a05bfff35e68b79cc7a61e597e93c8429e3c28aa45e3638",
+      "alternativeSignatures": [
+        "651c138785ce4683d804b0fda901656a6cc360c9a872c635bd069c52a0c57040",
+        "ba85d0bf645a09ee23ca23bfb6a15c79f85bb5fe41e614cad289df741f63e61c",
+        "4c803464fd07392d030cde089f84cd67c5b6add2f82000205ce510378b2a762d"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/Extensions/DependencyAgentExtension/InstallDependencyAgent-Windows.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "15db9988fccd1977d5cc1d0c8d39fd5455f82ede49673ea76819beaf8fca8e08": {
+      "signature": "15db9988fccd1977d5cc1d0c8d39fd5455f82ede49673ea76819beaf8fca8e08",
+      "alternativeSignatures": [
+        "10ae6f8890d3b07d5ebe8a5173bdea2fddd403419f8c197992924ae0ea953ecc",
+        "017f7b7773d46bda013a013dd98bc87ddafa25308ea5ceeac38ad2245e694a12",
+        "4395ceb7af47f931098386a01a632a642d5fe69b57ade244dc1d7c849217b20f"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/Extensions/HealthExtension/cpprest140_2_9.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "b9b45c3db900c63c63d455d1ae9cabcec22f905a9c722c994e320e55127969f0": {
+      "signature": "b9b45c3db900c63c63d455d1ae9cabcec22f905a9c722c994e320e55127969f0",
+      "alternativeSignatures": [
+        "1e6d9cd7c6ff567cf43faeb581a7be0a168ea9c9dc02a73f4bb133ebe423240b",
+        "eab6df857ab761ff96c4e63e8128cbfcd057797f7e537e3aef8a714916acce60",
+        "7097d3ef3b20c9d8a7212ca0e6ff23b879efa1228ea6cc95a425f59685b0d24d"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/Extensions/MetricsExtension/cpprest141_2_10.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "7b64967f8e3443890736ab4c680b611dc368e6ce2d884391a11ed0507669dd15": {
+      "signature": "7b64967f8e3443890736ab4c680b611dc368e6ce2d884391a11ed0507669dd15",
+      "alternativeSignatures": [
+        "5736148b0c9279be55539a630b5ad68c62cc1a7a5d8d7c54bc794d2c69c3c6e9",
+        "448324554e9529f8200bd4d7d06a0ec6f49a805b1a68cd2c93dfb81cea09c253",
+        "7c4bdaa57d5504a6a1976c21578c38c97e543100f87fb0995123b476efa64c66"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/procdump/x64/procdump64.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "2ce16a936b8618e9b0eae2aa2390910cf26f7fa8a83ff61ffec7914284664389": {
+      "signature": "2ce16a936b8618e9b0eae2aa2390910cf26f7fa8a83ff61ffec7914284664389",
+      "alternativeSignatures": [
+        "a7fa25bb1fbd3fb1f8c733d4824ac03a32fca22bbe5d556831d3953b1f9f73a9",
+        "4feb18938a76c134592a820b1726017e1109fed8e30bbdd4b7db2e203b3cc231",
+        "f985732b689e2400f66ff170384dfd3d43924e405d3c2bef43512199ef87b294"
+      ],
+      "target": "out/release-x64/MdsAgentApplication/MdsAgentServicePackage/MdsAgent.Data/procdump/x86/procdump.exe",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "255a56f3667793db6187237e09f584207c77567a35cd30eaa0da868fe258e16f": {
+      "signature": "255a56f3667793db6187237e09f584207c77567a35cd30eaa0da868fe258e16f",
+      "alternativeSignatures": [
+        "cb745af3c4c770a45a592a9bb3ce1e15f5cb35922bad9908875382d02f1b1b69",
+        "7675d4935391f7a91a173727e86e554558c69746f733cabb458c2c928739b8b1",
+        "4c976f944f1a13399f5d94b63d12065cff05789623bc83493897e6f612747615"
+      ],
+      "target": "out/release-x64/VegaDistributedTestApplication-Pkg/VegaDistributedTestApplication/VegaDistTestSvc/Code/runtimes/win-x64/native/grpc_csharp_ext.x64.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    },
+    "10e0d71d332e54bdc217a26436b3379bec28704d2f786878acd89f4c459fb049": {
+      "signature": "10e0d71d332e54bdc217a26436b3379bec28704d2f786878acd89f4c459fb049",
+      "alternativeSignatures": [
+        "21dde153b114e66460d029b92aa98921ba79fa34812a94017dd595225abb093b",
+        "33ad4f30f8b7cde6eaa71edc8f3b862165781a1fac83a99c0d145bd356e5a1d0",
+        "6af814e41f0886a419e752e7fdc08f42434cd54175899ec3ecc72b33a5bb06aa"
+      ],
+      "target": "out/release-x64/VegaDistributedTestApplication-Pkg/VegaDistributedTestApplication/VegaDistTestSvc/Code/runtimes/win-x86/native/grpc_csharp_ext.x86.dll",
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2026-05-20 18:58:23Z",
+      "expirationDate": "2026-11-06 19:59:00Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-05-20 19:59:00Z"
+    }
+  }
+}

@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 {
     using System;
     using System.Collections.Generic;
+    using System.Configuration;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Fabric;
@@ -41,19 +42,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     /// </summary>
     public sealed class RingMasterService : StatefulService, IDisposable
     {
-        private static IConfiguration appSettings;
-
         private readonly CancellationTokenSource cancellationSource = new CancellationTokenSource();
         private readonly IZooKeeperServerInstrumentation zooKeeperServerInstrumentation;
         private readonly IRingMasterServerInstrumentation ringMasterServerInstrumentation;
         private readonly AbstractPersistedDataFactory factory;
         private readonly RingMasterBackendCore backend;
         private readonly IRingMasterRequestExecutor executor;
+        private readonly TimeSpan maxConnectionIdleTime;
+        private readonly TimeSpan maxConnectionLifespan;
+        private readonly int maxAllowedConnections;
+        private readonly TimeSpan acceptConnectionTimeout;
 
         private RingMasterServer ringMasterServer;
 
-        private ushort port = 98;
-        private ushort zkprPort = 100;
+        // Based on https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-reliable-services-lifecycle, the Stateful service startup will first call OnOpenAsync,
+        // then call CreateServiceReplicaListeners() and StatefulServiceBase.RunAsync() in parallel. So we clear the tcpListenerStoppedOnException in OnOpenAsync, and set it
+        // when Transport raise the Stop due to exception. And in the RunAsync, we monitor this exception and finish RunAsync with the exception if any.
+        private Exception tcpListenerStoppedOnException = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RingMasterService"/> class.
@@ -64,11 +69,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         public RingMasterService(StatefulServiceContext context, IMetricsFactory ringMasterMetricsFactory, IMetricsFactory persistenceMetricsFactory)
             : base(context, PersistedDataFactory.CreateStateManager(context))
         {
-            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
-            appSettings = builder.Build();
-
-            RingMasterBackendCore.GetSettingFunction = GetSetting;
+            RingMasterBackendCore.GetSettingFunction = this.GetSetting;
             string factoryName = $"{this.Context.ServiceTypeName}-{this.Context.ReplicaId}-{this.Context.NodeContext.NodeName}";
             this.zooKeeperServerInstrumentation = new ZooKeeperServerInstrumentation(ringMasterMetricsFactory);
             this.ringMasterServerInstrumentation = new RingMasterServerInstrumentation(ringMasterMetricsFactory);
@@ -78,15 +79,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
             RingMasterBackendCoreInstrumentation.Instance = ringMasterInstrumentation;
 
-            bool needFixStatDuringLoad = bool.TryParse(GetSetting("WinFabPersistence.FixStatDuringLoad"), out needFixStatDuringLoad) && needFixStatDuringLoad;
+            bool needFixStatDuringLoad = bool.TryParse(this.GetSetting("WinFabPersistence.FixStatDuringLoad"), out needFixStatDuringLoad) && needFixStatDuringLoad;
+            bool enableHotSecondary = bool.TryParse(this.GetSetting("WinFabPersistence.HotSecondary"), out enableHotSecondary) && enableHotSecondary;
+            bool ignoreErrorsDuringLoad = bool.TryParse(this.GetSetting("WinFabPersistence.IgnoreErrorsDuringLoad"), out ignoreErrorsDuringLoad) && ignoreErrorsDuringLoad;
+            TimeSpan.TryParse(this.GetSetting("RingMaster.Transport.ClientConnection.MaxConnectionIdleTime"), out this.maxConnectionIdleTime);
+            TimeSpan.TryParse(this.GetSetting("RingMaster.Transport.ClientConnection.MaxConnectionLifespan"), out this.maxConnectionLifespan);
+
+            uint timeoutSeconds;
+            if (!uint.TryParse(this.GetSetting("RingMaster.Transport.Server.AcceptConnectionTimeoutSeconds"), out timeoutSeconds))
+            {
+                timeoutSeconds = 5;
+            }
+
+            this.acceptConnectionTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+            if (!int.TryParse(this.GetSetting("RingMaster.Transport.Server.MaxAllowedConnections"), out this.maxAllowedConnections))
+            {
+                this.maxAllowedConnections = 1000;
+            }
+            else
+            {
+                Trace.TraceInformation($"Accepted MaxAllowedConnections setting override: {this.maxAllowedConnections}");
+            }
+
             var persistenceConfiguration = new PersistedDataFactory.Configuration
             {
-                EnableActiveSecondary = true,
+                EnableActiveSecondary = enableHotSecondary,
                 FixStatDuringLoad = needFixStatDuringLoad,
+                IgnoreErrorsDuringLoad = ignoreErrorsDuringLoad,
             };
 
             bool useInMemoryPersistence;
-            if (bool.TryParse(GetSetting("InMemoryPersistence"), out useInMemoryPersistence) && useInMemoryPersistence)
+            if (bool.TryParse(this.GetSetting("InMemoryPersistence"), out useInMemoryPersistence) && useInMemoryPersistence)
             {
                 this.factory = new InMemoryFactory();
             }
@@ -129,12 +152,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             {
                 RingMasterServiceEventSource.Log.RunAsync();
 
-                // Use this to pass the exception, it will not run to completion.
-                var tcs = new TaskCompletionSource<bool>();
+                var tcs = new TaskCompletionSource<Exception>();
 
                 this.backend.OnBackendRestartFailure = (o) =>
                 {
-                    tcs.TrySetException(new FabricException("Backend failed to timely restart on primary status lost"));
+                    tcs.SetResult(new FabricException("Backend failed to timely restart on primary status lost"));
                 };
 
                 this.factory.OnFatalError = (msg, ex) =>
@@ -142,18 +164,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                     // Unable to commit transaction, let exception propagate to RunAsync so the replica can be restarted
                     if (ex is FabricTransientException)
                     {
-                        tcs.TrySetException(new FabricTransientException(msg, ex));
+                        tcs.TrySetResult(new FabricTransientException(msg, ex));
                     }
                     else
                     {
-                        tcs.TrySetException(new FabricException(msg, ex));
+                        tcs.TrySetResult(new FabricException(msg, ex));
                     }
                 };
 
                 // Start the backend core at the background. If LoadTree gets stuck due to service fabric replicator
                 // issue, the below while loop will handle the failure properly.
-                var unused = Task.Run(() => this.backend.Start(cancellationToken));
-                this.backend.OnBecomePrimary();
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    this.backend.Start(cancellationToken);
+                    this.backend.OnBecomePrimary();
+                });
 
                 Assembly assembly = Assembly.GetExecutingAssembly();
                 FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
@@ -181,9 +206,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                         Task.Delay(TimeSpan.FromSeconds(30), cancellationToken),
                         tcs.Task);
 
-                    if (tcs.Task.IsFaulted)
+                    if (tcs.Task.IsCompleted)
                     {
-                        throw tcs.Task.Exception;
+                        throw tcs.Task.Result;
+                    }
+
+                    var transportException = this.tcpListenerStoppedOnException;
+                    if (transportException != null)
+                    {
+                        this.tcpListenerStoppedOnException = null;
+                        throw transportException;
                     }
                 }
             }
@@ -218,6 +250,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// <inheritdoc />
         protected override Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
         {
+            this.tcpListenerStoppedOnException = null;
+
             return base.OnOpenAsync(openMode, cancellationToken);
         }
 
@@ -254,37 +288,76 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             return Task.FromResult(true);
         }
 
-        /// <summary>
-        /// Converts a hostname into ip-address
-        /// </summary>
-        /// <param name="host">hostname that needs to be converted</param>
-        /// <returns>an ip-address in s tring format</returns>
-        private static string GetHostIp(string host)
+        private System.Fabric.Description.ConfigurationSection GetConfigurationSection(ICodePackageActivationContext context, string sectionName, string configurationPackageName = "Config")
         {
-            IPAddress ip;
-            if (IPAddress.TryParse(host, out ip))
+            if (context == null)
             {
-                return ip.ToString();
+                return null;
             }
 
-            IPAddress[] ips = Dns.GetHostAddresses(host);
-            foreach (IPAddress ipAddress in ips)
+            ConfigurationPackage package = context.GetConfigurationPackageObject(configurationPackageName);
+            if (package == null)
             {
-                if (ipAddress.AddressFamily != AddressFamily.InterNetwork)
-                {
-                    continue;
-                }
-
-                ip = ipAddress;
-                return ip.ToString();
+                return null;
             }
 
-            return null;
+            var configSettings = package.Settings.Sections;
+            return configSettings.Contains(sectionName) ? configSettings[sectionName] : null;
         }
 
-        private static string GetSetting(string settingName)
+        private string GetSetting(string settingName)
         {
-            string returnedValue = appSettings[settingName];
+            return this.GetSetting(settingName, true);
+        }
+
+        private string GetSetting(string settingName, bool allowAppConfig)
+        {
+            try
+            {
+                if (settingName != "AppConfigOverrides")
+                {
+                    string overrides = this.GetSetting("AppConfigOverrides", false);
+
+                    if (overrides != null)
+                    {
+                        foreach (string entry in overrides.Split(';'))
+                        {
+                            string[] pieces = entry.Split('=');
+                            if (pieces.Length == 2 && string.Equals(pieces[0], settingName))
+                            {
+                                return pieces[1];
+                            }
+                        }
+                    }
+                }
+
+                var section = this.GetConfigurationSection(this.Context.CodePackageActivationContext, "RingMasterService");
+
+                if (section != null)
+                {
+                    string val = section.Parameters[settingName].Value;
+
+                    if (!string.IsNullOrEmpty(val))
+                    {
+                        return val;
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            if (!allowAppConfig)
+            {
+                return null;
+            }
+
+            // Fallback: use appSettings.json:
+            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            IConfiguration appSettings = builder.Build();
+            var returnedValue = appSettings[settingName];
             RingMasterServiceEventSource.Log.RingMaster_GetSetting(settingName, returnedValue);
             return returnedValue;
         }
@@ -297,23 +370,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             Justification = "TCP listener will be disposed when the service is stopped")]
         private ICommunicationListener CreateListener(StatefulServiceContext context)
         {
-            // Partition replica's URL is the node's IP, port, PartitionId, ReplicaId, Guid
-            var protocol = EndpointProtocol.Tcp;
-
-            try
-            {
-                var internalEndpoint = context.CodePackageActivationContext.GetEndpoint("ServiceEndpoint");
-                this.port = Convert.ToUInt16(internalEndpoint.Port);
-
-                protocol = internalEndpoint.Protocol;
-
-                RingMasterServiceEventSource.Log.CreateListener("RingMasterProtocol", this.port, 0);
-            }
-            catch (Exception ex)
-            {
-                RingMasterServiceEventSource.Log.CreateListener_GetEndpointFailed($"Failed to get ServiceEndpoint for RingMasterProtocol: {ex}");
-                throw;
-            }
+            var endpoint = context.CodePackageActivationContext.GetEndpoint("ServiceEndpoint");
 
             var communicationProtocol = new RingMasterCommunicationProtocol();
             this.ringMasterServer = new RingMasterServer(
@@ -321,22 +378,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                 this.ringMasterServerInstrumentation,
                 CancellationToken.None);
 
-            string nodeIp = context.NodeContext.IPAddressOrFQDN;
-
-            if (nodeIp.Equals("LocalHost", StringComparison.OrdinalIgnoreCase))
-            {
-                nodeIp = GetHostIp(Dns.GetHostName());
-            }
-
-            string uri = $"{protocol}://{nodeIp}:{this.port}/";
-            return new TcpCommunicationListener(
+            var listener = new TcpCommunicationListener(
                 this.ringMasterServer,
-                this.port,
-                uri,
                 this.backend,
                 this.ringMasterServerInstrumentation,
+                this.backend.ServerInstrumentation,
                 communicationProtocol,
-                RingMasterCommunicationProtocol.MaximumSupportedVersion);
+                context,
+                this.maxConnectionIdleTime,
+                this.maxConnectionLifespan,
+                this.maxAllowedConnections,
+                this.acceptConnectionTimeout,
+                RingMasterCommunicationProtocol.MaximumSupportedVersion)
+                {
+                    Port = endpoint.Port,
+                };
+
+            this.tcpListenerStoppedOnException = null;
+            listener.OnListenerStopped += (ex) =>
+            {
+                this.tcpListenerStoppedOnException = ex;
+            };
+
+            return listener;
         }
 
         [SuppressMessage(
@@ -347,42 +411,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             Justification = "ZK TCP listener will be disposed when the service is stopped")]
         private ICommunicationListener CreateZkprListener(StatefulServiceContext context)
         {
-            // Partition replica's URL is the node's IP, port, PartitionId, ReplicaId, Guid
-            EndpointResourceDescription internalEndpoint = null;
-            EndpointProtocol protocol = EndpointProtocol.Tcp;
+            var endpoint = context.CodePackageActivationContext.GetEndpoint("ZkprServiceEndpoint");
 
-            try
-            {
-                internalEndpoint = context.CodePackageActivationContext.GetEndpoint("ZkprServiceEndpoint");
-                this.zkprPort = Convert.ToUInt16(internalEndpoint.Port);
-
-                protocol = internalEndpoint.Protocol;
-
-                RingMasterServiceEventSource.Log.CreateListener("ZookeeperProtocol", this.zkprPort, ushort.MaxValue);
-            }
-            catch (Exception ex)
-            {
-                RingMasterServiceEventSource.Log.CreateListener_GetEndpointFailed(string.Format("Listener:{0}, Exception:{1}", "ZookeeperProtocol", ex.ToString()));
-                throw;
-            }
-
-            string uri = $"{protocol}://+:{this.zkprPort}/";
-
-            string nodeIp = context.NodeContext.IPAddressOrFQDN;
-
-            if (nodeIp.Equals("LocalHost", StringComparison.InvariantCultureIgnoreCase))
-            {
-                nodeIp = GetHostIp(Dns.GetHostName());
-            }
-
-            uri = uri.Replace("+", nodeIp);
             return new ZooKeeperTcpListener(
-                this.zkprPort,
-                uri,
                 this.executor,
                 this.zooKeeperServerInstrumentation,
                 new ZkprCommunicationProtocol(),
-                ZkprCommunicationProtocol.MaximumSupportedVersion);
+                context,
+                ZkprCommunicationProtocol.MaximumSupportedVersion)
+                {
+                    Port = endpoint.Port,
+                };
         }
     }
 }

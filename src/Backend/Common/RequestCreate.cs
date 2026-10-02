@@ -18,17 +18,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private readonly StringCallbackDelegate callback;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestCreate"/> class.
+        /// Initializes a new instance of the <see cref="RequestCreate" /> class.
         /// </summary>
         /// <param name="path">Path to the node</param>
         /// <param name="context">Context associated with the invocation</param>
         /// <param name="data">Data that will be associated with the newly created node</param>
-        /// <param name="acl">List of <see cref="Acl"/>s that will be associated wiht the newly created node</param>
+        /// <param name="acl">List of <see cref="Acl" />s that will be associated wiht the newly created node</param>
         /// <param name="createMode">Specifies how the node must be created</param>
         /// <param name="callback">Callback that must be invoked when the request is completed</param>
         /// <param name="uid">Optional unique id to assign to the request</param>
-        public RequestCreate(string path, object context, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, StringCallbackDelegate callback, ulong uid = 0)
-            : this(new RequestDefinitions.RequestCreate(path, data, acl, createMode, MakeUid(uid)), context, callback)
+        /// <param name="userMetadata">The user metadata.</param>
+        public RequestCreate(string path, object context, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, StringCallbackDelegate callback, ulong uid = 0, byte[] userMetadata = null)
+            : this(new RequestDefinitions.RequestCreate(path, data, acl, createMode, MakeUid(uid), userMetadata: userMetadata), context, callback)
         {
         }
 
@@ -57,6 +58,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             set
             {
                 this.Request.Data = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata
+        {
+            get
+            {
+                return this.Request.UserMetadata;
+            }
+
+            set
+            {
+                this.Request.UserMetadata = value;
             }
         }
 

@@ -5,6 +5,7 @@
 namespace Microsoft.Vega.DistributedTest
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Fabric;
@@ -15,10 +16,11 @@ namespace Microsoft.Vega.DistributedTest
     using System.Threading;
     using System.Threading.Tasks;
 
-    using DistTestCommonProto;
     using Grpc.Core;
+
     using Microsoft.Extensions.Configuration;
     using Microsoft.Vega.DistributedJobControllerProto;
+    using Microsoft.Vega.DistTestCommonProto;
     using Microsoft.Vega.Test.Helpers;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -41,7 +43,7 @@ namespace Microsoft.Vega.DistributedTest
         /// <summary>
         /// Parameters passed by TAEF in the form of "TE.exe VegaDistributedTestClient /p:Key=Value"
         /// </summary>
-        private static IDictionary<string, object> testProperties;
+        private static IDictionary testProperties;
 
         /// <summary>
         /// The root node name
@@ -143,6 +145,16 @@ namespace Microsoft.Vega.DistributedTest
         private static Channel grpcChannel;
 
         /// <summary>
+        /// The ring master service count
+        /// </summary>
+        private static int ringMasterServiceCount = 1;
+
+        /// <summary>
+        /// The host endpoint
+        /// </summary>
+        private static string serviceHostEndpoint = string.Empty;
+
+        /// <summary>
         /// Initializes the test class
         /// </summary>
         /// <param name="context">Test context object</param>
@@ -177,27 +189,27 @@ namespace Microsoft.Vega.DistributedTest
             // If TAEF provides some parameters, take them and override app.config
             if (testProperties != null)
             {
-                if (testProperties.ContainsKey("ServerAddress"))
+                if (testProperties.Contains("ServerAddress"))
                 {
                     serverAddress = testProperties["ServerAddress"] as string;
                 }
 
-                if (testProperties.ContainsKey("VegaAddress"))
+                if (testProperties.Contains("VegaAddress"))
                 {
                     vegaAddress = testProperties["VegaAddress"] as string;
                 }
 
-                if (testProperties.ContainsKey("VegaPortNumber"))
+                if (testProperties.Contains("VegaPortNumber"))
                 {
                     vegaPortNumber = testProperties["VegaPortNumber"] as string;
                 }
 
-                if (testProperties.ContainsKey("KillerNodeName"))
+                if (testProperties.Contains("KillerNodeName"))
                 {
                     killerNodeName = testProperties["KillerNodeName"] as string;
                 }
 
-                if (testProperties.ContainsKey("RootNodeName"))
+                if (testProperties.Contains("RootNodeName"))
                 {
                     rootNodeName = testProperties["RootNodeName"] as string;
                 }
@@ -231,6 +243,7 @@ namespace Microsoft.Vega.DistributedTest
                 { "AsyncTaskCount", asyncTaskCount.ToString() },
                 { "LargeTreeRatio", largeTreeRatio.ToString() },
                 { "WatcherCountPerNode", watcherCountPerNode.ToString() },
+                { "HostEndpoint", serviceHostEndpoint },
             };
 
             TestInitialize().GetAwaiter().GetResult();
@@ -242,8 +255,12 @@ namespace Microsoft.Vega.DistributedTest
         [ClassCleanup]
         public static void TestClassCleanup()
         {
-            cancellationSource.Dispose();
-            grpcChannel.ShutdownAsync().GetAwaiter().GetResult();
+            cancellationSource?.Dispose();
+
+            if (grpcChannel != null)
+            {
+                grpcChannel.ShutdownAsync().GetAwaiter().GetResult();
+            }
         }
 
         /// <summary>
@@ -341,6 +358,20 @@ namespace Microsoft.Vega.DistributedTest
         }
 
         /// <summary>
+        /// set user metadata test.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Functional")]
+        public void TestSetDataAndUserMetadata()
+        {
+            this.RunTestJobAsync(
+                "TestSetDataAndUserMetadata",
+                defaultTestParameters,
+                new string[] { "ProcessedCounts" })
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
         /// batch create node test.
         /// </summary>
         [TestMethod]
@@ -417,9 +448,44 @@ namespace Microsoft.Vega.DistributedTest
                         { "PartitionCount", appSettings["PartitionCount"] },
                         { "NodeCountPerPartition", appSettings["NodeCountPerPartition"] },
                         { "ChannelCount", appSettings["ChannelCount"] },
+                        { "HostEndpoint", serviceHostEndpoint },
                     },
-                new string[] { "CreateLatency", "ReadLatency", "SetLatency", "DeleteLatency", "InstallWatcherLatency" })
+                new string[] { "CreateLatency", "ReadLatency", "SetLatency", "DeleteLatency", "InstallWatcherLatency", "WatcherDeliverLatency" })
                 .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Tests the large multi with watcher.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Functional")]
+        public void TestLargeMultiWithWatcher()
+        {
+            defaultTestParameters.Add("RequestCountInMulti", appSettings["TestLargeMultiWithWatcher.RequestCountInMulti"]);
+
+            if (defaultTestParameters["RequestCountInMulti"] == "0")
+            {
+                for (int requestCount = 3000; requestCount <= 10000; requestCount += 500)
+                {
+                    defaultTestParameters["RequestCountInMulti"] = requestCount.ToString();
+
+                    this.RunTestJobAsync(
+                        "TestLargeMultiWithWatcher",
+                        defaultTestParameters,
+                        new string[] { "MultiResponseTimeMs" })
+                        .GetAwaiter().GetResult();
+
+                    Thread.Sleep(30 * 1000);
+                }
+            }
+            else
+            {
+                this.RunTestJobAsync(
+                    "TestLargeMultiWithWatcher",
+                    defaultTestParameters,
+                    new string[] { "MultiResponseTimeMs" })
+                    .GetAwaiter().GetResult();
+            }
         }
 
         /// <summary>
@@ -428,11 +494,11 @@ namespace Microsoft.Vega.DistributedTest
         /// <returns>async task</returns>
         private static async Task TestInitialize()
         {
-            string endpoint = $"{serverAddress}:18600";
+            string endpoint = serverAddress;
 
             if (string.IsNullOrEmpty(serverAddress))
             {
-                using (var fabricClient = new FabricClient())
+                using (var fabricClient = Helpers.CreateFabricClient())
                 {
                     endpoint = await GetFirstJobControllerEndpoint(fabricClient).ConfigureAwait(false);
                 }
@@ -545,6 +611,7 @@ namespace Microsoft.Vega.DistributedTest
             {
                 Scenario = scenarioName,
                 Parameters = { GrpcHelper.GetJobParametersFromDictionary(parameters) },
+                ServiceInstanceCount = ringMasterServiceCount,
             });
 
             JobState[] jobStates = null;
@@ -573,20 +640,12 @@ namespace Microsoft.Vega.DistributedTest
 
                 foreach (var jobState in jobStates)
                 {
-                    if (jobState != null)
-                    {
-                        log(jobState.ToString());
-                    }
-                    else
-                    {
-                        // should investigate why service returns null.
-                        log("NULL state ...");
-                    }
+                    log(jobState.ToString());
                 }
 
-                if (jobStates.All(j => j.Completed))
+                if (jobStates.Any() && jobStates.All(j => j.Completed))
                 {
-                    if (metricNames != null)
+                    if (metricNames != null && metricNames.Any())
                     {
                         log($"Fetching metrics...");
                         foreach (var metricName in metricNames)
@@ -617,6 +676,10 @@ namespace Microsoft.Vega.DistributedTest
                             {
                                 log($"Test outcome {scenarioName} - {metricName} : {Utilities.GetReport(metrics.ToArray())}");
                             }
+                            else
+                            {
+                                log($"no more metrics");
+                            }
                         }
                     }
 
@@ -626,7 +689,7 @@ namespace Microsoft.Vega.DistributedTest
                 {
                     try
                     {
-                        await Task.Delay(10000, cancellationSource.Token).ConfigureAwait(false);
+                        await Task.Delay(5000, cancellationSource.Token).ConfigureAwait(false);
                     }
                     catch (TaskCanceledException)
                     {

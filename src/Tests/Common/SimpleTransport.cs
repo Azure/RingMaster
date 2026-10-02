@@ -158,7 +158,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
 
             public Action OnConnectionLost { get; set; }
 
-            public Action<byte[]> OnPacketReceived { get; set; }
+            public Func<IMemoryBuffer, Task> OnPacketReceived { get; set; }
 
             public ulong Id { get; private set; }
 
@@ -228,12 +228,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
                 this.cancellationSource.Dispose();
             }
 
-            public void Send(byte[] data)
+            public void Send(IMemoryBuffer data)
             {
                 Task _ = this.SendAsync(data);
             }
 
-            public async Task SendAsync(byte[] data)
+            public async Task SendAsync(IMemoryBuffer data)
             {
                 if (data == null)
                 {
@@ -260,7 +260,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
                     {
                         await this.packetsAvailable.WaitAsync(cancellationToken);
                         Packet packet = this.packets.Take();
-                        this.OnPacketReceived(packet.Data);
+                        await this.OnPacketReceived(packet.Data);
                         packet.SetCompleted();
                     }
                 }
@@ -287,7 +287,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
             {
                 private readonly TaskCompletionSource<object> completionSource;
 
-                public Packet(long packetId, byte[] data)
+                public Packet(long packetId, IMemoryBuffer data)
                 {
                     this.Id = packetId;
                     this.Data = data;
@@ -296,7 +296,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
 
                 public long Id { get; private set; }
 
-                public byte[] Data { get; private set; }
+                public IMemoryBuffer Data { get; private set; }
 
                 public Task Completed
                 {

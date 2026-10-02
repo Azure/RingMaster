@@ -120,10 +120,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(19, connectionId, remoteEndpoint, remoteIdentity);
         }
 
-        [Event(20, Level = EventLevel.Informational, Version = 2)]
-        public void ConnectionLost(ulong connectionId)
+        [Event(20, Level = EventLevel.Informational, Version = 3)]
+        public void ConnectionLost(ulong connectionId, string remoteEndpoint)
         {
-            this.WriteEvent(20, connectionId);
+            this.WriteEvent(20, connectionId, remoteEndpoint);
         }
 
         [Event(21, Level = EventLevel.Verbose, Version = 2)]
@@ -132,10 +132,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(21, callId, responsePath ?? "<null>", resultCode);
         }
 
-        [Event(22, Level = EventLevel.Verbose, Version = 1)]
-        public void UnexpectedResponse(ulong callId)
+        [Event(22, Level = EventLevel.Verbose, Version = 2)]
+        public void UnexpectedResponse(ulong callId, string remoteEndpoint)
         {
-            this.WriteEvent(22, callId);
+            this.WriteEvent(22, callId, remoteEndpoint);
         }
 
         [Event(23, Level = EventLevel.Error, Version = 1)]
@@ -162,10 +162,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(26, connectionId, packetLength);
         }
 
-        [Event(27, Level = EventLevel.Error, Version = 2)]
-        public void OnPacketReceivedFailed(ulong connectionId, string exception)
+        [Event(27, Level = EventLevel.Error, Version = 3)]
+        public void OnPacketReceivedFailed(ulong connectionId, string exception, string remoteEndpoint)
         {
-            this.WriteEvent(27, connectionId, exception);
+            this.WriteEvent(27, connectionId, exception, remoteEndpoint);
         }
 
         [Event(28, Level = EventLevel.Informational, Version = 2)]
@@ -174,28 +174,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(28, watcherId, path);
         }
 
-        [Event(30, Level = EventLevel.Informational, Version = 1)]
-        public void NotifyConnectionLoss(ulong callId)
+        [Event(30, Level = EventLevel.Informational, Version = 2)]
+        public void NotifyConnectionLoss(ulong callId, string remoteEndpoint)
         {
-            this.WriteEvent(30, callId);
+            this.WriteEvent(30, callId, remoteEndpoint);
         }
 
-        [Event(32, Level = EventLevel.Verbose, Version = 2)]
-        public void NotifyResponseTimeout(ulong callId, long elapsedMilliseconds)
+        [Event(32, Level = EventLevel.Verbose, Version = 3)]
+        public void NotifyResponseTimeout(ulong callId, long elapsedMilliseconds, string remoteEndpoint)
         {
-            this.WriteEvent(32, callId, elapsedMilliseconds);
+            this.WriteEvent(32, callId, elapsedMilliseconds, remoteEndpoint);
         }
 
         [Event(35, Level = EventLevel.Informational, Version = 2)]
         public void Start(string endpoint)
         {
             this.WriteEvent(35, endpoint);
-        }
-
-        [Event(36, Level = EventLevel.Informational, Version = 1)]
-        public void GetDataWithStat(string path, bool watch)
-        {
-            this.WriteEvent(36, path, watch);
         }
 
         [Event(37, Level = EventLevel.Informational, Version = 2)]
@@ -210,10 +204,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(38, heartBeatCount, exception);
         }
 
-        [Event(39, Level = EventLevel.Error, Version = 1)]
-        public void HeartbeatFailure(ulong connectionId)
+        [Event(39, Level = EventLevel.Error, Version = 2)]
+        public void HeartbeatFailure(ulong connectionId, string remoteEndpoint)
         {
-            this.WriteEvent(39, connectionId);
+            this.WriteEvent(39, connectionId, remoteEndpoint);
         }
 
         [Event(40, Level = EventLevel.Informational, Version = 1)]
@@ -222,28 +216,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(40, pathSrc, pathDst);
         }
 
-        [Event(41, Level = EventLevel.Informational, Version = 3)]
-        public void RequestQueueFull(ulong requestId, int queueLength)
+        [Event(41, Level = EventLevel.Informational, Version = 4)]
+        public void RequestQueueFull(ulong requestId, int queueLength, string remoteEndpoint)
         {
-            this.WriteEvent(41, requestId, queueLength);
+            this.WriteEvent(41, requestId, queueLength, remoteEndpoint);
         }
 
-        [Event(42, Level = EventLevel.Error, Version = 1)]
-        public void RequestSendFailed(ulong connectionId, ulong requestId, string exception)
+        [Event(42, Level = EventLevel.Error, Version = 2)]
+        public void RequestSendFailed(ulong connectionId, ulong requestId, string exception, string remoteEndpoint)
         {
-            this.WriteEvent(42, connectionId, requestId, exception);
+            this.WriteEvent(42, connectionId, requestId, exception, remoteEndpoint);
         }
 
-        [Event(43, Level = EventLevel.Informational, Version = 1)]
-        public void ManageConnectionLifetimeTaskCanceled(ulong connectionId)
+        [Event(43, Level = EventLevel.Informational, Version = 2)]
+        public void ManageConnectionLifetimeTaskCanceled(ulong connectionId, string remoteEndpoint)
         {
-            this.WriteEvent(43, connectionId);
+            this.WriteEvent(43, connectionId, remoteEndpoint);
         }
 
-        [Event(44, Level = EventLevel.Error, Version = 1)]
-        public void ManageConnectionLifetimeTaskFailed(ulong connectionId, string exception)
+        [Event(44, Level = EventLevel.Error, Version = 2)]
+        public void ManageConnectionLifetimeTaskFailed(ulong connectionId, string exception, string remoteEndpoint)
         {
-            this.WriteEvent(44, connectionId, exception);
+            this.WriteEvent(44, connectionId, exception, remoteEndpoint);
         }
 
         [Event(45, Level = EventLevel.Informational, Version = 1)]
@@ -252,16 +246,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(45, connectionId, remoteEndpoint, remoteIdentity);
         }
 
-        [Event(46, Level = EventLevel.Informational, Version = 1)]
-        public void ManageRequestLifetimeTaskCanceled()
+        [Event(46, Level = EventLevel.Informational, Version = 2)]
+        public void ManageRequestLifetimeTaskCanceled(string remoteEndpoint)
         {
-            this.WriteEvent(46);
+            this.WriteEvent(46, remoteEndpoint);
         }
 
-        [Event(48, Level = EventLevel.Informational, Version = 1)]
-        public void ManageRequestLifetimeTaskCompleted()
+        [Event(48, Level = EventLevel.Informational, Version = 2)]
+        public void ManageRequestLifetimeTaskCompleted(string remoteEndpoint)
         {
-            this.WriteEvent(48);
+            this.WriteEvent(48, remoteEndpoint);
         }
 
         [Event(49, Level = EventLevel.Informational, Version = 1)]
@@ -288,22 +282,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             this.WriteEvent(52, watcherCount);
         }
 
-        [Event(53, Level = EventLevel.Informational, Version = 1)]
-        public void ManageResponsesTaskCompleted()
+        [Event(53, Level = EventLevel.Informational, Version = 2)]
+        public void ManageResponsesTaskCompleted(string remoteEndpoint)
         {
-            this.WriteEvent(53);
+            this.WriteEvent(53, remoteEndpoint);
         }
 
-        [Event(54, Level = EventLevel.Error, Version = 1)]
-        public void ManageResponsesTaskFailed(string exception)
+        [Event(54, Level = EventLevel.Error, Version = 2)]
+        public void ManageResponsesTaskFailed(string exception, string remoteEndpoint)
         {
-            this.WriteEvent(54, exception);
+            this.WriteEvent(54, exception, remoteEndpoint);
         }
 
-        [Event(55, Level = EventLevel.Error, Version = 1)]
-        public void ProcessResponseFailed(ulong callId, string exception)
+        [Event(55, Level = EventLevel.Error, Version = 2)]
+        public void ProcessResponseFailed(ulong callId, string exception, string remoteEndpoint)
         {
-            this.WriteEvent(55, callId, exception);
+            this.WriteEvent(55, callId, exception, remoteEndpoint);
         }
 
         [Event(56, Level = EventLevel.Informational)]
@@ -322,6 +316,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public void DispatchWatcherNotification(ulong watcherId, string path, int eventType)
         {
             this.WriteEvent(58, watcherId, path, eventType);
+        }
+
+        [Event(59, Level = EventLevel.Warning)]
+        public void RequestNoProcessTimeLeft(ulong callId, ushort requestType, string path)
+        {
+            this.WriteEvent(59, callId, requestType, path);
+        }
+
+        [Event(60, Level =EventLevel.Error)]
+        public void DispatchWatcherEventQueueEmpty(ulong watcherId, string path)
+        {
+            this.WriteEvent(60, watcherId, path);
+        }
+
+        [Event(61, Level = EventLevel.Error)]
+        public void DispatchWatcherFailed(ulong watcherId, string path, string exception)
+        {
+            this.WriteEvent(61, watcherId, path, exception);
         }
     }
 }

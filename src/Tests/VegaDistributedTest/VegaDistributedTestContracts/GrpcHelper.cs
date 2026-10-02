@@ -6,8 +6,9 @@ namespace Microsoft.Vega.DistributedTest
 {
     using System.Collections.Generic;
 
-    using DistTestCommonProto;
     using Google.Protobuf.Collections;
+
+    using Microsoft.Vega.DistTestCommonProto;
 
     /// <summary>
     /// The Grpc helper methods.

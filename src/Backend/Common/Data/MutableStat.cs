@@ -11,7 +11,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
     /// Class Stat.
     /// </summary>
     [Serializable]
-    public sealed class MutableStat : IMutableStat
+    public class MutableStat : IMutableStat
     {
         /// <summary>
         /// Windows file time units is 100-nanoseconds, so there is 10k fs ticks in a millisecond:
@@ -156,6 +156,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         /// </summary>
         /// <value>The number children.</value>
         public int NumChildren { get; set; }
+
+        /// <summary>
+        /// Gets or sets the version number of the most recent change to this node's user metadata.
+        /// </summary>
+        public virtual int Uversion
+        {
+            get { return 1; }
+            set { throw new InvalidOperationException(); }
+        }
 
         /// <inheritdoc />
         /// <remarks>

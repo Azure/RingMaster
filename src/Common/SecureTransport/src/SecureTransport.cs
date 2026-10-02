@@ -130,6 +130,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         public Action OnConnectionLost { get; set; }
 
         /// <summary>
+        /// Gets or sets the callback that must be invoked when stop listening.
+        /// </summary>
+        public Action<Exception> OnServerStopped { get; set; }
+
+        /// <summary>
         /// Gets a value indicating whether the transport is active, meaning started and not stopped yet.
         /// </summary>
         public bool IsActive
@@ -137,6 +142,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             get
             {
                 return this.hasStarted.IsSet && !this.hasStopped.IsSet;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the transport has started.
+        /// </summary>
+        public bool HasStarted
+        {
+            get
+            {
+                return this.hasStarted.IsSet;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the transport has stopped.
+        /// </summary>
+        public bool HasStopped
+        {
+            get
+            {
+                return this.hasStopped.IsSet;
             }
         }
 
@@ -300,7 +327,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>Client task</returns>
         public Task StartClient(params IPEndPoint[] endpoints)
         {
-            return this.StartClient(TimeSpan.FromSeconds(5), endpoints);
+            return this.StartClient(TimeSpan.FromSeconds(5), DefaultStartTimeout, () => { return endpoints; });
+        }
+
+        /// <summary>
+        /// Starts client with default server SSL validation timeout of 5 seconds
+        /// </summary>
+        /// <param name="endpoints">Endpoints to connect to</param>
+        /// <returns>Client task</returns>
+        public Task StartClient(Func<IList<IPEndPoint>> endpoints)
+        {
+            return this.StartClient(TimeSpan.FromSeconds(5), DefaultStartTimeout, endpoints);
         }
 
         /// <summary>
@@ -311,6 +348,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>Client task</returns>
         public Task StartClient(TimeSpan validationTimeout, params IPEndPoint[] endpoints)
         {
+            return this.StartClient(validationTimeout, DefaultStartTimeout, () => { return endpoints; });
+        }
+
+        /// <summary>
+        /// Starts client with a specified server SSL validation timeout
+        /// </summary>
+        /// <param name="validationTimeout">Connection SSL validation timeout</param>
+        /// <param name="endpoints">Endpoints to connect to</param>
+        /// <returns>Client task</returns>
+        public Task StartClient(TimeSpan validationTimeout, Func<IList<IPEndPoint>> endpoints)
+        {
+            return this.StartClient(validationTimeout, DefaultStartTimeout, endpoints);
+        }
+
+        /// <summary>
+        /// Starts client with a specified server SSL validation timeout
+        /// </summary>
+        /// <param name="validationTimeout">Connection SSL validation timeout</param>
+        /// <param name="startTimeout">start timeout</param>
+        /// <param name="endpoints">Endpoints to connect to</param>
+        /// <returns>Client task</returns>
+        public Task StartClient(TimeSpan validationTimeout, TimeSpan startTimeout, Func<IList<IPEndPoint>> endpoints)
+        {
             if (this.cancellationTokenSource != null)
             {
                 SecureTransportEventSource.Log.StartClientFailed_AlreadyStarted(this.transportId);
@@ -320,9 +380,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.rootCancellationToken);
             this.hasStarted.Reset();
             this.hasStopped.Reset();
-            SecureTransportEventSource.Log.StartClient(this.transportId, endpoints.Length);
+            SecureTransportEventSource.Log.StartClient(this.transportId, endpoints().Count);
             var task = Task.Run(() => this.StartConnecting(endpoints, validationTimeout), this.cancellationTokenSource.Token);
-            if (!this.hasStarted.Wait(DefaultStartTimeout))
+            if (!this.hasStarted.Wait(startTimeout))
             {
                 SecureTransportEventSource.Log.StartTimedout(this.transportId);
                 throw SecureTransportException.StartTimedout();
@@ -371,6 +431,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.hasStarted.Reset();
             this.hasStopped.Reset();
             SecureTransportEventSource.Log.StartServer(this.transportId, endpoint.ToString());
+
+            this.listener = new TcpListener(endpoint);
+
+            try
+            {
+                this.listener.Start();
+            }
+            catch (Exception e)
+            {
+                SecureTransportEventSource.Log.StartServerFailed_Exception(this.transportId, e.ToString());
+                this.cancellationTokenSource = null;
+                throw;
+            }
+
+            this.instrumentation.ListenerStarted(this.transportId, this.LocalEndpoint);
+
             var task = Task.Run(() => this.StartListening(endpoint, validationTimeout), this.cancellationTokenSource.Token);
             if (!this.hasStarted.Wait(DefaultStartTimeout))
             {
@@ -447,25 +523,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         private async Task StartListening(IPEndPoint localEndpoint, TimeSpan validationTimeout)
         {
             this.hasStarted.Set();
+            EndPoint listenEndpoint = this.LocalEndpoint;
+            Exception e = null;
+
             try
             {
-                this.listener = new TcpListener(localEndpoint);
-                this.listener.Start();
-
                 int iteration = 0;
                 int consecutiveFailureCount = 0;
-                while ((!this.cancellationTokenSource.Token.IsCancellationRequested) && (consecutiveFailureCount < ConsecutiveAcceptFailuresLimit))
+                while (!this.cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    bool mustReleaseSemaphore = false;
+                    if (consecutiveFailureCount >= ConsecutiveAcceptFailuresLimit)
+                    {
+                        throw SecureTransportException.TooManyConsecutiveAcceptFailures(consecutiveFailureCount);
+                    }
+
                     try
                     {
-                        if (!await this.acceptConnectionsSemaphore.WaitAsync(validationTimeout, this.cancellationTokenSource.Token))
-                        {
-                            throw SecureTransportException.AcceptConnectionTimedout();
-                        }
-
-                        mustReleaseSemaphore = true;
-
                         iteration++;
                         Task<TcpClient> acceptTask = this.listener.AcceptTcpClientAsync();
 
@@ -474,19 +547,50 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                             // AcceptTcpClientAsync does not have an overload that takes a cancellationToken, so it
                             // does not return even if cancellation is in progress.  The following task will observe
                             // the cancellation token and go into the canceled state when cancellation is requested.
-                            Task delayTask = Task.Delay(Timeout.InfiniteTimeSpan, cancelSource.Token);
-
-                            await Task.WhenAny(acceptTask, delayTask);
+                            await Task.WhenAny(
+                                acceptTask,
+                                Task.Delay(Timeout.InfiniteTimeSpan, cancelSource.Token));
 
                             if (acceptTask.IsCompleted)
                             {
+                                // AcceptTcpClientAsync may throw, this will get the acction and log it instead of hiding it.
+                                acceptTask.GetAwaiter().GetResult();
+
                                 cancelSource.Cancel();
                                 TcpClient client = await acceptTask;
                                 consecutiveFailureCount = 0;
 
-                                mustReleaseSemaphore = false;
-                                var ignoredTask = this.AcceptConnection(iteration, client, validationTimeout)
-                                    .ContinueWith(t => this.acceptConnectionsSemaphore.Release());
+                                var ignored = Task.Run(async () =>
+                                {
+                                    bool mustReleaseSemaphore = false;
+                                    try
+                                    {
+                                        if (await this.acceptConnectionsSemaphore.WaitAsync(this.configuration.AcceptConnectionTimeout, this.cancellationTokenSource.Token))
+                                        {
+                                            mustReleaseSemaphore = true;
+                                            await this.AcceptConnection(iteration, client, validationTimeout)
+                                                .ContinueWith(t =>
+                                                {
+                                                    this.acceptConnectionsSemaphore.Release();
+                                                    mustReleaseSemaphore = false;
+                                                });
+                                        }
+                                        else
+                                        {
+                                            // Can't get the allowed connections semaphore, disconnect the TcpClient and discard pending data.
+                                            client.LingerState = new LingerOption(true, 0);
+                                            client.Close();
+                                            SecureTransportEventSource.Log.DisconnectOverlimitConnection(this.transportId, iteration, null);
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (mustReleaseSemaphore)
+                                        {
+                                            this.acceptConnectionsSemaphore.Release();
+                                        }
+                                    }
+                                });
                             }
                         }
                     }
@@ -495,25 +599,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                         consecutiveFailureCount++;
                         SecureTransportEventSource.Log.AcceptTcpClientFailed(this.transportId, iteration, consecutiveFailureCount, ex.ToString());
                     }
-                    finally
-                    {
-                        if (mustReleaseSemaphore)
-                        {
-                            this.acceptConnectionsSemaphore.Release();
-                        }
-                    }
                 }
-
-                this.listener.Stop();
+            }
+            catch (Exception exception)
+            {
+                e = exception;
+                throw;
             }
             finally
             {
+                this.listener.Stop();
+                this.instrumentation.ListenerStopped(this.transportId, listenEndpoint);
                 SecureTransportEventSource.Log.ListenerStopped(this.transportId);
                 this.hasStopped.Set();
+                this.OnServerStopped?.Invoke(e);
             }
         }
 
-        private async Task StartConnecting(IPEndPoint[] endpoints, TimeSpan validationTimeout)
+        private async Task StartConnecting(Func<IList<IPEndPoint>> endpoints, TimeSpan validationTimeout)
         {
             this.hasStarted.Set();
             try
@@ -555,10 +658,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                             SecureTransportEventSource.Log.EstablishConnectionFailed(
                                 this.transportId,
                                 iteration,
-                                endpoints.Length,
+                                endpoints().Count,
                                 ex.Message,
                                 timer.ElapsedMilliseconds);
                             this.instrumentation.EstablishConnectionFailed(timer.Elapsed);
+                        }
+
+                        var inner = ex.InnerException;
+                        if ((inner is SocketException) &&
+                            (inner as SocketException).SocketErrorCode == SocketError.ConnectionReset)
+                        {
+                            // Will get this error when forcibly disconnected by remote
+                            SecureTransportEventSource.Log.ConnectionIsReset(this.transportId, iteration, ex.ToString());
                         }
                     }
                     finally
@@ -569,6 +680,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                             client.Close();
                         }
                     }
+
+                    if (!this.configuration.AllowAutoReconnect)
+                    {
+                        break;
+                    }
                 }
             }
             finally
@@ -577,22 +693,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             }
         }
 
-        private async Task<TcpClient> EstablishConnection(int iteration, IPEndPoint[] endpoints, TimeSpan timeout)
+        /// <summary>
+        /// establishes the connection
+        /// </summary>
+        /// <param name="iteration">number of iteration</param>
+        /// <param name="endpoints">endpoints to use</param>
+        /// <param name="timeout">timeout to enforce</param>
+        /// <returns>connection on exit</returns>
+        private async Task<TcpClient> EstablishConnection(int iteration, Func<IList<IPEndPoint>> endpoints, TimeSpan timeout)
         {
             using (var cancelEstablishConnection = CancellationTokenSource.CreateLinkedTokenSource(this.cancellationTokenSource.Token))
             {
                 cancelEstablishConnection.CancelAfter(timeout);
 
                 var connectionTasks = new List<Task<TcpClient>>();
-                for (int i = 0; i < endpoints.Length; i++)
+                foreach (var ep in endpoints())
                 {
-                    connectionTasks.Add(this.EstablishConnection(iteration, endpoints[i], timeout, cancelEstablishConnection.Token));
+                    connectionTasks.Add(this.EstablishConnection(iteration, ep, timeout, cancelEstablishConnection.Token));
                 }
 
                 TcpClient successfulClient = null;
                 while (connectionTasks.Count > 0)
                 {
-                    var resolvedTask = await Task.WhenAny(connectionTasks.ToArray());
+                    var resolvedTask = await Task.WhenAny(connectionTasks);
+
                     if (resolvedTask.IsCompleted && !resolvedTask.IsFaulted && !resolvedTask.IsCanceled)
                     {
                         cancelEstablishConnection.Cancel();
@@ -624,13 +748,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             {
                 SecureTransportEventSource.Log.EstablishConnection(this.transportId, iteration, endpoint.ToString(), (long)timeout.TotalMilliseconds);
                 Task connectTask = client.ConnectAsync(endpoint.Address, endpoint.Port);
-                Task cancelTask = Task.Delay(timeout, cancellationToken);
 
-                await Task.WhenAny(connectTask, cancelTask);
+                await Task.WhenAny(
+                    connectTask,
+                    Task.Delay(timeout, cancellationToken));
 
                 if (connectTask.IsCompleted)
                 {
-                    await connectTask;
+                    connectTask.GetAwaiter().GetResult();
+
                     TcpClient connectedClient = client;
                     client = null;
                     SecureTransportEventSource.Log.ConnectSucceeded(this.transportId, iteration, endpoint.Address.ToString(), endpoint.Port, timer.ElapsedMilliseconds);
@@ -709,7 +835,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 MaxUnflushedPacketsCount = this.configuration.MaxUnflushedPacketsCount,
             };
 
-            using (var connection = new Connection(this.transportId, connectionId, client, secureStream, configuration, this.cancellationTokenSource.Token))
+            using (var connection = new Connection(this.transportId, connectionId, client, secureStream, configuration, this.cancellationTokenSource.Token, this.instrumentation))
             {
                 if (!this.activeConnections.TryAdd(connectionId, connection))
                 {
@@ -950,9 +1076,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             public int MaxUnflushedPacketsCount { get; set; } = 10000;
 
             /// <summary>
+            /// Gets or sets a value indicating whether the transport should auto reconnect when connection down.
+            /// </summary>
+            public bool AllowAutoReconnect { get; set; } = true;
+
+            /// <summary>
             /// Gets or sets the maximum number of connections that can be established at the same time.
             /// </summary>
             public int MaxConnections { get; set; } = 1000;
+
+            /// <summary>
+            /// Gets or sets timeout to wait for connection semaphore when accepting a new connection.
+            /// </summary>
+            public TimeSpan AcceptConnectionTimeout { get; set; } = TimeSpan.FromSeconds(5);
         }
 
         private sealed class NoInstrumentation : ISecureTransportInstrumentation
@@ -980,6 +1116,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             }
 
             public void EstablishConnectionFailed(TimeSpan processingTime)
+            {
+            }
+
+            public void OutgoingQueueFull(long transportId, long connectionId, int pendingPacketCount)
+            {
+            }
+
+            public void OutgoingPacketQueued(long transportId, long connectionId, int queueLength, int packetLength)
+            {
+            }
+
+            public void OutgoingPacketSent(long transportId, long connectionId, int packetLength)
+            {
+            }
+
+            public void ListenerStarted(long transportId, EndPoint endpoint)
+            {
+            }
+
+            public void ListenerStopped(long transportId, EndPoint endpoint)
             {
             }
         }

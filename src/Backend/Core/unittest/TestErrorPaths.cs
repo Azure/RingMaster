@@ -93,6 +93,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         }
 
         /// <summary>
+        /// Verify that the appropriate exceptions are thrown if the <see cref="SetDataAndUserMetadata"/> method
+        /// is used incorrectly.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestSetDataAndUserMetadataErrorPaths()
+        {
+            this.errorPathTests.TestSetDataAndUserMetadataErrorPaths().Wait();
+        }
+        
+        /// Verify that the appropriate exceptions are thrown if the <see cref="SetData"/> method
+        /// is used incorrectly when wildcard nodes exist.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestSetDataErrorPathsWildcards()
+        {
+            this.errorPathTests.TestSetDataErrorPathsWildcards().Wait();
+        }
+
+        /// <summary>
         /// Verify that the appropriate exceptions are thrown if the <see cref="GetACL"/> method
         /// is used incorrectly.
         /// </summary>
@@ -112,6 +133,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         public void TestSetACLErrorPaths()
         {
             this.errorPathTests.TestSetACLErrorPaths().Wait();
+        }
+
+        /// <summary>
+        /// Verify that the appropriate exceptions are thrown if the <see cref="SetACL"/> method
+        /// is used incorrectly when wildcard nodes exist.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestSetACLErrorPathsWildcards()
+        {
+            this.errorPathTests.TestSetACLErrorPathsWildcards().Wait();
         }
 
         /// <summary>
@@ -176,6 +208,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         public void TestGetSubtreeNonExistentNode()
         {
             this.errorPathTests.TestGetSubtreeNonExistentNode().Wait();
+        }
+
+        /// <summary>
+        /// Verifies that GetFullSubtree requests for non-existent nodes return proper errors.
+        /// </summary>
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestGetFullSubtreeNonExistentNode()
+        {
+            this.errorPathTests.TestGetFullSubtreeNonExistentNode().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(10000)]
+        public void TestServerOperationTime()
+        {
+            this.errorPathTests.TestServerOperationTimeout().Wait();
         }
     }
 }

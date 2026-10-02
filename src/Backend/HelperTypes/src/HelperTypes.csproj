@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.1" />
+    <PackageReference Include="System.Memory" />
+    <!-- Allowing using the latest C# language features -->
+    <PackageReference Include="PolySharp" PrivateAssets="All"/>
   </ItemGroup>
 
   <Import Project="$(StyleCopProps)" />

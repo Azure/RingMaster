@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include=".\src\RingMasterServer.csproj" />
+    <ProjectReference Include=".\src\RingMasterServer.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

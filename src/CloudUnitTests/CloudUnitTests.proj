@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.Build.NoTargets">
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <OutputPath Condition="'$(OutputPath)' == ''">$(OutputRoot)CloudUnitTests</OutputPath>
+    <OutDir Condition="'$(OutDir)' == ''">$(OutputPath)</OutDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FilesToCopy Include="$(SRCROOT)\Scripts\**\*.*" />
+    <FilesToCopy Include="$(SRCROOT)\CloudUnitTests\**\*.*" />
+
+    <!-- It resolves IMD errors in CloudBuild. -->
+    <QCustomInput Include="$(SRCROOT)\CloudUnitTests\** ">
+      <Visible>false</Visible>
+    </QCustomInput>
+  </ItemGroup>
+
+  <Target Name="CopyFiles" AfterTargets="Build">
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFiles="@(FilesToCopy->'$(OutputPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="Restore" />
+</Project>

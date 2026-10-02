@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="VegaDistributedTestApplication\VegaDistributedTestService\VegaDistributedTestService.csproj" />
-    <ProjectFile Include="VegaDistributedTestApplication\VegaDistributedTestApplication.sfproj" />
-    <ProjectFile Include="VegaDistributedTestClient\VegaDistributedTestClient.csproj" />
-    <ProjectFile Include="VegaDistributedTestContracts\VegaDistributedTestContracts.csproj" />
+    <ProjectReference Include="VegaDistributedTestApplication\VegaDistributedTestApplication.sfproj" />
+    <ProjectReference Include="VegaDistributedTestClient\VegaDistributedTestClient.csproj" />
+    <ProjectReference Include="VegaDistributedTestContracts\VegaDistributedTestContracts.csproj" />
+    <ProjectReference Include="VegaDistributedTestFramework\VegaDistributedTestFramework.csproj" />
+    <ProjectReference Include="VegaDistributedTestService\VegaDistributedTestService.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Interface IRingMasterServerInstrumentation
@@ -272,5 +273,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="elapsed">Duration from the response is ready to the change is fully replicated</param>
         void OnResponseWaitForReplication(TimeSpan elapsed);
+
+        /// <summary>
+        /// The callback before complete.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="data">The data.</param>
+        /// <param name="stat">The stat.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        void CallbackBeforeComplete(string path, byte[] data, IStat stat, byte[] userMetadata);
+
+        /// <summary>
+        /// Called on OnCompleteTerminationFailure. This happens when Connection is closed and Complete termination  (deletes ephermal nodes etc) gets triggered but throws exception while doing it.
+        /// </summary>
+        void OnCompleteTerminationFailure();
     }
 }

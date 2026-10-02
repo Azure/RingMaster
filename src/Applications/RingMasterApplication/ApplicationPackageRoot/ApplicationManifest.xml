@@ -1,22 +1,107 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="RingMasterApplication" ApplicationTypeVersion="@BUILDNUMBER@" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
+    <!-- Monitoring settings: -->
     <!-- Note: These should be overridden in your Params Override file as needed -->
+    <!-- Monitoring settings: -->
     <Parameter Name="EnvironmentName" DefaultValue="" />
     <Parameter Name="Tenant" DefaultValue="" />
     <Parameter Name="MdmAccountName" DefaultValue="" />
     <Parameter Name="MdmNamespace" DefaultValue="RingMasterWorker" />
     <Parameter Name="RingMasterWatchdog.MdmNamespace" DefaultValue="RingMasterWorker/Watchdog" />
     <Parameter Name="VIP" DefaultValue="" />
+    <!-- Service Fabric settings: -->
+    <Parameter Name="PlacementConstraints" DefaultValue="" />
     <Parameter Name="RingMasterService_TargetReplicaSetSize" DefaultValue="5" />
     <Parameter Name="RingMasterService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="RingMasterWatchdog_InstanceCount" DefaultValue="1" />
+    <!-- Paths and endpoints: -->
+    <Parameter Name="LogPath" DefaultValue="C:\Resources\Directory" />
+    <Parameter Name="ServicePort" DefaultValue="0" />
+    <Parameter Name="ZkprServicePort" DefaultValue="0" />
+    <!-- RingMaster parameters: -->
+    <Parameter Name="AppConfigOverrides" DefaultValue="" />
+    <Parameter Name="DebuggerAttachTimeout" DefaultValue="" />
+    <Parameter Name="InMemoryPersistence" DefaultValue="" />
+    <Parameter Name="SSL.UseSSL" DefaultValue="" />
+    <Parameter Name="RingMaster.SecondaryPreprocessor.RunOnMultiplesOf" DefaultValue="" />
+    <Parameter Name="RingMaster.DontStartPseudoNodes" DefaultValue="" />
+    <Parameter Name="RingMaster.StartMainEndpointOnSecondary" DefaultValue="" />
+    <Parameter Name="RingMaster.StartExtraEndpointsOnSecondary" DefaultValue="" />
+    <Parameter Name="RingMaster.MaxSessionIdleSeconds" DefaultValue="" />
+    <Parameter Name="WireBackup.Enable" DefaultValue="" />
+    <Parameter Name="WireBackup.Path" DefaultValue="" />
+    <Parameter Name="WireBackup.MaxEvents" DefaultValue="" />
+    <Parameter Name="WireBackup.MaxTimeInSeconds" DefaultValue="" />
+    <Parameter Name="WireBackup.MaxEventsBetweenSnapshots" DefaultValue="" />
+    <Parameter Name="WireBackup.MaxTimeBetweenSnapshotsInSeconds" DefaultValue="" />
+    <Parameter Name="WireBackup.RetentionSeconds" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedMillis" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedResponses" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxThreadsPerConnection" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.BufferSizeInBytes" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionIdleTime" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionLifespan" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedMillis" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedResponses" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.MaxThreadsPerClient" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.ClientSession.BufferSizeInBytes" DefaultValue="" />
+    <Parameter Name="RingMaster.Transport.Server.MaxAllowedConnections" DefaultValue="" />
+    <Parameter Name="RingMaster.Paths.NotAllowedToFail" DefaultValue="" />
+    <Parameter Name="RingMaster.Paths.IgnoreForLockDown" DefaultValue="" />
+    <Parameter Name="RingMaster.LockStrategy" DefaultValue="" />
+    <Parameter Name="WinFabPersistence.HotSecondary" DefaultValue="" />
+    <Parameter Name="WinFabPersistence.EnableSFNotificationHandler" DefaultValue="" />
+    <Parameter Name="WinFabPersistence.FixStatDuringLoad" DefaultValue="" />
+    <Parameter Name="WinFabPersistence.IgnoreErrorsDuringLoad" DefaultValue="" />
+    <Parameter Name="RingMaster.LockSizesPerLevel" DefaultValue="1,50,2500,10000,100000,500000" />
+	<Parameter Name="RingMasterLimits.MaxGetChildrenEnumerationCount" DefaultValue="" /> 
+    <Parameter Name="RingMaster.MaxRetryOperationMillis" DefaultValue="" /> 
   </Parameters>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="RingMasterService" ServiceManifestVersion="@BUILDNUMBER@" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
+          <Section Name="RingMasterService">
+            <Parameter Name="AppConfigOverrides" Value="[AppConfigOverrides]" />
+            <Parameter Name="DebuggerAttachTimeout" Value="[DebuggerAttachTimeout]" />
+            <Parameter Name="InMemoryPersistence" Value="[InMemoryPersistence]" />
+            <Parameter Name="SSL.UseSSL" Value="[SSL.UseSSL]" />
+            <Parameter Name="RingMaster.SecondaryPreprocessor.RunOnMultiplesOf" Value="[RingMaster.SecondaryPreprocessor.RunOnMultiplesOf]" />
+            <Parameter Name="RingMaster.DontStartPseudoNodes" Value="[RingMaster.DontStartPseudoNodes]" />
+            <Parameter Name="RingMaster.StartMainEndpointOnSecondary" Value="[RingMaster.StartMainEndpointOnSecondary]" />
+            <Parameter Name="RingMaster.StartExtraEndpointsOnSecondary" Value="[RingMaster.StartExtraEndpointsOnSecondary]" />
+            <Parameter Name="RingMaster.MaxSessionIdleSeconds" Value="[RingMaster.MaxSessionIdleSeconds]" />
+            <Parameter Name="WireBackup.Enable" Value="[WireBackup.Enable]" />
+            <Parameter Name="WireBackup.Path" Value="[WireBackup.Path]" />
+            <Parameter Name="WireBackup.MaxEvents" Value="[WireBackup.MaxEvents]" />
+            <Parameter Name="WireBackup.MaxTimeInSeconds" Value="[WireBackup.MaxTimeInSeconds]" />
+            <Parameter Name="WireBackup.MaxEventsBetweenSnapshots" Value="[WireBackup.MaxEventsBetweenSnapshots]" />
+            <Parameter Name="WireBackup.MaxTimeBetweenSnapshotsInSeconds" Value="[WireBackup.MaxTimeBetweenSnapshotsInSeconds]" />
+            <Parameter Name="WireBackup.RetentionSeconds" Value="[WireBackup.RetentionSeconds]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedMillis" Value="[RingMaster.Transport.ClientConnection.MaxUnFlushedMillis]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.MaxUnFlushedResponses" Value="[RingMaster.Transport.ClientConnection.MaxUnFlushedResponses]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.MaxThreadsPerConnection" Value="[RingMaster.Transport.ClientConnection.MaxThreadsPerConnection]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.BufferSizeInBytes" Value="[RingMaster.Transport.ClientConnection.BufferSizeInBytes]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionIdleTime" Value="[RingMaster.Transport.ClientConnection.MaxConnectionIdleTime]" />
+            <Parameter Name="RingMaster.Transport.ClientConnection.MaxConnectionLifespan" Value="[RingMaster.Transport.ClientConnection.MaxConnectionLifespan]" />
+            <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedMillis" Value="[RingMaster.Transport.ClientSession.MaxUnFlushedMillis]" />
+            <Parameter Name="RingMaster.Transport.ClientSession.MaxUnFlushedResponses" Value="[RingMaster.Transport.ClientSession.MaxUnFlushedResponses]" />
+            <Parameter Name="RingMaster.Transport.ClientSession.MaxThreadsPerClient" Value="[RingMaster.Transport.ClientSession.MaxThreadsPerClient]" />
+            <Parameter Name="RingMaster.Transport.ClientSession.BufferSizeInBytes" Value="[RingMaster.Transport.ClientSession.BufferSizeInBytes]" />
+            <Parameter Name="RingMaster.Transport.Server.MaxAllowedConnections" Value="[RingMaster.Transport.Server.MaxAllowedConnections]" />
+            <Parameter Name="RingMaster.Paths.NotAllowedToFail" Value="[RingMaster.Paths.NotAllowedToFail]" />
+            <Parameter Name="RingMaster.Paths.IgnoreForLockDown" Value="[RingMaster.Paths.IgnoreForLockDown]" />
+            <Parameter Name="RingMaster.LockStrategy" Value="[RingMaster.LockStrategy]" />
+            <Parameter Name="WinFabPersistence.HotSecondary" Value="[WinFabPersistence.HotSecondary]" />
+            <Parameter Name="WinFabPersistence.EnableSFNotificationHandler" Value="[WinFabPersistence.EnableSFNotificationHandler]" />
+            <Parameter Name="WinFabPersistence.FixStatDuringLoad" Value="[WinFabPersistence.FixStatDuringLoad]" />
+            <Parameter Name="WinFabPersistence.IgnoreErrorsDuringLoad" Value="[WinFabPersistence.IgnoreErrorsDuringLoad]" />
+            <Parameter Name="RingMaster.LockSizesPerLevel" Value="[RingMaster.LockSizesPerLevel]" />
+			<Parameter Name="RingMasterLimits.MaxGetChildrenEnumerationCount" Value="[RingMasterLimits.MaxGetChildrenEnumerationCount]" /> 
+            <Parameter Name="RingMaster.MaxRetryOperationMillis" Value="[RingMaster.MaxRetryOperationMillis]" /> 
+          </Section>
           <Section Name="Monitoring">
             <Parameter Name="Environment" Value="[EnvironmentName]" />
             <Parameter Name="Tenant" Value="[Tenant]" />
@@ -28,6 +113,15 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <ResourceOverrides>
+      <Endpoints>
+        <Endpoint Name="ServiceEndpoint" Port="[ServicePort]" />
+        <Endpoint Name="ZkprServiceEndpoint" Port="[ZkprServicePort]" />
+      </Endpoints>
+    </ResourceOverrides>
+    <EnvironmentOverrides CodePackageRef="Code">
+      <EnvironmentVariable Name="RINGMASTER_LOG_PATH" Value="[LogPath]" />
+    </EnvironmentOverrides>
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SetupLocalSystem" />
     </Policies>
@@ -48,6 +142,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <EnvironmentOverrides CodePackageRef="Code">
+      <EnvironmentVariable Name="RINGMASTER_LOG_PATH" Value="[LogPath]" />
+    </EnvironmentOverrides>
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SetupLocalSystem" />
     </Policies>
@@ -56,11 +153,13 @@
     <Service Name="RingMasterService">
       <StatefulService ServiceTypeName="RingMasterService" TargetReplicaSetSize="[RingMasterService_TargetReplicaSetSize]" MinReplicaSetSize="[RingMasterService_MinReplicaSetSize]">
         <SingletonPartition />
+        <PlacementConstraints>[PlacementConstraints]</PlacementConstraints>
       </StatefulService>
     </Service>
     <Service Name="RingMasterWatchdog">
       <StatelessService ServiceTypeName="RingMasterWatchdog" InstanceCount="[RingMasterWatchdog_InstanceCount]">
         <SingletonPartition />
+        <PlacementConstraints>[PlacementConstraints]</PlacementConstraints>
       </StatelessService>
     </Service>
   </DefaultServices>

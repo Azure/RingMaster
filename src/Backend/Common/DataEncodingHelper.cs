@@ -546,7 +546,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (data == null)
             {
-                Write((int)-1, session);
+                Write(-1, session);
                 return;
             }
 
@@ -570,7 +570,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (data == null)
             {
-                Write((int)-1, ms);
+                Write(-1, ms);
                 return;
             }
 

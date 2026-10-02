@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      var perfData = [
+        ['Date', 'CreateRate', 'GetRate'],
+        ['3/7/2018', 353.8, 857.2],
+        ['3/8/2018', 350.5, 1475],
+        ['3/9/2018', 369.2, 1664],
+        ['3/11/2018', 362.2, 889.5],
+        ['3/13/2018', 369.7, 1621],
+        ['3/14/2018', 360.2, 1697],
+        ['3/16/2018', 932.2, 8389], //request dispatch change.
+        ['3/18/2018', 958.2, 8118],
+        ['3/20/2018', 937.3, 8325],
+        ['3/21/2018', 969.2, 8779],
+        ['3/23/2018', 827.3, 7714],
+        ['4/2/2018', 797.3, 8930],
+        ['4/3/2018', 825.1, 9239],
+        ['4/12/2018', 803, 9220],
+        ['4/14/2018', 946.7, 10720],
+        ['4/18/2018', 825.6, 8591],
+        ['4/19/2018', 1015, 10250],
+        ['4/20/2018', 1099, 8371], // new test client (multi-level tree)
+        ['4/23/2018', 1011, 8411],
+        ['4/24/2018', 901.5, 9590]
+      ];
+      
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable(perfData);
+
+        var options = {
+          title: 'VegaServiceFabricPerf Numbers from WAES',
+          curveType: 'function',
+          legend: { position: 'bottom' }
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="curve_chart" style="width: 900px; height: 500px"></div>
+  </body>
+</html>

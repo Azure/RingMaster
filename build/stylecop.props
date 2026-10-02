@@ -8,6 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <AdditionalFiles Include="$(SRCROOT)\StyleCop\stylecop.json" Link="stylecop.json" />
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta006" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 </Project>

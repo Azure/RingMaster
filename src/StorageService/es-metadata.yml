@@ -1,0 +1,17 @@
+schemaVersion: 1.0.0
+providers:
+  - provider: Ownership/CodeReviewers
+    version: 1.0.0
+    metadata:
+      options:
+        allowInheritance: false
+      reviewers:
+        - scope: '[AnyFile]'
+          required:
+            - xinyanz
+            - zhyao
+            - fcolombo
+            - ericodoom
+            - jrenchin
+            - olferrigni
+            - lusheng

@@ -105,6 +105,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         }
 
         /// <summary>
+        /// Gets the byte array hash code.
+        /// </summary>
+        /// <param name="bytes">The bytes.</param>
+        /// <returns>hash code of given byte array</returns>
+        public static int GetByteArrayHashCode(byte[] bytes)
+        {
+            if (bytes == null)
+            {
+                return 0;
+            }
+
+            int hash = 17;
+            foreach (var item in bytes)
+            {
+                hash ^= item.GetHashCode();
+            }
+
+            return hash;
+        }
+
+        /// <summary>
         /// Returns a measurement of the byte[] using sampling
         /// </summary>
         /// <param name="data">The byte[].</param>

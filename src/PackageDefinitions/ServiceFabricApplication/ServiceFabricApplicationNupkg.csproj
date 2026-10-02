@@ -2,7 +2,7 @@
 
   <Import Project="..\NuprojCommon.props" />
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppVer)</TargetFramework>
     <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion>
     <NoBuild>true</NoBuild>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -13,25 +13,27 @@
     <Title>Vega Service Fabric Application</Title>
     <Description>Vega Persistence layer that uses ReliableDictionary to persist data</Description>
     <Copyright>Copyright (c) Microsoft Corporation</Copyright>
-    <PackageLicenseUrl>https://b</PackageLicenseUrl>
     <PackageProjectUrl>https://b</PackageProjectUrl>
     <PackageTags>RingMaster;VegaClient</PackageTags>
     <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
     <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
     <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
     <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+
+    <PackageLocation>$(OutputRoot)\RingMasterApplication-Pkg\RingMasterApplication</PackageLocation>
+    <CompressedPackageLocation>$(OutputRoot)RingMasterApplication.sfpkg</CompressedPackageLocation>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj" PrivateAssets="All" />
     <ProjectReference Include="$(SRCROOT)\Applications\RingMasterApplication\RingMasterApplication.sfproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="$(OutputRoot)RingMasterApplication.sfpkg">
+    <Content Include="$(CompressedPackageLocation)">
       <PackagePath>content</PackagePath>
     </Content>
   </ItemGroup>
@@ -44,13 +46,12 @@
     <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.dll" />
     <libs Include="$(OutputPath)\Microsoft.RingMaster.SecureTransport.pdb" />
     <Content Include="@(libs)">
-      <PackagePath>lib\net462</PackagePath>
+      <PackagePath>lib\$(TargetFramework)</PackagePath>
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <QCustomInput Include="$(OutputRoot)RingMasterApplication.sfpkg">
-      <Visible>false</Visible>
-    </QCustomInput>
-  </ItemGroup>
+  <Target Name="CompressPackage" AfterTargets="ResolveProjectReferences">
+    <Exec Command="powershell Compress-Archive -Path $(PackageLocation)\* -CompressionLevel Fastest -DestinationPath $(CompressedPackageLocation).zip" />
+    <Exec Command="cmd /c move $(CompressedPackageLocation).zip $(CompressedPackageLocation)" />
+  </Target>
 </Project>

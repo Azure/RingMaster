@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="Common\dirs.proj" />
-    <ProjectFile Include="InMemory\dirs.proj" />
-    <ProjectFile Include="ServiceFabric\dirs.proj" />
+    <ProjectReference Include="Common\dirs.proj" />
+    <ProjectReference Include="InMemory\dirs.proj" />
+    <ProjectReference Include="ServiceFabric\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

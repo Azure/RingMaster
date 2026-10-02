@@ -5,6 +5,7 @@
 namespace Microsoft.Vega.MiscellaneousTests
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -58,7 +59,19 @@ namespace Microsoft.Vega.MiscellaneousTests
         private class DummyTestContext : TestContext
         {
             /// <inheritdoc />
-            public override IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
+            public override IDictionary Properties { get; } = new Dictionary<string, object>();
+
+            /// <inheritdoc />
+            public override void AddResultFile(string fileName)
+            {
+                throw new NotImplementedException();
+            }
+
+            /// <inheritdoc />
+            public override void Write(string message) => Console.Write(message);
+
+            /// <inheritdoc />
+            public override void Write(string format, params object[] args) => Console.Write(format, args);
 
             /// <inheritdoc />
             public override void WriteLine(string message) => Console.WriteLine(message);

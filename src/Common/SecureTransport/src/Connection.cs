@@ -8,20 +8,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using System.IO;
-    using System.Linq;
     using System.Net;
-    using System.Net.Security;
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Represents a connection established by the <see cref="SecureTransport"/>.
     /// </summary>
     internal class Connection : IConnection
     {
+        /// <summary>
+        /// The send queue full maximum last time before we kill the process.
+        /// </summary>
+        private static readonly TimeSpan SendQueueFullMaxLastTime = TimeSpan.FromMinutes(10);
+
+        /// <summary>
+        /// A last successful time when any client was able to successfully send the data the the clients.
+        /// It is used to detect that the current instance is completely disconnected from the world and crash to help Service Fabric to elect a new leader.
+        /// </summary>
+        private static DateTime lastSuccessfulAddToSendQueueTime = DateTime.UtcNow;
+
         /// <summary>
         /// Socket connection with the remote client.
         /// </summary>
@@ -72,6 +81,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// </summary>
         private readonly Stopwatch timeSinceLastActivity = Stopwatch.StartNew();
 
+        private readonly ISecureTransportInstrumentation instrumentation;
+
         /// <summary>
         /// Task that pushes packets to the other side of the connection.
         /// </summary>
@@ -93,7 +104,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         private bool disposed = false;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// Initializes a new instance of the <see cref="Connection" /> class.
         /// </summary>
         /// <param name="transportId">Unique Id of the transport that created this connection</param>
         /// <param name="connectionId">Unique Id of the connection</param>
@@ -101,7 +112,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <param name="secureStream">Stream that represents data in the connection</param>
         /// <param name="configuration">Configuration parameters</param>
         /// <param name="cancellationToken">Cancellation token that will be observed by this connection</param>
-        public Connection(long transportId, long connectionId, TcpClient client, Stream secureStream, Configuration configuration, CancellationToken cancellationToken)
+        /// <param name="instrumentation">The instrumentation.</param>
+        public Connection(long transportId, long connectionId, TcpClient client, Stream secureStream, Configuration configuration, CancellationToken cancellationToken, ISecureTransportInstrumentation instrumentation)
         {
             this.transportId = transportId;
             this.connectionId = connectionId;
@@ -138,58 +150,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.client.SendBufferSize = this.configuration.SendBufferSize;
 
             // Outgoing packets is the queue of packets that have not been sent yet. The semaphore
-            // outgoingPacketsAvailable is signalled when a packet is queued. This wakes up the
+            // outgoingPacketsAvailable is signaled when a packet is queued. This wakes up the
             // PushPackets task which actually sends the packet to the other side.
             this.outgoingPackets = new BlockingCollection<Packet>(configuration.SendQueueLength);
             this.outgoingPacketsAvailable = new SemaphoreSlim(0, configuration.SendQueueLength);
 
             this.RemoteIdentity = configuration.RemoteIdentity;
+            this.instrumentation = instrumentation;
         }
 
-        /// <summary>
-        /// Gets the unique id of this connection.
-        /// </summary>
-        public ulong Id
-        {
-            get { return (ulong)this.connectionId; }
-        }
+        /// <inheritdoc />
+        public ulong Id => (ulong)this.connectionId;
 
-        /// <summary>
-        /// Gets the remote endpoint of this connection.
-        /// </summary>
-        public EndPoint RemoteEndPoint
-        {
-            get
-            {
-                return this.client.Client.RemoteEndPoint;
-            }
-        }
+        /// <inheritdoc />
+        public EndPoint RemoteEndPoint => this.client.Client.RemoteEndPoint;
 
-        /// <summary>
-        /// Gets the identity of the remote endpoint if mutual authentication was used
-        /// </summary>
-        public string RemoteIdentity { get; private set; }
+        /// <inheritdoc />
+        public string RemoteIdentity { get; }
 
-        /// <summary>
-        /// Gets the negotiated protocol version.
-        /// </summary>
+        /// <inheritdoc />
         public uint ProtocolVersion { get; private set; }
 
-        /// <summary>
-        /// Gets or sets the callback that must be invoked whenever a packet is received.
-        /// </summary>
-        public Action<byte[]> OnPacketReceived { get; set; }
+        /// <inheritdoc />
+        public Func<IMemoryBuffer, Task> OnPacketReceived { get; set; }
 
-        /// <summary>
-        /// Gets or sets the callback that should be invoked if the incoming packat is not in the standard
-        /// RingMaster format of length + data.
-        /// </summary>
+        /// <inheritdoc />
         public PacketReceiveDelegate DoPacketReceive { get; set; }
 
-        /// <summary>
-        /// Gets or sets the callback that should be invoked fro protocol negotiation. This allows protocols like Zookeeper to
-        /// supply their own which is different than the ringmaster protocol's negotiation.
-        /// </summary>
+        /// <inheritdoc />
         public ProtocolNegotiatorDelegate DoProtocolNegotiation { get; set; }
 
         /// <summary>
@@ -197,9 +185,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// </summary>
         public bool UseNetworkByteOrder { get; set; } = false;
 
-        /// <summary>
-        /// Gets or sets the callback that must be invoked when this connection is lost.
-        /// </summary>
+        /// <inheritdoc />
         public Action OnConnectionLost { get; set; }
 
         /// <summary>
@@ -209,62 +195,82 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
         public async Task Start(uint protocolVersion)
         {
-            this.ProtocolVersion = await this.DoProtocolNegotiation(protocolVersion);
+            this.ProtocolVersion = await this.DoProtocolNegotiation(protocolVersion).ConfigureAwait(false);
             this.pushPacketsTask = Task.Run(this.PushPackets);
         }
 
-        /// <summary>
-        /// Send a packet to the other side of the connection.
-        /// </summary>
-        /// <param name="data">Data to send</param>
-        public void Send(byte[] data)
+        /// <inheritdoc />
+        public void Send(IMemoryBuffer data)
         {
-            Task notInUse = this.SendAsync(data);
+            data.ThrowIfNull();
+
+            // Send is best-effort unless the outgoing queue stays full long enough
+            // that the caller must tear down the connection.
+            _ = this.SendAsync(data);
         }
 
-        /// <summary>
-        /// Send a packet to the other side of the connection asynchronously.
-        /// </summary>
-        /// <param name="data">Data to send</param>
-        /// <returns>A <see cref="Task"/> that tracks completion of the send operation</returns>
-        public Task SendAsync(byte[] data)
+        /// <inheritdoc />
+        public Task SendAsync(IMemoryBuffer data)
         {
-            if (data == null)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
+            const int AddingPacketTimeoutMs = 5000;
+
+            data.ThrowIfNull();
 
             // Do not send the packet if the outgoing packets queue
             // is marked complete for adding.
             if (this.disposed || this.outgoingPackets.IsAddingCompleted)
             {
-                return Task.FromResult<object>(null);
+                return Task.CompletedTask;
             }
 
             var packet = default(Packet);
             packet.Id = Interlocked.Increment(ref this.nextPacketId);
             packet.Data = data;
             packet.CompletionSource = new TaskCompletionSource<object>();
+            var packetLength = packet.Data.GetBuffer().Length;
 
-            SecureTransportEventSource.Log.Send(this.transportId, this.connectionId, packet.Id, packet.Data.Length);
-            if (this.outgoingPackets.TryAdd(packet))
+            SecureTransportEventSource.Log.Send(this.transportId, this.connectionId, packet.Id, packetLength);
+            if (this.outgoingPackets.TryAdd(packet, AddingPacketTimeoutMs))
             {
-                // Signal that a packet is avaliable to send. This wakes up the PushPackets task
+                // Signal that a packet is available to send. This wakes up the PushPackets task
                 // which actually sends the packet to the other side.
+                this.instrumentation.OutgoingPacketQueued(this.transportId, this.connectionId, this.outgoingPackets.Count, packetLength);
                 this.outgoingPacketsAvailable.Release();
             }
             else
             {
-                SecureTransportEventSource.Log.SendQueueFull(this.transportId, this.connectionId, packet.Id, packet.Data.Length);
-                throw SecureTransportException.SendQueueFull();
+                if (this.outgoingPackets.IsAddingCompleted)
+                {
+                    // We have a race condition here: even though we checked IsAddingCompleted before,
+                    // its possible that the flag was set between the check and the call to outgoingPackets.TryAdd.
+                    // In this case we still can't do anything but return a completed task.
+                    SecureTransportEventSource.Log.SendIsSkippedDueToCompletion(this.transportId, this.connectionId, packetId: packet.Id);
+                    packet.Data.Dispose();
+                    return Task.CompletedTask;
+                }
+
+                int count = this.outgoingPackets.Count;
+                this.instrumentation.OutgoingQueueFull(this.transportId, this.connectionId, count);
+                SecureTransportEventSource.Log.SendQueueFull(this.transportId, this.connectionId, packet.Id, packetLength, count);
+
+                // We probably completely lost the network. Failing fast allowing Service Fabric to fail over to another instance.
+                var timeSinceLastSuccessfulMessageDelivery = DateTime.UtcNow - lastSuccessfulAddToSendQueueTime;
+                if (timeSinceLastSuccessfulMessageDelivery > SendQueueFullMaxLastTime)
+                {
+                    Environment.FailFast(
+                         $"Send queue full lasted for more than {SendQueueFullMaxLastTime}. Time since the last successful delivery: {timeSinceLastSuccessfulMessageDelivery}. " +
+                                $"Now: {DateTime.UtcNow}, {nameof(lastSuccessfulAddToSendQueueTime)}: {lastSuccessfulAddToSendQueueTime}. Remote Endpoint: {this.RemoteEndPoint}" +
+                                $" Connection Id: {this.connectionId}, Transport Id: {this.transportId}");
+                }
+
+                packet.Data.Dispose();
+                throw SecureTransportException.SendQueueFull(outgoingPacketsCount: count);
             }
 
             return packet.CompletionSource.Task;
         }
 
-        /// <summary>
-        /// Disconnect this connection.
-        /// </summary>
+        /// <inheritdoc />
         public void Disconnect()
         {
             SecureTransportEventSource.Log.Disconnect(this.transportId, this.connectionId);
@@ -274,7 +280,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 {
                     this.outgoingPackets.CompleteAdding();
                     this.cancellationTokenSource.Cancel();
-                    this.client.Client.Disconnect(reuseSocket: false);
+                    try
+                    {
+                        this.client.Client.Shutdown(SocketShutdown.Both);
+                    }
+                    catch (Exception ex)
+                    {
+                        SecureTransportEventSource.Log.HandleConnectionFailed(this.transportId, this.connectionId, ex.ToString());
+                    }
+
+                    try
+                    {
+                        this.client.Client.Disconnect(reuseSocket: false);
+                    }
+                    catch (Exception ex)
+                    {
+                        SecureTransportEventSource.Log.HandleConnectionFailed(this.transportId, this.connectionId, ex.ToString());
+                    }
+
                     this.isDisconnected = true;
                 }
             }
@@ -289,7 +312,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
             this.Disconnect();
             this.secureStream.Close();
             this.client.Close();
-            this.pushPacketsTask?.Wait();
+            this.pushPacketsTask?.GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -305,6 +328,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                 this.outgoingPackets.Dispose();
                 this.outgoingPacketsAvailable.Dispose();
                 this.pushPacketsTask?.Dispose();
+
+                // Disposing the cancellation token source to avoid a memory leak, since otherwise
+                // the linked source will be kept in the registration list forever.
+                this.cancellationTokenSource?.Dispose();
             }
         }
 
@@ -341,7 +368,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                     SecureTransportEventSource.Log.OnPacketReceived(this.transportId, this.connectionId, packet.Length);
                     if (this.OnPacketReceived != null)
                     {
-                        this.OnPacketReceived(packet);
+                        await this.OnPacketReceived(new ByteArrayBackedBuffer(packet)).ConfigureAwait(false);
                     }
                 }
             }
@@ -408,14 +435,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 
                     // As long as there are packets available to send, keep adding them to the stream, otherwise
                     // flush the stream.
-                    if (await this.outgoingPacketsAvailable.WaitAsync(timeToWait, this.cancellationToken))
+                    if (await this.outgoingPacketsAvailable.WaitAsync(timeToWait, this.cancellationToken).ConfigureAwait(false))
                     {
                         Packet packet = this.outgoingPackets.Take(this.cancellationToken);
-                        writer.Write(this.UseNetworkByteOrder ? System.Net.IPAddress.HostToNetworkOrder((int)packet.Data.Length) : (int)packet.Data.Length);
-                        writer.Write(packet.Data);
-                        unflushedPacketsCount++;
+                        try
+                        {
+                            this.instrumentation.OutgoingPacketSent(this.transportId, this.connectionId, packet.Data.Length);
 
-                        packet.CompletionSource.SetResult(null);
+                            writer.Write(this.UseNetworkByteOrder ? System.Net.IPAddress.HostToNetworkOrder(packet.Data.Length) : packet.Data.Length);
+                            writer.Write(packet.Data.GetBuffer(), 0, packet.Data.Length);
+                            unflushedPacketsCount++;
+
+                            // We can assume that we sent the data successfully, even though technically we could've just added them to the output buffer.
+                            lastSuccessfulAddToSendQueueTime = DateTime.UtcNow;
+
+                            // The current design is tricky, since we have a buffering stream, so we don't really know when the message is delivered or not.
+                            // For instance, when we write we could have caused the flush, or not depending on the SendBufferSize configuration.
+
+                            // We should do the following:
+                            // 1. Call packet.CompletionSource.SetException in the catch block.
+                            // 2. Flush on timer
+                            // 3. Somehow track if the packet was flushed or not to mark the packets completed **only** when they were actually delivered.
+                            packet.CompletionSource.TrySetResult(null);
+                        }
+                        finally
+                        {
+                            packet.Data.Dispose();
+                        }
 
                         if (unflushedPacketsCount > this.configuration.MaxUnflushedPacketsCount)
                         {
@@ -467,7 +513,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
 
             await Task.WhenAll(
                 this.secureStream.WriteAsync(BitConverter.GetBytes(localProtocolVersion), 0, sizeof(int), this.cancellationToken).ContinueWith(_ => this.secureStream.FlushAsync(this.cancellationToken)),
-                this.secureStream.ReadAsync(versionBytes, 0, sizeof(int), this.cancellationToken));
+                this.secureStream.ReadAsync(versionBytes, 0, sizeof(int), this.cancellationToken))
+                .ConfigureAwait(false);
 
             uint remoteProtocolVersion = BitConverter.ToUInt32(versionBytes, 0);
 
@@ -577,7 +624,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         private struct Packet
         {
             public long Id;
-            public byte[] Data;
+            public IMemoryBuffer Data;
             public TaskCompletionSource<object> CompletionSource;
         }
     }

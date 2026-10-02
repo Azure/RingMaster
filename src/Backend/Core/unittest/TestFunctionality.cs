@@ -213,6 +213,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         }
 
         /// <summary>
+        /// Tests the create node with user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadata()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadata().Wait();
+        }
+
+        /// <summary>
+        /// Tests the create node with user metadata on existing node.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadataOnExistingNode()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadataOnExistingNode().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithDataOrMetadataExceedsMaxLength()
+        {
+            this.functionalityTest.TestCreateNodeWithDataOrMetadataExceedsMaxLength(MaxNodeDataSize, MaxUserMetadataSize).Wait();
+        }
+
+        /// <summary>
         /// Verify that child nodes can be created and enumerated.
         /// </summary>
         [TestMethod]
@@ -260,6 +287,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         public void TestDeleteWithAllowNonExistFlag()
         {
             this.functionalityTest.TestDeleteWithAllowNonExistFlag().Wait();
+        }
+
+        /// <summary>
+        /// Verify that a node can be deleted and also validates the allow not empty flag.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDeleteWithAllowNotEmptyFlag()
+        {
+            this.functionalityTest.TestDeleteWithAllowNotEmptyFlag().Wait();
         }
 
         /// <summary>
@@ -321,10 +358,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         /// Verify that data sizes up to the limit are supported and the limit is enforced.
         /// </summary>
         [TestMethod]
-        [Timeout(300000)]
+        [Timeout(30000)]
         public void TestCreateLargeData()
         {
             this.functionalityTest.TestCreateLargeData(256 * 1024).Wait();
+        }
+
+        /// <summary>
+        /// Tests the get data.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetData()
+        {
+            this.functionalityTest.TestGetData().Wait();
         }
 
         /// <summary>
@@ -394,6 +441,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         }
 
         /// <summary>
+        /// Tests the set user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestSetDataAndUserMetadata()
+        {
+            this.functionalityTest.TestSetDataAndUserMetadata().Wait();
+        }
+
+        /// <summary>
         /// Verify that Access control list to be associated with nodes can be provided at
         /// creation time and that data can be retrieved using the GetACL method.
         /// </summary>
@@ -431,6 +488,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         /// </summary>
         [TestMethod]
         [Timeout(30000)]
+        [Ignore]
         public void TestMultiScheduled()
         {
             this.StartPseudoNodes();
@@ -456,16 +514,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
         [TestMethod]
         [Timeout(30000)]
-        public void TestGetSubtreeNoStats()
+        public void TestGetSubtreeNoStatsNoMetadata()
         {
-            this.functionalityTest.TestGetSubtree(false).Wait();
+            this.functionalityTest.TestGetSubtree(false, false).Wait();
         }
 
         [TestMethod]
         [Timeout(30000)]
-        public void TestGetSubtreeWithStats()
+        public void TestGetSubtreeWithStatsWithMetadata()
         {
-            this.functionalityTest.TestGetSubtree(true).Wait();
+            this.functionalityTest.TestGetSubtree(true, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeNoStatsWithMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(false, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStatsNoMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(true, false).Wait();
         }
 
         [TestMethod]

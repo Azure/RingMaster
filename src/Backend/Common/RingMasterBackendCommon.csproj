@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />

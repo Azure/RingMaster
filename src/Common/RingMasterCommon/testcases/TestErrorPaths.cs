@@ -296,6 +296,89 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         }
 
         /// <summary>
+        /// Tests the set data and user metadata data error paths.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestSetDataAndUserMetadataErrorPaths()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string pathToNonExistentNode = string.Format("/$bvt_TestSetDataAndUserMetadataErrorPaths_nonexistent{0}", Guid.NewGuid());
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.SetDataAndUserMetadata(pathToNonExistentNode, Guid.NewGuid().ToByteArray(), 1, Guid.NewGuid().ToByteArray(), 1);
+                    },
+                    "Nonode error if an attempt is made to call SetDataAndUserMetadata on a node that does not exist");
+
+                string nodePath = string.Format("/$bvt_TestSetDataAndUserMetadataErrorPaths_node{0}", Guid.NewGuid());
+                await ringMaster.Create(nodePath, null, null, CreateMode.Ephemeral);
+
+                IStat stat = await ringMaster.Exists(nodePath, watcher: null);
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badversion,
+                    async () =>
+                    {
+                        await ringMaster.SetDataAndUserMetadata(nodePath, Guid.NewGuid().ToByteArray(), stat.Version, Guid.NewGuid().ToByteArray(), stat.Uversion + 1);
+                    },
+                    "Badversion error if the wrong version number was provided");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badversion,
+                    async () =>
+                    {
+                        await ringMaster.SetDataAndUserMetadata(nodePath, Guid.NewGuid().ToByteArray(), stat.Version + 1, Guid.NewGuid().ToByteArray(), stat.Uversion);
+                    },
+                    "Badversion error if the wrong version number was provided");
+            }
+        }
+        
+        /// Verify that the appropriate exceptions are thrown if the <see cref="SetData"/> method
+        /// is used incorrectly when wildcard nodes exist.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestSetDataErrorPathsWildcards()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string parentNodePath = string.Format("/$bvt_TestSetDataErrorPathsWildcards_nonexistent{0}", Guid.NewGuid());
+
+                string wildcardNodeName = "**";
+                string branchWildcardNodePath = string.Format("{0}/{1}", parentNodePath, wildcardNodeName);
+                string leafWildcardNodePath = string.Format("{0}/{1}/{2}", parentNodePath, "branch", wildcardNodeName);
+
+                string nonExistentNodeName = Guid.NewGuid().ToString();
+                string pathToNonExistentNode = string.Format("{0}/{1}/{2}", parentNodePath, "branch", nonExistentNodeName);
+
+                byte[] nodeData = Guid.NewGuid().ToByteArray();
+
+                string createdParentNodeName = await ringMaster.Create(parentNodePath, null, null, CreateMode.Persistent);
+                IStat statCreateParent = await ringMaster.Exists(parentNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateParent, expectedDataLength: 0);
+
+                string createdBranchWildcardNodeName = await ringMaster.Create(branchWildcardNodePath, null, null, CreateMode.Persistent);
+                Assert.AreEqual(createdBranchWildcardNodeName, wildcardNodeName);
+                IStat statCreateBranchWildcard = await ringMaster.Exists(branchWildcardNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateBranchWildcard, expectedDataLength: 0);
+
+                string createdLeafWildcardNodeName = await ringMaster.Create(leafWildcardNodePath, null, null, CreateMode.PersistentAllowPathCreation);
+                Assert.AreEqual(createdLeafWildcardNodeName, wildcardNodeName);
+                IStat statCreateLeafWildcard = await ringMaster.Exists(leafWildcardNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateLeafWildcard, expectedDataLength: 0);
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.SetData(pathToNonExistentNode, Guid.NewGuid().ToByteArray(), -1);
+                    },
+                    "Nonode error if an attempt is made to call SetData on a node that does not exist when wildcard node exists.");
+            }
+        }
+
+        /// <summary>
         /// Verify that the appropriate exceptions are thrown if the <see cref="GetACL"/> method
         /// is used incorrectly.
         /// </summary>
@@ -389,6 +472,50 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                         await ringMaster.SetACL(nodePath, null, stat.Version + 1);
                     },
                     "Badversion error if Version is incorrect");
+            }
+        }
+
+        /// <summary>
+        /// Verify that the appropriate exceptions are thrown if the <see cref="SetACL"/> method
+        /// is used incorrectly when wildcard nodes exist.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestSetACLErrorPathsWildcards()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string parentNodePath = string.Format("/$bvt_TestSetACLErrorPathsWildcards_nonexistent{0}", Guid.NewGuid());
+
+                string wildcardNodeName = "**";
+                string branchWildcardNodePath = string.Format("{0}/{1}", parentNodePath, wildcardNodeName);
+                string leafWildcardNodePath = string.Format("{0}/{1}/{2}", parentNodePath, "branch", wildcardNodeName);
+
+                string nonExistentNodeName = Guid.NewGuid().ToString();
+                string pathToNonExistentNode = string.Format("{0}/{1}/{2}", parentNodePath, "branch", nonExistentNodeName);
+
+                byte[] nodeData = Guid.NewGuid().ToByteArray();
+
+                string createdParentNodeName = await ringMaster.Create(parentNodePath, null, null, CreateMode.Persistent);
+                IStat statCreateParent = await ringMaster.Exists(parentNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateParent, expectedDataLength: 0);
+
+                string createdBranchWildcardNodeName = await ringMaster.Create(branchWildcardNodePath, null, null, CreateMode.Persistent);
+                Assert.AreEqual(createdBranchWildcardNodeName, wildcardNodeName);
+                IStat statCreateBranchWildcard = await ringMaster.Exists(branchWildcardNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateBranchWildcard, expectedDataLength: 0);
+
+                string createdLeafWildcardNodeName = await ringMaster.Create(leafWildcardNodePath, null, null, CreateMode.PersistentAllowPathCreation);
+                Assert.AreEqual(createdLeafWildcardNodeName, wildcardNodeName);
+                IStat statCreateLeafWildcard = await ringMaster.Exists(leafWildcardNodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(statCreateLeafWildcard, expectedDataLength: 0);
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.SetACL(pathToNonExistentNode, null, -1);
+                    },
+                    "Nonode error if an attempt is made to call SetACL on a node that does not exist when wildcard node exists.");
             }
         }
 
@@ -568,6 +695,65 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                         await ringMaster.GetSubtree(null, ">:1:");
                     },
                     "Badarguments error if an attempt is made to GetSubtree on null path");
+            }
+        }
+
+        public async Task TestGetFullSubtreeNonExistentNode()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.GetFullSubtree($"/{Guid.NewGuid()}");
+                    },
+                    "Nonode error if an attempt is made to GetFullSubtree on non-existent node");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.GetFullSubtree($"/{Guid.NewGuid()}", RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata | RequestGetSubtree.GetSubtreeOptions.IncludeStats);
+                    },
+                    "Nonode error if an attempt is made to GetFullSubtree on non-existent node");
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nonode,
+                    async () =>
+                    {
+                        await ringMaster.GetFullSubtree(null);
+                    },
+                    "Nonode error if an attempt is made to GetFullSubtree on null node");
+            }
+        }
+
+        public async Task TestServerOperationTimeout()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                var request = new RequestExists("/", null);
+                request.RequestExpiryTime = AbstractRingMasterRequest.RequestTimeTracker.Elapsed;
+
+                var response = await ringMaster.Request(request);
+
+                Assert.AreEqual((int)RingMasterException.Code.ServerOperationTimeout, response.ResultCode);
+            }
+        }
+
+        public async Task TestClientOperationTimeout()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                ringMaster.Timeout = 0;
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Operationtimeout,
+                    async () =>
+                    {
+                        await ringMaster.Exists("/", null);
+                    },
+                    "client should operation timeout because timeout is too short");
             }
         }
     }

@@ -1,30 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="Common\TestCommon.csproj" />
-    <ProjectFile Include="EndToEndTests\EndToEndTests.csproj" />
-    <ProjectFile Include="EventSourceValidation\EventSourceValidation.csproj" />
-    <ProjectFile Include="FakeFluentAssertions\FakeFluentAssertions.csproj" />
-    <ProjectFile Include="MiscellaneousTests\MiscellaneousTests.csproj" />
-    <ProjectFile Include="PerformanceTestCases\PerformanceTestCases.csproj" />
-    <ProjectFile Include="RingMasterBVT\RingMasterBVT.csproj" />
-    <ProjectFile Include="RingMasterPerformance\RingMasterPerformance.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\RingMasterTestApplication.sfproj" />
-    <ProjectFile Include="RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
-    <ProjectFile Include="RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
-    <ProjectFile Include="TestHelpers\TestHelpers.csproj" />
-    <ProjectFile Include="VegaCodeBenchmark\VegaCodeBenchmark.csproj" />
-    <ProjectFile Include="VegaDistributedTest\dirs.proj" />
-    <ProjectFile Include="VegaFailoverCorrectness\VegaFailoverCorrectness.csproj" />
-    <ProjectFile Include="VegaInMemoryPerf\VegaInMemoryPerf.csproj" />
-    <ProjectFile Include="VegaServiceFabricPerf\VegaServiceFabricPerf.csproj" />
-    <ProjectFile Include="VegaTracingPerf\VegaTracingPerf.csproj" />
-    <ProjectFile Include="VegaUpgradeTest\VegaUpgradeTest.csproj" />
+    <ProjectReference Include="Common\TestCommon.csproj" />
+    <ProjectReference Include="EndToEndTests\EndToEndTests.csproj" />
+    <ProjectReference Include="EventSourceValidation\EventSourceValidation.csproj" />
+    <ProjectReference Include="FakeFluentAssertions\FakeFluentAssertions.csproj" />
+    <ProjectReference Include="MiscellaneousTests\MiscellaneousTests.csproj" />
+    <ProjectReference Include="PerformanceTestCases\PerformanceTestCases.csproj" />
+    <ProjectReference Include="RSLValidation\RSLValidation.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="RingMasterBVT\RingMasterBVT.csproj" />
+    <ProjectReference Include="RingMasterPerformance\RingMasterPerformance.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\RingMasterTestApplication.sfproj" />
+    <ProjectReference Include="RingMasterTestApplication\ConnectionStressService\ConnectionStressService.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\ControlPlaneStressService\ControlPlaneStressService.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\EnumerationStressService\EnumerationStressService.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\PopulationStressService\PopulationStressService.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\ServingPlaneStressService\ServingPlaneStressService.csproj" />
+    <ProjectReference Include="RingMasterTestApplication\SubscribeStressService\SubscribeStressService.csproj" />
+    <ProjectReference Include="TestHelpers\TestHelpers.csproj" />
+    <ProjectReference Include="VegaCodeBenchmark\VegaCodeBenchmark.csproj" />
+    <ProjectReference Include="VegaDistributedTest\dirs.proj" />
+    <ProjectReference Include="VegaFailoverCorrectness\VegaFailoverCorrectness.csproj" />
+    <ProjectReference Include="VegaInMemoryPerf\VegaInMemoryPerf.csproj" />
+    <ProjectReference Include="VegaServiceFabricPerf\VegaServiceFabricPerf.csproj" />
+    <ProjectReference Include="VegaTracingPerf\VegaTracingPerf.csproj" />
+    <ProjectReference Include="VegaUpgradeTest\VegaUpgradeTest.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

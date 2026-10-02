@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppVer)</TargetFramework>
+    <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion>
+    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Microsoft.Vega.DistributedTest</RootNamespace>
+    <AssemblyName>VegaDistributedTestService</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(QBUILD)' != ''">
+    <OutputPath>$(OutputRoot)\VegaDistributedTestApplication-Pkg\VegaDistributedTestApplication\VegaDistTestSvc\Code</OutputPath>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Cloud.InstrumentationFramework.NetStd" Condition="'$(OSSBUILD)' == ''" />
+    <PackageReference Include="Bond.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.ServiceFabric" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" />
+    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Infrastructure\LogFileEventTracing\LogFileEventTracing.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\TestHelpers\TestHelpers.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\VegaDistributedTest\VegaDistributedTestContracts\VegaDistributedTestContracts.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tests\VegaDistributedTest\VegaDistributedTestFramework\VegaDistributedTestFramework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Startup.cmd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Startup.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="entryPoint.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="appSettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <QCustomInput Include="PackageRoot\ServiceManifest.xml" />
+  </ItemGroup>
+  
+  <Import Project="$(StyleCopProps)" />
+</Project>

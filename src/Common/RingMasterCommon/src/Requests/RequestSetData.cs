@@ -17,8 +17,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="version">Expected version of data on the node</param>
         /// <param name="dataCommand">Indicates whether the data is an encoded command</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestSetData(string path, byte[] data, int version, bool dataCommand = false, ulong uid = 0)
-            : base(RingMasterRequestType.SetData, path, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestSetData(string path, byte[] data, int version, bool dataCommand = false, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : base(RingMasterRequestType.SetData, path, uid, invokeCallbackBeforeComplete)
         {
             this.Data = data;
             this.Version = version;

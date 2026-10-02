@@ -7,7 +7,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
-    using System.Text;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
@@ -139,26 +138,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
                 DataEntry copy = new DataEntry();
                 info = copy;
-
-                if ((kind & CachedKind.NodeAcls) != CachedKind.None)
-                {
-                    copy.Acls = entry.Acls;
-                }
-
-                if ((kind & CachedKind.NodeData) != CachedKind.None)
-                {
-                    copy.Data = entry.Data;
-                }
-
-                if ((kind & CachedKind.NodeChildren) != CachedKind.None)
-                {
-                    copy.Children = entry.Children;
-                }
-
-                if ((kind & CachedKind.NodeStats) != CachedKind.None)
-                {
-                    copy.Stat = entry.Stat;
-                }
+                copy.SetInfo(entry, kind);
 
                 return result;
             }
@@ -180,57 +160,50 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="info">The information to set.</param>
         public void SetInfo(string prefix, string path, CachedKind kind, IRingMasterClientCacheDataEntry info)
         {
-            if (info == null)
+            try
             {
-                this.Invalidate(prefix, path);
-                return;
-            }
-
-            LruCache<string, DataEntry> cache = this.GetCacheForPrefix(prefix, true);
-            DataEntry entry;
-            if (!cache.TryGetValue(path, out entry))
-            {
-                lock (cache)
+                if (info == null)
                 {
-                    if (!cache.TryGetValue(path, out entry))
+                    this.Invalidate(prefix, path);
+                    return;
+                }
+
+                LruCache<string, DataEntry> cache = this.GetCacheForPrefix(prefix, true);
+                DataEntry entry;
+                if (!cache.TryGetValue(path, out entry))
+                {
+                    lock (cache)
                     {
-                        entry = new DataEntry();
-                        cache.Add(path, entry);
+                        if (!cache.TryGetValue(path, out entry))
+                        {
+                            entry = new DataEntry();
+                            entry.SetInfo(info, kind);
+                            if (entry.Stat != null || entry.Children != null || entry.Data != null || entry.UserMetadata != null || entry.Acls != null)
+                            {
+                                cache.Add(path, entry);
+                            }
+
+                            return;
+                        }
+                    }
+                }
+
+                lock (entry)
+                {
+                    entry.SetInfo(info, kind);
+
+                    if (entry.Stat == null && entry.Children == null && entry.Data == null && entry.UserMetadata == null && entry.Acls == null)
+                    {
+                        cache.Remove(path);
                     }
                 }
             }
-
-            lock (entry)
+            finally
             {
-                if ((kind & CachedKind.NodeAcls) != CachedKind.None)
+                if (this.debugCache)
                 {
-                    entry.Acls = info.Acls;
+                    System.Console.Write(string.Format("*** SETINFO {0}/{1}/{2} at {3}", prefix, path, kind, this.GetStack()));
                 }
-
-                if ((kind & CachedKind.NodeData) != CachedKind.None)
-                {
-                    entry.Data = info.Data;
-                }
-
-                if ((kind & CachedKind.NodeChildren) != CachedKind.None)
-                {
-                    entry.Children = info.Children;
-                }
-
-                if ((kind & CachedKind.NodeStats) != CachedKind.None)
-                {
-                    entry.Stat = info.Stat;
-                }
-
-                if (entry.Stat == null && entry.Children == null && entry.Data == null && entry.Acls == null)
-                {
-                    cache.Remove(path);
-                }
-            }
-
-            if (this.debugCache)
-            {
-                System.Console.Write(string.Format("*** SETINFO {0}/{1}/{2} at {3}", prefix, path, kind, this.GetStack()));
             }
         }
 
@@ -357,6 +330,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             public byte[] Data { get; set; }
 
             /// <summary>
+            /// Gets or sets the user metadata.
+            /// </summary>
+            /// <value>
+            /// The user metadata.
+            /// </value>
+            public byte[] UserMetadata { get; set; }
+
+            /// <summary>
             /// Gets or sets the IStat.
             /// </summary>
             /// <value>The stat.</value>
@@ -373,6 +354,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// </summary>
             /// <value>The ACLs.</value>
             public IReadOnlyList<Acl> Acls { get; set; }
+
+            /// <summary>
+            /// Initializes the <see cref="DataEntry"/> class with given info.
+            /// </summary>
+            /// <param name="info">The given info</param>
+            /// <param name="kind">The kind of info that the DataEntry created for.</param>
+            internal void SetInfo(IRingMasterClientCacheDataEntry info, CachedKind kind)
+            {
+                if ((kind & CachedKind.NodeAcls) != CachedKind.None)
+                {
+                    this.Acls = info.Acls;
+                }
+
+                if ((kind & CachedKind.NodeData) != CachedKind.None)
+                {
+                    this.Data = info.Data;
+                }
+
+                if ((kind & CachedKind.NodeUserMetadata) != CachedKind.None)
+                {
+                    this.UserMetadata = info.UserMetadata;
+                }
+
+                if ((kind & CachedKind.NodeChildren) != CachedKind.None)
+                {
+                    this.Children = info.Children;
+                }
+
+                if ((kind & CachedKind.NodeStats) != CachedKind.None)
+                {
+                    this.Stat = info.Stat;
+                }
+            }
         }
     }
 }

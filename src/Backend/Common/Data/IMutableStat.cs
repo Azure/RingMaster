@@ -60,6 +60,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data
         new int Aversion { get; set; }
 
         /// <summary>
+        /// Gets or sets the uversion - User metadata version
+        /// </summary>
+        /// <value>
+        /// The uversion.
+        /// </value>
+        new int Uversion { get; set; }
+
+        /// <summary>
         /// Gets or sets the length of the data.
         /// </summary>
         /// <value>The length of the data.</value>

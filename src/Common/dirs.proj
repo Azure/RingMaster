@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include=".\CommunicationProtocol\dirs.proj" />
-    <ProjectFile Include=".\Instrumentation\Instrumentation.csproj" />
-    <ProjectFile Include=".\RingMasterClient\dirs.proj" />
-    <ProjectFile Include=".\RingMasterCommon\dirs.proj" />
-    <ProjectFile Include=".\RingMasterServer\dirs.proj" />
-    <ProjectFile Include=".\SecureTransport\dirs.proj" />
-    <ProjectFile Include=".\ZooKeeperServer\dirs.proj" />
+    <ProjectReference Include=".\CommunicationProtocol\dirs.proj" />
+    <ProjectReference Include=".\Instrumentation\Instrumentation.csproj" />
+    <ProjectReference Include=".\RingMasterClient\dirs.proj" />
+    <ProjectReference Include=".\RingMasterCommon\dirs.proj" />
+    <ProjectReference Include=".\RingMasterServer\dirs.proj" />
+    <ProjectReference Include=".\SecureTransport\dirs.proj" />
+    <ProjectReference Include=".\ZooKeeperServer\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

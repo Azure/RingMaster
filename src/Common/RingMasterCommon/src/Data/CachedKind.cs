@@ -36,5 +36,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// node ACLs
         /// </summary>
         NodeAcls = 8,
+
+        /// <summary>
+        /// The node user metadata
+        /// </summary>
+        NodeUserMetadata = 16,
     }
 }

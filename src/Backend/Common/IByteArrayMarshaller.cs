@@ -4,6 +4,7 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using RequestResponse = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestResponse;
 
     /// <summary>
@@ -16,27 +17,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>serialized bytes</returns>
-        byte[] SerializeRequestAsBytes(RequestCall request);
+        IMemoryBuffer SerializeRequestAsBytes(RequestCall request);
 
         /// <summary>
         /// Deserializes the request from bytes.
         /// </summary>
         /// <param name="requestBytes">The request bytes.</param>
         /// <returns>deserialized object</returns>
-        RequestCall DeserializeRequestFromBytes(byte[] requestBytes);
+        RequestCall DeserializeRequestFromBytes(IMemoryBuffer requestBytes);
 
         /// <summary>
         /// Serializes the response as bytes.
         /// </summary>
         /// <param name="response">The response.</param>
         /// <returns>serialized bytes.</returns>
-        byte[] SerializeResponseAsBytes(RequestResponse response);
+        IMemoryBuffer SerializeResponseAsBytes(RequestResponse response);
 
         /// <summary>
         /// Deserializes the response from bytes.
         /// </summary>
         /// <param name="responseBytes">The response bytes.</param>
         /// <returns>deserialized object</returns>
-        RequestResponse DeserializeResponseFromBytes(byte[] responseBytes);
+        RequestResponse DeserializeResponseFromBytes(IMemoryBuffer responseBytes);
     }
 }

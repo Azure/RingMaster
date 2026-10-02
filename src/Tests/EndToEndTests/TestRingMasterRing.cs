@@ -38,6 +38,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.EndToEndTests
             LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Backend-RingMasterEvents", EventLevel.Warning, "RingMasterBackendCore");
             LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence", EventLevel.Informational, "Persistence");
             LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence-InMemory", EventLevel.Informational, "InMemoryPersistence");
+            Trace.Listeners.Clear();
             Trace.Listeners.Add(new LogFileTraceListener());
 
             AppDomain.CurrentDomain.ProcessExit +=

@@ -53,10 +53,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// nodes change.
         /// </summary>
         /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
-        public async Task TestChildrenChangedEvent()
+        public async Task TestChildrenChangedEvent(bool includeChildChange)
         {
+            var kind = includeChildChange ? WatcherKind.IncludeDataAndChildChange : 0;
             Task<WatchedEvent> createWatcherTask;
-            var createWatcher = CreateWatcher(out createWatcherTask);
+            var createWatcher = CreateWatcher(out createWatcherTask, kind);
             using (var ringMaster = this.ConnectToRingMaster())
             {
                 string nodePath = string.Format("{0}/TestChildrenChangedEvent_{1}", TestWatcher.TestPrefix, Guid.NewGuid());
@@ -73,7 +74,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 using (var ringMaster2 = this.ConnectToRingMaster())
                 {
                     Trace.TraceInformation("Creating child node {0}", childNodePath);
-                    await ringMaster2.Create(childNodePath, null, null, CreateMode.Persistent);
+                    await ringMaster2.Create(childNodePath, Guid.NewGuid().ToByteArray(), null, CreateMode.Persistent, Guid.NewGuid().ToByteArray());
                 }
 
                 Trace.TraceInformation("Waiting for watcher to receive the NodeChildrenChanged event");
@@ -82,9 +83,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, createdEvent.EventType);
                 Assert.AreEqual(nodePath, createdEvent.Path);
                 Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, createdEvent.KeeperState);
+                if (includeChildChange)
+                {
+                    Assert.AreEqual("ChildNode", createdEvent.ChildName);
+                    Assert.IsNotNull(createdEvent.ChildData);
+                    Assert.IsNotNull(createdEvent.ChildUserMetadata);
+                    Assert.IsNotNull(createdEvent.ChildStat);
+                }
+                else
+                {
+                    Assert.IsNull(createdEvent.ChildData);
+                    Assert.IsNull(createdEvent.ChildUserMetadata);
+                    Assert.IsNull(createdEvent.ChildStat);
+                    Assert.IsNull(createdEvent.ChildName);
+                }
 
                 Task<WatchedEvent> deleteWatcherTask;
-                var deleteWatcher = CreateWatcher(out deleteWatcherTask);
+                var deleteWatcher = CreateWatcher(out deleteWatcherTask, kind);
 
                 Trace.TraceInformation("Setting watch on Node {0}", nodePath);
                 await ringMaster.GetChildren(nodePath, deleteWatcher);
@@ -102,6 +117,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, deletedEvent.EventType);
                 Assert.AreEqual(nodePath, deletedEvent.Path);
                 Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, deletedEvent.KeeperState);
+                Assert.IsNull(deletedEvent.ChildStat);
+                Assert.IsNull(deletedEvent.ChildData);
+                Assert.IsNull(deletedEvent.ChildUserMetadata);
             }
         }
 
@@ -174,10 +192,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// Verifies that the watcher is notified when a watched node is deleted.
         /// </summary>
         /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
-        public async Task TestDeletedEvent()
+        public async Task TestDeletedEvent(bool includeChildData)
         {
             Task<WatchedEvent> watchTask;
-            var watcher = CreateWatcher(out watchTask);
+            var kind = includeChildData ? WatcherKind.OneUse | WatcherKind.IncludeDataAndChildChange : WatcherKind.OneUse;
+            var watcher = CreateWatcher(out watchTask, kind);
             using (var ringMaster = this.ConnectToRingMaster())
             {
                 string nodePath = string.Format("{0}/TestDeletedEvent_{1}", TestWatcher.TestPrefix, Guid.NewGuid());
@@ -187,7 +206,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
 
                 Trace.TraceInformation("Setting watch on Node {0}", nodePath);
                 var stat = await ringMaster.Exists(nodePath, watcher);
-
+                
                 // Make the modification that triggers the watcher from another session.
                 using (var ringMaster2 = this.ConnectToRingMaster())
                 {
@@ -201,18 +220,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(WatchedEvent.WatchedEventType.NodeDeleted, watchedEvent.EventType);
                 Assert.AreEqual(nodePath, watchedEvent.Path);
                 Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, watchedEvent.KeeperState);
+                Assert.IsNull(watchedEvent.Stat);
+                Assert.IsNull(watchedEvent.ChildName);
+                Assert.IsNull(watchedEvent.ChildStat);
             }
         }
 
         /// <summary>
         /// Verifies that the watcher is notified when the data of a watched node is changed.
         /// </summary>
-        /// <param name="includeData">Whether to include data in the watched event or not</param>
+        /// <param name="includeDataAndChildChange">Whether to include data in the watched event or not</param>
         /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
-        public async Task TestDataChangedEvent(bool includeData = false)
+        public async Task TestDataChangedEvent(bool includeDataAndChildChange)
         {
             Task<WatchedEvent> watchTask;
-            var kind = includeData ? WatcherKind.OneUse | WatcherKind.IncludeData : WatcherKind.OneUse;
+            var kind = includeDataAndChildChange ? WatcherKind.OneUse | WatcherKind.IncludeDataAndChildChange : WatcherKind.OneUse;
             var watcher = CreateWatcher(out watchTask, kind);
             using (var ringMaster = this.ConnectToRingMaster())
             {
@@ -238,7 +260,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(WatchedEvent.WatchedEventType.NodeDataChanged, watchedEvent.EventType);
                 Assert.AreEqual(nodePath, watchedEvent.Path);
                 Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, watchedEvent.KeeperState);
-                if (includeData)
+                if (includeDataAndChildChange)
                 {
                     Assert.IsNotNull(watchedEvent.Data, "Data should not be null in the watcher return");
                     Assert.IsNotNull(watchedEvent.Stat, "Stat should not be null in the watcher return");
@@ -248,6 +270,66 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     Assert.IsNull(watchedEvent.Data, $"Data should be null, actual length {watchedEvent.Data?.Length}");
                     Assert.IsNull(watchedEvent.Stat, $"Stat should be null, actual: {watchedEvent.Stat}");
                 }
+
+                Assert.IsNull(watchedEvent.UserMetadata);
+                Assert.IsNull(watchedEvent.ChildUserMetadata);
+                Assert.IsNull(watchedEvent.ChildName);
+                Assert.IsNull(watchedEvent.ChildStat);
+                Assert.IsNull(watchedEvent.ChildData);
+            }
+        }
+
+        /// <summary>
+        /// Tests the data and user metadata changed.
+        /// </summary>
+        /// <param name="includeDataAndChildChange">if set to <c>true</c> [include data and child change].</param>
+        /// <returns>async task</returns>
+        public async Task TestDataAndUserMetadataChanged(bool includeDataAndChildChange)
+        {
+            Task<WatchedEvent> watchTask;
+            var kind = includeDataAndChildChange ? WatcherKind.OneUse | WatcherKind.IncludeDataAndChildChange : WatcherKind.OneUse;
+            var watcher = CreateWatcher(out watchTask, kind);
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string nodePath = string.Format("{0}/TestDataAndUserMetadataChangedEvent_{1}", TestWatcher.TestPrefix, Guid.NewGuid());
+
+                Trace.TraceInformation("Creating Node {0}", nodePath);
+                await ringMaster.Create(nodePath, null, null, CreateMode.Persistent);
+
+                Trace.TraceInformation("Setting watch on Node {0}", nodePath);
+                await ringMaster.GetData(nodePath, watcher);
+
+                // Make the modification that triggers the watcher from another session.
+                using (var ringMaster2 = this.ConnectToRingMaster())
+                {
+                    Trace.TraceInformation("Changing data for node {0}", nodePath);
+                    byte[] nodeData = Guid.NewGuid().ToByteArray();
+                    await ringMaster2.SetDataAndUserMetadata(nodePath, nodeData, 1, Guid.NewGuid().ToByteArray(), -1);
+                }
+
+                Trace.TraceInformation("Waiting for watcher to receive the NodeDataAndUserMetadataChanged event");
+                WatchedEvent watchedEvent = await watchTask;
+
+                Assert.AreEqual(WatchedEvent.WatchedEventType.NodeDataAndUserMetadataChanged, watchedEvent.EventType);
+                Assert.AreEqual(nodePath, watchedEvent.Path);
+                Assert.AreEqual(WatchedEvent.WatchedEventKeeperState.SyncConnected, watchedEvent.KeeperState);
+                if (includeDataAndChildChange)
+                {
+                    Assert.IsNotNull(watchedEvent.UserMetadata, "User Metadata should not be null in the watcher return");
+                    Assert.IsNotNull(watchedEvent.Data, "Data should not be null in the watcher return");
+                    Assert.IsNotNull(watchedEvent.Stat, "Stat should not be null in the watcher return");
+                }
+                else
+                {
+                    Assert.IsNull(watchedEvent.UserMetadata, $"User Metadata should be null, actual length {watchedEvent.UserMetadata?.Length}");
+                    Assert.IsNull(watchedEvent.Data, $"Data should be null, actual length {watchedEvent.Data?.Length}");
+                    Assert.IsNull(watchedEvent.Stat, $"Stat should be null, actual: {watchedEvent.Stat}");
+                }
+
+                Assert.IsNull(watchedEvent.ChildUserMetadata);
+                Assert.IsNull(watchedEvent.ChildName);
+                Assert.IsNull(watchedEvent.ChildStat);
+                Assert.IsNull(watchedEvent.ChildData);
             }
         }
 
@@ -282,10 +364,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// </summary>
         /// <param name="registerBulkWatcher">The function to invoke to register a bulkwatcher</param>
         /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        public async Task TestBulkWatcher(Func<IRingMasterRequestHandler, string, IWatcher, Task> registerBulkWatcher = null)
+        public async Task TestBulkWatcher(bool includeDataAndChildChange, Func<IRingMasterRequestHandler, string, IWatcher, Task> registerBulkWatcher = null)
         {
+            var kind = includeDataAndChildChange ? WatcherKind.IncludeDataAndChildChange : default(WatcherKind);
             Task<WatchedEvent>[] bulkWatcherTasks = new Task<WatchedEvent>[4];
-            IWatcher watcher = CreateWatcher(bulkWatcherTasks);
+            IWatcher watcher = CreateWatcher(bulkWatcherTasks, kind);
 
             registerBulkWatcher = registerBulkWatcher ?? RingMasterExtensions.RegisterBulkWatcher;
 
@@ -303,31 +386,68 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 {
                     string childNodePath = $"{nodePath}/Child1";
                     Trace.TraceInformation($"Creating child node path={childNodePath}");
-                    await ringMaster2.Create(childNodePath, null, null, CreateMode.Persistent);
+                    await ringMaster2.Create(childNodePath, Guid.NewGuid().ToByteArray(), null, CreateMode.Persistent, Guid.NewGuid().ToByteArray());
 
-                    Trace.TraceInformation("Waiting for NodeCreated event");
-                    var nodeCreatedEvent = await bulkWatcherTasks[0];
-                    Trace.TraceInformation("Waiting for NodeChildrenChanged event");
-                    var nodeChildrenChangedEvent = await bulkWatcherTasks[1];
+                    Trace.TraceInformation("Waiting for first event");
+                    var firstEvent = await bulkWatcherTasks[0];
+                    WatchedEvent secondEvent = null;
 
-                    Assert.AreEqual(WatchedEvent.WatchedEventType.NodeCreated, nodeCreatedEvent.EventType);
-                    Assert.AreEqual(childNodePath, nodeCreatedEvent.Path);
-                    Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, nodeChildrenChangedEvent.EventType);
-                    Assert.AreEqual(nodePath, nodeChildrenChangedEvent.Path);
+                    if (includeDataAndChildChange)
+                    {
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, firstEvent.EventType);
+                        Assert.AreEqual(nodePath, firstEvent.Path);
+
+                        Assert.IsNull(firstEvent.Data);
+                        Assert.IsNotNull(firstEvent.Stat);
+                        Assert.IsNotNull(firstEvent.ChildUserMetadata);
+                        Assert.AreEqual("Child1", firstEvent.ChildName);
+                    }
+                    else
+                    {
+                        Trace.TraceInformation("Waiting for second event");
+                        secondEvent = await bulkWatcherTasks[1];
+
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeCreated, firstEvent.EventType);
+                        Assert.AreEqual(childNodePath, firstEvent.Path);
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, secondEvent.EventType);
+                        Assert.AreEqual(nodePath, secondEvent.Path);
+                        Assert.IsNull(firstEvent.Data);
+                        Assert.IsNull(firstEvent.Stat);
+                        Assert.IsNull(firstEvent.ChildName);
+                        Assert.IsNull(firstEvent.ChildUserMetadata);
+                    }
 
                     string grandChildNodePath = $"{childNodePath}/GrandChild1";
                     Trace.TraceInformation($"Creating grandchild node path={grandChildNodePath}");
                     await ringMaster2.Create(grandChildNodePath, null, null, CreateMode.Persistent);
 
-                    Trace.TraceInformation("Waiting for NodeCreated event");
-                    nodeCreatedEvent = await bulkWatcherTasks[2];
-                    Trace.TraceInformation("Waiting for NodeChildrenChanged event");
-                    nodeChildrenChangedEvent = await bulkWatcherTasks[3];
+                    if (includeDataAndChildChange)
+                    {
+                        Trace.TraceInformation("Waiting for NodeCreated event");
+                        firstEvent = await bulkWatcherTasks[1];
 
-                    Assert.AreEqual(WatchedEvent.WatchedEventType.NodeCreated, nodeCreatedEvent.EventType);
-                    Assert.AreEqual(grandChildNodePath, nodeCreatedEvent.Path);
-                    Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, nodeChildrenChangedEvent.EventType);
-                    Assert.AreEqual(childNodePath, nodeChildrenChangedEvent.Path);
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, firstEvent.EventType);
+                        Assert.AreEqual(childNodePath, firstEvent.Path);
+                        Assert.IsNotNull(firstEvent.Stat);
+                        Assert.IsNotNull(firstEvent.ChildName);
+                        Assert.IsNotNull(firstEvent.ChildStat);
+                    }
+                    else
+                    {
+                        Trace.TraceInformation("Waiting for NodeCreated event");
+                        firstEvent = await bulkWatcherTasks[2];
+                        Trace.TraceInformation("Waiting for NodeChildrenChanged event");
+                        secondEvent = await bulkWatcherTasks[3];
+
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeCreated, firstEvent.EventType);
+                        Assert.AreEqual(grandChildNodePath, firstEvent.Path);
+                        Assert.AreEqual(WatchedEvent.WatchedEventType.NodeChildrenChanged, secondEvent.EventType);
+                        Assert.IsNull(secondEvent.Stat);
+                        Assert.AreEqual(childNodePath, secondEvent.Path);
+                        Assert.IsNull(secondEvent.ChildName);
+                        Assert.IsNull(secondEvent.ChildData);
+                        Assert.IsNull(secondEvent.ChildStat);
+                    }
 
                     Trace.TraceInformation("Closing ringMaster2");
                 }
@@ -537,10 +657,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         {
             var watcherTaskCompletionSource = new TaskCompletionSource<WatchedEvent>();
             var watcher = new DelegateWatcher(
-                watchedEvent =>
-                {
-                    Task.Run(() => watcherTaskCompletionSource.SetResult(watchedEvent));
-                },
+                watchedEvent => ThreadPool.QueueUserWorkItem(_ => watcherTaskCompletionSource.TrySetResult(watchedEvent)),
                 kind);
 
             watchedEventTask = watcherTaskCompletionSource.Task;
@@ -553,7 +670,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// </summary>
         /// <param name="watchedEventTaskArray">The array of tasks that will be completed when the watcher is notified</param>
         /// <returns>Interface to the watcher</returns>
-        private static IWatcher CreateWatcher(Task<WatchedEvent>[] watchedEventTaskArray)
+        private static IWatcher CreateWatcher(Task<WatchedEvent>[] watchedEventTaskArray, WatcherKind kind = default(WatcherKind))
         {
             Queue<TaskCompletionSource<WatchedEvent>> srcArray = new Queue<TaskCompletionSource<WatchedEvent>>();
 
@@ -581,9 +698,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                         item = srcArray.Dequeue();
                     }
 
-                    Task.Run(() => item.SetResult(watchedEvent));
+                    ThreadPool.QueueUserWorkItem(_ => item.TrySetResult(watchedEvent));
                 },
-                default(WatcherKind));
+                kind);
 
             return watcher;
         }

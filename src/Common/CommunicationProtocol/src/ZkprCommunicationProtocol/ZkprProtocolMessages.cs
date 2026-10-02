@@ -10,8 +10,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
-    using Data;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Error codes used by ZooKeeper

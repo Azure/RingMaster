@@ -32,6 +32,12 @@ namespace Microsoft.Vega.Test.Helpers
 
         private volatile int serverGeneration = 0;
 
+        private int targetServiceIndex;
+
+        private Random random;
+
+        private string hostEndpoint;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RetriableRingMasterClient" /> class.
         /// </summary>
@@ -39,12 +45,24 @@ namespace Microsoft.Vega.Test.Helpers
         /// <param name="server">the server</param>
         /// <param name="vegaServiceInfoReader">The vega service information reader.</param>
         /// <param name="log">the logger function</param>
-        public RetriableRingMasterClient(Func<string, IRingMasterRequestHandler> createClient, string server, IVegaServiceInfoReader vegaServiceInfoReader = null, Action<string> log = null)
+        /// <param name="targetServiceIndex">Index of the target service.</param>
+        /// <param name="hostEndpoint">The host endpoint.</param>
+        /// <exception cref="ArgumentNullException">createClient</exception>
+        public RetriableRingMasterClient(Func<string, IRingMasterRequestHandler> createClient, string server, IVegaServiceInfoReader vegaServiceInfoReader = null, Action<string> log = null, int targetServiceIndex = 0, string hostEndpoint = "")
         {
+            if (createClient == null)
+            {
+                throw new ArgumentNullException(nameof(createClient));
+            }
+
             this.createClientFunc = createClient;
             this.ringMasterRequestHandler = createClient(server);
             this.vegaServerReader = vegaServiceInfoReader ?? new VegaServiceInfoReader();
             this.log = log ?? (s => Trace.TraceInformation(s));
+            this.targetServiceIndex = targetServiceIndex;
+            this.CurrentServer = server;
+            this.random = new Random();
+            this.hostEndpoint = hostEndpoint;
         }
 
         /// <summary>
@@ -62,6 +80,14 @@ namespace Microsoft.Vega.Test.Helpers
                 this.ringMasterRequestHandler.Timeout = value;
             }
         }
+
+        /// <summary>
+        /// Gets the current server.
+        /// </summary>
+        /// <value>
+        /// The current server.
+        /// </value>
+        public string CurrentServer { get; private set; }
 
         /// <summary>
         /// Close the RequestForwarder.
@@ -197,11 +223,12 @@ namespace Microsoft.Vega.Test.Helpers
 
                 if (this.serverGeneration < generation)
                 {
-                    var newServer = (await this.vegaServerReader.GetVegaServiceInfo()).Item1;
+                    var newServer = (await this.vegaServerReader.GetVegaServiceInfo(this.targetServiceIndex, this.hostEndpoint)).Item1;
 
                     this.serverGeneration++;
                     var newRequestHandler = this.createClientFunc(newServer);
                     Interlocked.Exchange(ref this.ringMasterRequestHandler, newRequestHandler);
+                    this.CurrentServer = newServer;
                 }
             }
             catch (Exception ex)

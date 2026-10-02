@@ -64,6 +64,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             var applicableWatchers = new List<IWatcher>();
             var timer = Stopwatch.StartNew();
+            applicableWatchers.AddRange(this.GetWatchersOnParentPath(path));
+            applicableWatchers.AddRange(this.GetWatchersOnNode(path));
+
+            RingMasterEventSource.Log.WatcherCollection_EnumeratedApplicableWatchers(path, applicableWatchers.Count, timer.ElapsedMilliseconds);
+            return applicableWatchers;
+        }
+
+        /// <summary>
+        /// Gets the watchers on parent path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>a collection of watchers on parent path (not include the watchers on this node)</returns>
+        /// <exception cref="ArgumentNullException">path</exception>
+        public IEnumerable<IWatcher> GetWatchersOnParentPath(string path)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            var applicableWatchers = new List<IWatcher>();
             if (this.watcherCount > 0)
             {
                 this.watchersLock.EnterReadLock();
@@ -91,7 +112,46 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
             }
 
-            RingMasterEventSource.Log.WatcherCollection_EnumeratedApplicableWatchers(path, applicableWatchers.Count, timer.ElapsedMilliseconds);
+            return applicableWatchers;
+        }
+
+        /// <summary>
+        /// Gets the watchers on node.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>a collection of watchers only on this node</returns>
+        /// <exception cref="ArgumentNullException">path</exception>
+        public IEnumerable<IWatcher> GetWatchersOnNode(string path)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            var applicableWatchers = new List<IWatcher>();
+            if (this.watcherCount > 0)
+            {
+                this.watchersLock.EnterReadLock();
+                try
+                {
+                    if (this.watchers.TryGetValue(path, out Dictionary<ulong, WatcherRecord> existingWatchers))
+                    {
+                        foreach (var pair in existingWatchers)
+                        {
+                            ulong sessionId = pair.Key;
+                            WatcherRecord watcher = pair.Value;
+
+                            applicableWatchers.Add(watcher.Watcher);
+                            RingMasterEventSource.Log.WatcherCollection_WatcherApplies(path, sessionId, path);
+                        }
+                    }
+                }
+                finally
+                {
+                    this.watchersLock.ExitReadLock();
+                }
+            }
+
             return applicableWatchers;
         }
 
@@ -255,10 +315,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// /
         /// /foo
         /// /foo/bar
-        /// /foo/bar/toe
         /// </remarks>
         private static IEnumerable<string> EnumerateParentPaths(string path)
         {
+            path = path.Substring(0, path.LastIndexOf('/'));
             int index = path.IndexOf('/');
 
             while (index > -1)

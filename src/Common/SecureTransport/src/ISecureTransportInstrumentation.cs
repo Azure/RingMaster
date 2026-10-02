@@ -14,6 +14,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
     public interface ISecureTransportInstrumentation
     {
         /// <summary>
+        /// Starts the server.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="endpoint">The endpoint.</param>
+        void ListenerStarted(long transportId, EndPoint endpoint);
+
+        /// <summary>
+        /// Listeners the stopped.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="endpoint">The endpoint.</param>
+        void ListenerStopped(long transportId, EndPoint endpoint);
+
+        /// <summary>
         /// A connection with a server was established successfully.
         /// </summary>
         /// <param name="serverEndPoint">Address of the server</param>
@@ -57,5 +71,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
         /// <param name="clientEndPoint">EndPoint of the client that attempted to connect</param>
         /// <param name="processingTime">Time spent processing the connection request</param>
         void AcceptConnectionFailed(IPEndPoint clientEndPoint, TimeSpan processingTime);
+
+        /// <summary>
+        /// Outgoing packet queued.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <param name="queueLength">Length of the queue.</param>
+        /// <param name="packetLength">Length of the packet.</param>
+        void OutgoingPacketQueued(long transportId, long connectionId, int queueLength, int packetLength);
+
+        /// <summary>
+        /// Outgoing queue full.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <param name="pendingPacketCount">The pending packet count.</param>
+        void OutgoingQueueFull(long transportId, long connectionId, int pendingPacketCount);
+
+        /// <summary>
+        /// Outgoing packet sent.
+        /// </summary>
+        /// <param name="transportId">The transport identifier.</param>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <param name="packetLength">Length of the packet.</param>
+        void OutgoingPacketSent(long transportId, long connectionId, int packetLength);
     }
 }

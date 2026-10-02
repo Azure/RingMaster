@@ -12,7 +12,6 @@
     <Title>Vega Common Library</Title>
     <Description>Vega Common Library</Description>
     <Copyright>Copyright (c) Microsoft Corporation</Copyright>
-    <PackageLicenseUrl>https://b</PackageLicenseUrl>
     <PackageProjectUrl>https://b</PackageProjectUrl>
     <PackageTags>RingMaster;VegaCommon</PackageTags>
     <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
@@ -22,15 +21,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" />
-    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" />
+    <!-- Need to reference and include HelperTypes, since its used by ZkprCommunicationProtocol  -->
+    <ProjectReference Include="$(SRCROOT)\Backend\HelperTypes\src\HelperTypes.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\Common\Common.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\ZkprCommunicationProtocol\ZkprCommunicationProtocol.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\Instrumentation\Instrumentation.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterCommon\src\RingMasterCommon.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\SecureTransport\src\SecureTransport.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Common\CommunicationProtocol\src\RingMasterCommunicationProtocol\RingMasterCommunicationProtocol.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.HelperTypes.dll" />
+    <libs Include="$(OutputPath)\Microsoft.RingMaster.Backend.HelperTypes.pdb" />
     <libs Include="$(OutputPath)\Microsoft.RingMaster.Common.dll" />
     <libs Include="$(OutputPath)\Microsoft.RingMaster.Common.pdb" />
     <libs Include="$(OutputPath)\Microsoft.RingMaster.CommunicationProtocol.Common.dll" />

@@ -8,12 +8,14 @@ namespace Microsoft.Vega.MiscellaneousTests
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using Azure.Networking.Infrastructure.RingMaster.Requests;
+
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Microsoft.Vega.Test.Helpers;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+
     using NSubstitute;
-    using VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
     /// The retiable ring master client test
@@ -47,6 +49,7 @@ namespace Microsoft.Vega.MiscellaneousTests
         /// Retriables the ring master client stress.
         /// </summary>
         [TestMethod]
+        [Timeout(1000 * 60)]
         public void RetriableRingMasterClientStress()
         {
             int maxRequestCount = 1000;
@@ -87,9 +90,9 @@ namespace Microsoft.Vega.MiscellaneousTests
             });
 
             var vegaServiceInfoReader = Substitute.For<IVegaServiceInfoReader>();
-            vegaServiceInfoReader.GetVegaServiceInfo().Returns((callInfo) =>
+            vegaServiceInfoReader.GetVegaServiceInfo().Returns(async (callInfo) =>
             {
-                Thread.Sleep(rnd.Next(1, 5) * 1000);
+                await Task.Delay(rnd.Next(1, 3) * 1000);
                 return Tuple.Create(Arg.Any<string>(), Arg.Any<string>());
             });
 
@@ -103,7 +106,7 @@ namespace Microsoft.Vega.MiscellaneousTests
             int exceptionCount = 0;
             for (int i = 0; i < maxRequestCount; i++)
             {
-                taskCount++;
+                Interlocked.Increment(ref taskCount);
                 var unused = theClient.Request(requestFunc)
                     .ContinueWith(t =>
                     {

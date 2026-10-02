@@ -13,7 +13,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
-
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using IOperationOverrides = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.IOperationOverrides;
     using ISessionAuth = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.ISessionAuth;
     using Perm = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.Acl.Perm;
@@ -34,9 +34,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Collections of locks at each lock pool level
         /// </summary>
-        private readonly LayeredLockCollection lockCollections = new LayeredLockCollection();
+        private readonly LayeredLockCollection lockCollections;
 
         private readonly Func<IChangeList> createChangeList;
+
+        private readonly IRingMasterServerInstrumentation serverInstrumentation;
 
         private IChangeList changelist;
 
@@ -80,8 +82,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="lockDownPaths">The paths that must be in lockdown (or null)</param>
         /// <param name="onlyOnEphemeral">Only used on ephemeral</param>
         /// <param name="txId">Transanction ID</param>
-        public LockListForRW(Func<IChangeList> createChangeList, LockDownSet lockDownPaths, bool onlyOnEphemeral, long txId)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        public LockListForRW(Func<IChangeList> createChangeList, LockDownSet lockDownPaths, bool onlyOnEphemeral, long txId, IRingMasterServerInstrumentation serverInstrumentation)
         {
+            this.serverInstrumentation = serverInstrumentation ?? throw new ArgumentNullException(nameof(serverInstrumentation));
+            this.lockCollections = new LayeredLockCollection();
             this.createChangeList = createChangeList;
             this.lockDownPaths = lockDownPaths ?? throw new ArgumentNullException("lockDownPaths");
             this.readonlyInterfaceRequiresLocks = true;
@@ -222,9 +227,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <inheritdoc />
-        public void LockAll(ref bool cancelled)
+        public void LockAll(ref bool cancelled, IRingMasterRequest request)
         {
-            this.lockCollections.Acquire(ref cancelled);
+            this.lockCollections.Acquire(ref cancelled, request, this.serverInstrumentation.OnAcquireLock);
         }
 
         /// <summary>
@@ -317,7 +322,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                             RmAssert.Fail("Commit failed: " + e);
                         }
 
-                        RingMasterServerInstrumentation.Instance.OnTxCommitted();
+                        this.serverInstrumentation.OnTxCommitted();
                     }
                 }
             }
@@ -692,7 +697,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return new FirstStat(data.Stat);
             }
 
-            return new MutableStat(data.Stat);
+            if (data.Stat is MutableStat)
+            {
+                return new MutableStat(data.Stat);
+            }
+
+            return new MutableStatWithMetadataVersion(data.Stat);
         }
 
         /// <inheritdoc />
@@ -765,6 +775,51 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.RunOnAbort(() =>
             {
                 data.Data = prevData;
+                data.Stat = prevStat;
+            });
+        }
+
+        /// <summary>
+        /// Appends the set user metadata.
+        /// </summary>
+        /// <param name="data">The data.</param>
+        /// <param name="txTime">The tx time.</param>
+        /// <param name="prevData">The previous data.</param>
+        /// <param name="prevUserMetadata">The previous user metadata.</param>
+        /// <param name="prevStat">The previous stat.</param>
+        public void AppendSetDataAndUserMetadata(IPersistedData data, long txTime, byte[] prevData, byte[] prevUserMetadata, IMutableStat prevStat)
+        {
+            if (data == null)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            if (prevStat == null)
+            {
+                throw new ArgumentNullException(nameof(prevStat));
+            }
+
+            if (this.changelist == null)
+            {
+                this.changelist = this.createChangeList();
+            }
+
+            data.AppendSetDataAndUserMetadata(this.changelist);
+
+            if (this.changelist != null)
+            {
+                this.changelist.SetTime(txTime);
+            }
+
+            if (this.isLockDown)
+            {
+                return;
+            }
+
+            this.RunOnAbort(() =>
+            {
+                data.Data = prevData;
+                data.UserMetadata = prevUserMetadata;
                 data.Stat = prevStat;
             });
         }
@@ -873,7 +928,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (this.lockDownPaths.Contains(nodepath))
             {
-                RingMasterServerInstrumentation.Instance.OnLockDownAccess(nodepath, rwMode);
+                this.serverInstrumentation.OnLockDownAccess(nodepath, rwMode);
                 throw new InvalidAclException(nodepath, "lockdown");
             }
         }

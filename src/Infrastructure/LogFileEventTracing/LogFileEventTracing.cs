@@ -118,6 +118,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private long droppedTraces = 0L;
 
         /// <summary>
+        /// Number of total written bytes.
+        /// </summary>
+        private long totalWrittenChars = 0L;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LogFileEventTracing" /> class
         /// </summary>
         /// <param name="logDirectory">Directory where log files should be stored</param>
@@ -176,6 +181,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         }
 
         /// <summary>
+        /// Gets the total number of written bytes.
+        /// </summary>
+        public static long TotalWrittenChars => instance?.totalWrittenChars ?? 0L;
+
+        /// <summary>
         /// Initializes the singleton of <see cref="LogFileEventTracing"/> class
         /// </summary>
         /// <param name="logDirectory">Directory where log files should be stored</param>
@@ -216,8 +226,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="eventSourceName">Full name of the event source to be listened</param>
         /// <param name="level">Event level</param>
         /// <param name="shortName">Short and friendly name of the event source</param>
+        /// <param name="keywords">The keywords used for filtering some of the events.</param>
         /// <returns>True if the event source is listened successfully, false if otherwise</returns>
-        public static bool AddEventSource(string eventSourceName, EventLevel level = EventLevel.Verbose, string shortName = null)
+        public static bool AddEventSource(string eventSourceName, EventLevel level = EventLevel.Verbose, string shortName = null, EventKeywords keywords = EventKeywords.None)
         {
             if (instance == null)
             {
@@ -230,8 +241,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             if (eventSource != null)
             {
                 instance.listenedEventSources.Add(eventSource.Name, EventSourceInfo.Parse(eventSource, shortName));
-                instance.EnableEvents(eventSource, level);
-                Trace($"Event source {eventSourceName} enabled.");
+                instance.EnableEvents(eventSource, level, keywords);
+                Trace($"Event source {eventSourceName} enabled with keywords {keywords}.");
 
                 return true;
             }
@@ -388,6 +399,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
                             file.WriteLine(line);
                             fileSize += line.Length + linefeedLength;
+                            Interlocked.Add(ref this.totalWrittenChars, line.Length + linefeedLength);
                         }
                         else
                         {

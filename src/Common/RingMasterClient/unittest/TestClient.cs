@@ -10,6 +10,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Reflection;
     using System.Runtime.Serialization;
     using System.Runtime.Serialization.Formatters.Binary;
     using System.Security.Cryptography;
@@ -277,6 +278,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             }
         }
 
+        sealed private class RingMasterClientExceptionBinder : SerializationBinder
+        {
+            //Using binder we can avoid deserializing the data of other types
+            //Here the malicious object is not created.
+            public override Type BindToType(string assemblyName, string typeName)
+            {
+                if (typeName.Equals("Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientException"))
+                {
+                    return typeof(RingMasterClientException);
+                }
+                else if (typeName.StartsWith("Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientException"))
+                {
+                    var currentAssembly = Assembly.GetExecutingAssembly().FullName;
+                    Type typeToDeserialize = Type.GetType(String.Format("{0}, {1}", typeName, currentAssembly));
+                    return typeToDeserialize;
+                }
+                else
+                {
+                    throw new SerializationException($"Not a valid Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientException serialized data: {typeName}");
+                }
+            }
+        }
+
         /// <summary>
         /// Verify that RingMasterClientException can be serialized/deserialized properly.
         /// </summary>
@@ -289,6 +313,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
             Assert.AreEqual(RingMasterClientException.Code.RequestQueueFull, exception.ErrorCode);
 
             var formatter = new BinaryFormatter();
+            formatter.Binder = new RingMasterClientExceptionBinder();
             byte[] serializedData = null;
             using (var memoryStream = new MemoryStream())
             {
@@ -588,7 +613,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     return new RequestResponse()
                     {
                         ResultCode = (int)RingMasterException.Code.Ok,
-                        Content = expectedData
+                        Content = new GetDataResponse(expectedData, null, null),
                     };
                 };
 
@@ -624,14 +649,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     return new RequestResponse()
                     {
                         ResultCode = (int)RingMasterException.Code.Ok,
-                        Content = expectedData,
+                        Content = new GetDataResponse(expectedData, null, null),
                         Stat = expectedStat
                     };
                 };
 
-                var dataAndStat = client.GetDataWithStat(path, watcher).Result;
-                Assert.AreEqual(expectedStat.Version, dataAndStat.Item1.Version);
-                CollectionAssert.AreEqual(expectedData, dataAndStat.Item2);
+                var dataAndStat = client.GetData(path, RequestGetData.GetDataOptions.None, watcher).Result;
+                Assert.AreEqual(expectedStat.Version, dataAndStat.Stat.Version);
+                CollectionAssert.AreEqual(expectedData, dataAndStat.Data);
             }
         }
 

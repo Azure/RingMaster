@@ -5,7 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
 {
     using System.Threading.Tasks;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Interface to the protocol used to send requests and receive responses.
@@ -36,7 +36,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
         /// <param name="request">Request to serialize</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>Serialized representation of the given request</returns>
-        byte[] SerializeRequest(RequestCall request, uint version);
+        IMemoryBuffer SerializeRequest(RequestCall request, uint version);
 
         /// <summary>
         /// Serialize a <see cref="RequestResponse"/>.
@@ -44,7 +44,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
         /// <param name="response">Response to serialize</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>Serialized representation of the given response</returns>
-        byte[] SerializeResponse(RequestResponse response, uint version);
+        IMemoryBuffer SerializeResponse(RequestResponse response, uint version);
 
         /// <summary>
         /// Deserialize a <see cref="RequestCall"/>.
@@ -59,8 +59,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
         /// Deserialize a <see cref="RequestResponse"/>.
         /// </summary>
         /// <param name="serializedResponse">Serialized representation of the response</param>
+        /// <param name="serializedResponseLength">Length of serialized response.</param>
         /// <param name="version">Serialization protocol version to use</param>
         /// <returns>The deserialized <see cref="RequestResponse"/></returns>
-        RequestResponse DeserializeResponse(byte[] serializedResponse, uint version);
+        RequestResponse DeserializeResponse(byte[] serializedResponse, int serializedResponseLength, uint version);
     }
 }

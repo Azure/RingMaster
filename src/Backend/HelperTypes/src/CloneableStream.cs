@@ -39,18 +39,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// <exception cref="System.ArgumentNullException">getClone</exception>
         public CloneableStream(Stream thisStream, Func<Stream> getClone)
         {
-            if (thisStream == null)
-            {
-                throw new ArgumentNullException(nameof(thisStream));
-            }
-
-            if (getClone == null)
-            {
-                throw new ArgumentNullException(nameof(getClone));
-            }
-
-            this.getClone = getClone;
-            this.stream = thisStream;
+            this.getClone = getClone.ThrowIfNull();
+            this.stream = thisStream.ThrowIfNull();
         }
 
         /// <summary>

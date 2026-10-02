@@ -143,6 +143,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterTool
 
                         GetChildCount(ringMaster, path, showPath, maxToShow).Wait();
                     }
+                    else if (command == "getsysteminfo")
+                    {
+                        var systemInfo = SystemInfo.Deserialize(ringMaster.GetData(SystemInfo.SystemInfoPath, null).GetAwaiter().GetResult());
+                        Console.WriteLine(systemInfo.ToString());
+                    }
                 }
 
                 return 0;

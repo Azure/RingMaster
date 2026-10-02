@@ -176,6 +176,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ConnectionStressS
                 ConnectionStressServiceEventSource.Log.ConnectionClosed(connectionId, remoteEndPoint.ToString(), remoteIdentity);
                 this.connectionClosed.LogValue(1);
             }
+
+            public void OutgoingQueueFull(long transportId, long connectionId, int pendingPacketCount)
+            {
+            }
+
+            public void OutgoingPacketQueued(long transportId, long connectionId, int queueLength, int packetLength)
+            {
+            }
+
+            public void OutgoingPacketSent(long transportId, long connectionId, int packetLength)
+            {
+            }
+
+            public void ListenerStarted(long transportId, EndPoint endpoint)
+            {
+            }
+
+            public void ListenerStopped(long transportId, EndPoint endpoint)
+            {
+            }
         }
     }
 }

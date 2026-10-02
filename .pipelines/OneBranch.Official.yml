@@ -1,0 +1,250 @@
+#################################################################################
+#                         OneBranch Pipelines - Official                        #
+# This pipeline was created by EasyStart from a sample located at:              #
+#   https://aka.ms/obpipelines/easystart/samples                                #
+# Documentation:  https://aka.ms/obpipelines                                    #
+# Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
+# Retail Tasks:   https://aka.ms/obpipelines/tasks                              #
+# Support:        https://aka.ms/onebranchsup                                   #
+#################################################################################
+
+trigger: none # https://aka.ms/obpipelines/triggers
+
+parameters: # parameters are shown up in ADO UI in a build queue time
+- name: 'debug'
+  displayName: 'Enable debug output'
+  type: boolean
+  default: false
+
+- name: 'reddog'
+  displayName: 'Replicate to reddog'
+  type: boolean
+  default: true
+
+- name: 'runtest'
+  displayName: 'Run unit tests after build'
+  type: boolean
+  default: false
+
+- name: 'publishNupkg'
+  displayName: 'Publish NuGet packages'
+  type: boolean
+  default: false
+
+variables:
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  system.debug: ${{ parameters.debug }}
+  ENABLE_PRS_DELAYSIGN: 1
+  ROOT: $(Build.SourcesDirectory)
+  REPOROOT: $(Build.SourcesDirectory)
+  OUTPUTROOT: $(REPOROOT)\out
+  NUGET_XMLDOC_MODE: none
+
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest' # Docker image which is used to run non-CloudBuild jobs: https://aka.ms/obpipelines/containers
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    featureFlags:
+      EnableCDPxPAT: false
+      WindowsHostVersion: 
+        Version: 2022
+    cloudvault: # https://aka.ms/obpipelines/cloudvault
+      enabled: true
+    globalSdl: # https://aka.ms/obpipelines/sdl
+      tsa:
+        enabled: false # onebranch publish all sdl results to TSA. If TSA is disabled all SDL tools will forced into 'break' build mode.
+      # credscan:
+      #   suppressionsFile: $(Build.SourcesDirectory)\.config\CredScanSuppressions.json
+      binskim:
+        break: true # always break the build on binskim issues in addition to TSA upload
+      policheck:
+        break: true # always break the build on policheck issues. You can disable it by setting to 'false'
+      # suppression:
+      #   suppressionFile: $(Build.SourcesDirectory)\.gdn\global.gdnsuppress
+
+    nugetPublishing:
+      feeds:
+      - name: Official
+        files_to_publish: '*.nupkg;!*Vhd*.nupkg;!*.symbols.nupkg'
+        continueOnConflict: false
+
+    stages:
+    - stage: build
+      jobs:
+      - job: main
+        pool:
+          type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+          hostVersion:  
+            Version: 2022
+            
+        variables:
+          ob_outputDirectory: '$(REPOROOT)\out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+          ob_vsodrop_enabled: true
+          ob_vsodrop_adoInstance: msazure
+          ob_nugetPublishing_enabled: ${{ parameters.publishNupkg }}
+          ob_nugetPublishingDir: Release-x64\packages
+          ob_sdl_binskim_break: true # https://aka.ms/obpipelines/sdl
+          ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}: # conditionally enable symbolsPublishing for master branch only
+            ob_symbolsPublishing_enabled: true # https://aka.ms/obpipelines/symbols
+
+          # ob_sdl_suppression_suppressionFile: $(Build.SourcesDirectory)\.gdn\build.official.gdnsuppress
+          # ob_sdl_codeSignValidation_excludes: -|**\*.nupkg
+
+        steps:
+          - task: UseDotNet@2
+            continueOnError: true
+            inputs:
+              packageType: 'sdk'
+              useGlobalJson: true
+              performMultiLevelLookup: true
+
+          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
+            displayName: 'Setup BuildNumber'
+            inputs:
+              system: 'RevisionCounter'
+              major: '2'
+              minor: '2'
+              exclude_commit: true
+
+          - task: CmdLine@2
+            displayName: 'NuGet Restore'
+            inputs:
+              script: '$(Build.SourcesDirectory)\build\Local\NuGet\nuget.exe restore $(Build.SourcesDirectory)\src\packages.config'
+              workingDirectory: '$(Build.SourcesDirectory)'
+
+          - task: MSBuild@1
+            displayName: 'MSBuild restore'
+            inputs:
+              solution: '$(Build.SourcesDirectory)\dirs.proj'
+              msbuildLocationMethod: 'version'
+              msbuildVersion: 'latest'
+              platform: 'x64'
+              configuration: 'release'
+              msbuildArguments: '/t:Restore'
+              clean: true
+              maximumCpuCount: true
+              logProjectEvents: true
+              createLogFile: true
+
+          - task: MSBuild@1
+            displayName: 'MSBuild build'
+            inputs:
+              solution: '$(Build.SourcesDirectory)\src\dirs.proj'
+              msbuildLocationMethod: 'version'
+              msbuildVersion: 'latest'
+              platform: 'x64'
+              configuration: 'release'
+              msbuildArguments: '/v:n /nr:false /bl:$(OUTPUTROOT)\logs\msbuild_x64_release.binlog'
+              clean: true
+              maximumCpuCount: false
+              logProjectEvents: true
+              createLogFile: true
+
+          - task: MSBuild@1
+            displayName: 'Publish RingMasterService (self-contained)'
+            inputs:
+              solution: '$(Build.SourcesDirectory)\src\Applications\RingMasterApplication\RingMasterService\RingMasterService.csproj'
+              msbuildLocationMethod: 'version'
+              msbuildVersion: 'latest'
+              platform: 'x64'
+              configuration: 'release'
+              msbuildArguments: >
+                /restore
+                /t:Publish
+                /p:SelfContained=true
+                /p:RuntimeIdentifier=win-x64
+                /p:Platform=x64
+                /p:PublishDir=$(OUTPUTROOT)\Release-x64\RingMasterApplication-Pkg\RingMasterApplication\RingMasterService\Code\
+
+          - powershell: |
+              $path = '$(OUTPUTROOT)\Release-x64\RingMasterApplication-Pkg\RingMasterApplication\RingMasterWatchdog\Code'
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $path
+              New-Item -ItemType Directory -Force -Path $path | Out-Null
+            displayName: 'Clean RingMasterWatchdog publish folder'
+
+          - task: MSBuild@1
+            displayName: 'Publish RingMasterWatchdog (self-contained)'
+            inputs:
+              solution: '$(Build.SourcesDirectory)\src\Applications\RingMasterApplication\RingMasterWatchdog\RingMasterWatchdog.csproj'
+              msbuildLocationMethod: 'version'
+              msbuildVersion: 'latest'
+              platform: 'x64'
+              configuration: 'release'
+              msbuildArguments: >
+                /restore
+                /t:Publish
+                /p:SelfContained=true
+                /p:RuntimeIdentifier=win-x64
+                /p:Platform=x64
+                /p:PublishDir=$(OUTPUTROOT)\Release-x64\RingMasterApplication-Pkg\RingMasterApplication\RingMasterWatchdog\Code\
+                
+          - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
+            displayName: 'Sign output'
+            inputs:
+              command: 'sign'
+              signing_environment: 'azure-ado'
+              files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1'
+              search_root: '$(Build.SourcesDirectory)\out'
+
+          - task: MSBuild@1
+            displayName: 'MSBuild pack'
+            inputs:
+              solution: '$(Build.SourcesDirectory)\src\PackageDefinitions\dirs.proj'
+              msbuildLocationMethod: 'version'
+              msbuildVersion: 'latest'
+              platform: 'x64'
+              configuration: 'release'
+              msbuildArguments: '/restore /p:CdpxPostSigning=true /p:BuildProjectReferences=false /v:n /nr:false /bl:$(OUTPUTROOT)\logs\msbuild_x64_release_pack.binlog'
+              clean: false
+              maximumCpuCount: false
+              logProjectEvents: true
+              createLogFile: true
+
+          - task: CmdLine@2
+            displayName: 'Cleanup nupkg temp files'
+            inputs:
+              script: '$(Build.SourcesDirectory)\build\CleanNupkg.cmd'
+              workingDirectory: '$(Build.SourcesDirectory)'
+
+          - task: VSTest@2
+            displayName: 'VSTest'
+            condition: ${{ parameters.runtest }}
+            inputs:
+              testSelector: 'testAssemblies'
+              testAssemblyVer2: |
+                **\Microsoft.*UnitTest.dll
+                **\Microsoft.RingMaster.Test.EventSourceValidation.dll
+                **\MiscellaneousTests.dll
+                **\Microsoft.RingMaster.Backend.CoreStress.dll
+                **\Microsoft.RingMaster.Test.BVT.dll
+                **\Microsoft.RingMaster.Test.EndToEnd.dll
+                !**\*FiniteModelCheckerUnitTest.dll
+                !**\*TestAdapter.dll
+                !**\obj\**
+              searchFolder: '$(Build.SourcesDirectory)\out'
+              resultsFolder: '$(Build.SourcesDirectory)\out\logs\TestResults'
+              runInParallel: false
+              codeCoverageEnabled: true
+              testRunTitle: 'UT_release_x64'
+              platform: 'x64'
+              configuration: 'release'
+              publishRunAttachments: false
+              failOnMinTestsNotRun: true
+              rerunFailedTests: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            condition: ${{ parameters.runtest }}
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: '$(Build.SourcesDirectory)\out\logs\TestResults\**\*.trx'
+              # failed test may have worked on rerun, do not count the first time failure to fail the PR.
+              failTaskOnFailedTests: false

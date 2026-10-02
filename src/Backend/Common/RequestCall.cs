@@ -33,7 +33,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Gets or sets a value indicating whether this was sent to the server.
         /// </summary>
-        /// <value>Was this request sent to the server?</value>
+        /// <value>Whether this request is sent to the server.</value>
         public bool Sent { get; set; }
 
         /// <summary>

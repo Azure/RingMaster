@@ -32,5 +32,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// and by sending a single replicated meta-command
         /// </summary>
         FastDelete = 4,
+
+        /// <summary>
+        /// If set, this flag allows the delete operation to succeed even if delete couldn't be done
+        /// because the node was not empty and cascade delete was disabled.
+        /// </summary>
+        SuccessEvenIfNotEmpty = 8,
     }
 }

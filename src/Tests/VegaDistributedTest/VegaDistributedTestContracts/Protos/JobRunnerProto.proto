@@ -13,7 +13,11 @@ service JobRunnerSvc {
 
 	rpc GetServiceInstanceIdentity (DistTestCommonProto.Empty) returns (GetServiceInstanceIdentityReply) {}
 
-	rpc StartJob (StartJobRequest) returns (DistTestCommonProto.Empty) {}
+	rpc InitializeJob (InitJobRequest) returns (DistTestCommonProto.Empty) {}
+
+	rpc StartJob (DistTestCommonProto.Empty) returns (DistTestCommonProto.Empty) {}
+	
+	rpc CleanupJob (DistTestCommonProto.Empty) returns (DistTestCommonProto.Empty) {}
 }
 
 message GetJobStateReply {
@@ -34,7 +38,13 @@ message GetServiceInstanceIdentityReply {
 	string serviceInstanceIdentity = 1;	
 }
 
-message StartJobRequest {
+message TestNodeContext {
+	int32 testNodeId = 1;
+	int32 targetServiceIndex = 2;
+}
+
+message InitJobRequest {
 	string scenario = 1;
 	repeated DistTestCommonProto.JobParameter parameters = 2;
+	TestNodeContext testNodeContext = 3;
 }

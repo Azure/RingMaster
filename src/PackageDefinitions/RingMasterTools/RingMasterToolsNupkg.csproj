@@ -12,7 +12,7 @@
     <Title>Vega Tools</Title>
     <Description>Vega Tools</Description>
     <Copyright>Copyright (c) Microsoft Corporation</Copyright>
-    <PackageLicenseUrl>https://b</PackageLicenseUrl>
+    <!-- <PackageLicenseUrl>https://b</PackageLicenseUrl> -->
     <PackageProjectUrl>https://b</PackageProjectUrl>
     <PackageTags>RingMaster;VegaClient</PackageTags>
     <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
@@ -22,14 +22,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Tools\RingMasterClientModule\RingMasterClientModule.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Tools\RingMasterClientModule\RingMasterClientModule.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <Target Name="AddDependencies" AfterTargets="ResolveReferences">
     <ItemGroup>
       <!-- We don't need netstandard assemblies in the package -->
       <Content Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))">
-        <PackagePath>lib\net462</PackagePath>
+        <PackagePath>lib\netstandard2.0</PackagePath>
       </Content>
     </ItemGroup>
   </Target>

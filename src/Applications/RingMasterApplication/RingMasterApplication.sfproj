@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets=";ValidateMSBuildFiles">
-  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" />
-  <Import Project="..\Zip.targets" />
+  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.props" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>37D80B41-0442-456D-8D53-D6FD9709917C</ProjectGuid>
     <ProjectVersion>2.0</ProjectVersion>
-    <MinToolsVersion>1.5</MinToolsVersion>
-    <SupportedMSBuildNuGetPackageVersion>1.6.5</SupportedMSBuildNuGetPackageVersion>
+    <MinToolsVersion>2.0</MinToolsVersion>
+    <SupportedMSBuildNuGetPackageVersion>1.7.6</SupportedMSBuildNuGetPackageVersion>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <PackageLocation>$(OutputRoot)\$(MsBuildProjectName)-Pkg\$(MsBuildProjectName)</PackageLocation>
-    <CompressedPackageLocation>$(OutputRoot)RingMasterApplication.sfpkg</CompressedPackageLocation>
   </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -38,21 +36,18 @@
   </ItemGroup>
   <ItemGroup>
     <QCustomInput Include="@(ProjectReference -> '%(RootDir)%(Directory)$(ServicePackageRootFolder)\**')" />
-    <QCustomOutput Include="$(CompressedPackageLocation)" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>
     <ApplicationProjectTargetsPath>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Service Fabric Tools\Microsoft.VisualStudio.Azure.Fabric.ApplicationProject.targets</ApplicationProjectTargetsPath>
   </PropertyGroup>
   <Import Project="$(ApplicationProjectTargetsPath)" Condition="Exists('$(ApplicationProjectTargetsPath)')" />
-  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" />
+  <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" />
   <Target Name="ValidateMSBuildFiles">
-    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.props' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
-    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.5\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
+    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.props' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
+    <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.6\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
   </Target>
-
-  <Target Name="CompressPackage" AfterTargets="Build" DependsOnTargets="Package" Condition="'$(BuildingInsideVisualStudio)' == ''">
-    <Zip Input="$(PackageLocation)" Output="$(CompressedPackageLocation)" Condition="'$(OSSBUILD)' == ''" />
+  <Target Name="ReplaceBuildNumber" AfterTargets="Build" DependsOnTargets="Package" Condition="'$(BuildingInsideVisualStudio)' == ''">
     <Copy SourceFiles="ApplicationParameters\Local.5Node.xml" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
     <Copy SourceFiles="ApplicationParameters\parameters.json" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>
     <Copy SourceFiles="Scripts\Deploy-FabricApplication.sh" DestinationFolder="$(OutputRoot)\$(MsBuildProjectName)-Pkg"/>

@@ -33,11 +33,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private static readonly WatcherCollection SbulkWatchers = new WatcherCollection();
 
         /// <summary>
-        /// Maximum amount of time a session can be idle for
-        /// </summary>
-        private static readonly TimeSpan MaxSessionIdleTime = TimeSpan.FromSeconds(60);
-
-        /// <summary>
         /// do we want to use ROlocks?
         /// </summary>
         private static bool useROLocks = true;
@@ -61,6 +56,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Lock that guards the table of terminate actions.
         /// </summary>
         private readonly ReaderWriterLockSlim actionsOnTerminateLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+
+        private readonly IRingMasterServerInstrumentation serverInstrumentation;
+
+        /// <summary>
+        /// Maximum amount of time a session can be idle for
+        /// </summary>
+        private TimeSpan maxSessionIdleTime = TimeSpan.FromSeconds(60);
 
         /// <summary>
         /// The friendly name.
@@ -90,7 +92,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// The last time a request or response was seen in this session
         /// </summary>
-        private DateTime lastSessionActivity = DateTime.UtcNow;
+        private Stopwatch lastSessionActivity;
 
         /// <summary>
         /// Timer that kills the session if it has been idle for too long
@@ -106,11 +108,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Initializes a new instance of the <see cref="ClientSession"/> class.
         /// </summary>
         /// <param name="processMessage">Delegate to invoke to process received messages</param>
-        public ClientSession(ProcessMessageDelegate processMessage)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        public ClientSession(ProcessMessageDelegate processMessage, IRingMasterServerInstrumentation serverInstrumentation = null)
         {
             this.processMessage = processMessage;
             this.SessionId = SsessionIdProvider.NextUniqueId();
             this.FriendlyName = "sid-" + this.SessionId;
+
+            this.serverInstrumentation = serverInstrumentation ?? RingMasterServerInstrumentation.Instance;
         }
 
         /// <summary>
@@ -384,9 +389,33 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Starts the idle session timeout timer
         /// </summary>
-        public void StartTimeoutIdleSessionTimer()
+        /// <param name="maxIdleTime">max time for a session with no activity</param>
+        public void StartTimeoutIdleSessionTimer(TimeSpan maxIdleTime)
         {
-            this.timeoutIdleSessionTimer = new Timer(this.TimeoutIdleSession, null, MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
+            this.maxSessionIdleTime = maxIdleTime;
+            if (maxIdleTime == Timeout.InfiniteTimeSpan)
+            {
+                try
+                {
+                    lock (this.timeoutIdleSessionTimerLockObject)
+                    {
+                        if (this.timeoutIdleSessionTimer != null)
+                        {
+                            this.timeoutIdleSessionTimer.Dispose();
+                            this.timeoutIdleSessionTimer = null;
+                            this.lastSessionActivity.Stop();
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+                return;
+            }
+
+            this.lastSessionActivity = Stopwatch.StartNew();
+            this.timeoutIdleSessionTimer = new Timer(this.TimeoutIdleSession, null, this.maxSessionIdleTime, Timeout.InfiniteTimeSpan);
 
             this.AddOnTerminateAction("RemoveTimeoutIdleSessionTimer", _ =>
             {
@@ -431,9 +460,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>IEnumerable&lt;IWatcher&gt;.</returns>
-        internal static IEnumerable<IWatcher> GetBulkWatchers(string path)
+        internal static IEnumerable<IWatcher> GetBulkWatchersOnParentPath(string path)
         {
-            return SbulkWatchers.EnumerateApplicableWatchers(path);
+            return SbulkWatchers.GetWatchersOnParentPath(path);
+        }
+
+        /// <summary>
+        /// Gets the bulk watchers on node.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>a collection of watchers only on this node (without those on parent nodes)</returns>
+        internal static IEnumerable<IWatcher> GetBulkWatchersOnNode(string path)
+        {
+            return SbulkWatchers.GetWatchersOnNode(path);
         }
 
         /// <summary>
@@ -442,10 +481,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="sessionId">Id of the session that is adding the watcher</param>
         /// <param name="path">Path to watch</param>
         /// <param name="watcher">Watcher to add</param>
-        internal static void AddBulkWatcher(ulong sessionId, string path, MarshallerChannel.ProxyWatcher watcher)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        internal static void AddBulkWatcher(ulong sessionId, string path, MarshallerChannel.ProxyWatcher watcher, IRingMasterServerInstrumentation serverInstrumentation)
         {
             int count = SbulkWatchers.AddWatcher(sessionId, path, watcher);
-            RingMasterServerInstrumentation.Instance.UpdateBulkWatcherCount(count);
+            serverInstrumentation.UpdateBulkWatcherCount(count);
         }
 
         /// <summary>
@@ -453,20 +493,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="sessionId">Id of the session that is removing the watcher</param>
         /// <param name="path">Path associated with the watcher</param>
-        internal static void RemoveBulkWatcher(ulong sessionId, string path)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        internal static void RemoveBulkWatcher(ulong sessionId, string path, IRingMasterServerInstrumentation serverInstrumentation)
         {
             int count = SbulkWatchers.RemoveWatcher(sessionId, path);
-            RingMasterServerInstrumentation.Instance.UpdateBulkWatcherCount(count);
+            serverInstrumentation.UpdateBulkWatcherCount(count);
         }
 
         /// <summary>
         /// Removes all bulk watchers in the session
         /// </summary>
         /// <param name="sessionId">Session ID that is removing the watchers</param>
-        internal static void RemoveAllBulkWatchers(ulong sessionId)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        internal static void RemoveAllBulkWatchers(ulong sessionId, IRingMasterServerInstrumentation serverInstrumentation)
         {
             int count = SbulkWatchers.RemoveAllWatchersForSession(sessionId);
-            RingMasterServerInstrumentation.Instance.UpdateBulkWatcherCount(count);
+            serverInstrumentation.UpdateBulkWatcherCount(count);
         }
 
         /// <summary>
@@ -492,7 +534,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (this.ROInterfaceRequiresLocks || this.WritesAllowed || !useROLocks)
             {
-                ll = new LockListForRW(createChangeList, lockDownPaths, this.OnlyEphemeralChangesAllowed, txId);
+                ll = new LockListForRW(createChangeList, lockDownPaths, this.OnlyEphemeralChangesAllowed, txId, this.serverInstrumentation);
             }
             else
             {
@@ -563,10 +605,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Updates the timestamp of the last activity of the session
         /// </summary>
-        /// <param name="time">Timestamp of the activity</param>
-        protected void UpdateLastSessionActivity(DateTime time)
+        internal void UpdateLastSessionActivity()
         {
-            this.lastSessionActivity = time;
+            if (this.timeoutIdleSessionTimer == null)
+            {
+                return;
+            }
+
+            this.lastSessionActivity.Restart();
         }
 
         /// <summary>
@@ -613,7 +659,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         }
                     }
 
-                    ClientSession.RemoveAllBulkWatchers(this.SessionId);
+                    ClientSession.RemoveAllBulkWatchers(this.SessionId, this.serverInstrumentation);
 
                     // Then run the non watcher terminate actions.
                     foreach (KeyValuePair<string, Action<bool>> item in torun)
@@ -628,6 +674,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
 
                 this.State = SessionState.Closed;
+            }
+            catch (Exception ex)
+            {
+                this.serverInstrumentation.OnCompleteTerminationFailure();
+                string errorMessage = string.Format("Exception caught in Completete Termination - Failing Fast. Stack Trace : {0}", ex.ToString());
+                Trace.TraceError(errorMessage);
+                Environment.FailFast(errorMessage);
             }
             finally
             {
@@ -662,7 +715,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         private void TimeoutIdleSession(object state)
         {
-            if (this.lastSessionActivity < DateTime.UtcNow.Subtract(MaxSessionIdleTime))
+            if (this.timeoutIdleSessionTimer == null)
+            {
+                return;
+            }
+
+            if (this.lastSessionActivity.Elapsed > this.maxSessionIdleTime)
             {
                 Trace.TraceWarning("ClientSession[{0}]: Closing idle session", this.SessionId);
 
@@ -671,6 +729,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     try
                     {
                         this.Close();
+                        return;
                     }
                     catch (Exception closeEx)
                     {
@@ -684,7 +743,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 {
                     if (this.timeoutIdleSessionTimer != null)
                     {
-                        this.timeoutIdleSessionTimer.Change(MaxSessionIdleTime, Timeout.InfiniteTimeSpan);
+                        this.timeoutIdleSessionTimer.Change(this.maxSessionIdleTime, Timeout.InfiniteTimeSpan);
                     }
                 }
             }

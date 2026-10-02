@@ -9,10 +9,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.Diagnostics;
     using System.Linq;
     using System.Threading;
-    using HelperTypes;
-    using Infrastructure.RingMaster.Data;
-    using Requests;
-    using Code = Infrastructure.RingMaster.Data.RingMasterException.Code;
+
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
+
+    using Code = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.RingMasterException.Code;
 
     /// <summary>This class takes care of monitoring and executing scheduler commands.</summary>
     /// <remarks>
@@ -63,6 +66,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         private const string PathInflight = "/$metadata/scheduler/inflight";
         private const string PathInflightToken = "/$metadata/scheduler/inflight/$<inflighttoken>";
 
+        private readonly IRingMasterServerInstrumentation serverInstrumentation;
         private Func<bool> isPrimary;
         private IByteArrayMarshaller marshaller;
         private AbstractRingMaster self;
@@ -78,20 +82,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="isPrimary">the function indicating if the backend object is primary</param>
         /// <param name="rm">Ring master object</param>
         /// <param name="marshaller">the marshaller to use when serializing/deserializing commands</param>
-        internal ScheduledCommand(Func<bool> isPrimary, AbstractRingMaster rm, IByteArrayMarshaller marshaller)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        internal ScheduledCommand(Func<bool> isPrimary, AbstractRingMaster rm, IByteArrayMarshaller marshaller, IRingMasterServerInstrumentation serverInstrumentation)
         {
-            if (isPrimary == null)
-            {
-                throw new ArgumentNullException("isPrimary");
-            }
-
-            if (marshaller == null)
-            {
-                throw new ArgumentNullException("marshaller");
-            }
-
-            this.marshaller = marshaller;
-            this.isPrimary = isPrimary;
+            this.marshaller = marshaller ?? throw new ArgumentNullException(nameof(marshaller));
+            this.isPrimary = isPrimary ?? throw new ArgumentNullException(nameof(isPrimary));
+            this.serverInstrumentation = serverInstrumentation ?? throw new ArgumentNullException(nameof(serverInstrumentation));
             this.self = rm;
         }
 
@@ -176,7 +172,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="req">request to serialize</param>
         /// <param name="marshaller">marshaller to use</param>
         /// <returns>serialization bytes</returns>
-        public static byte[] GetBytes(IRingMasterBackendRequest req, IByteArrayMarshaller marshaller)
+        public static IMemoryBuffer GetBytes(IRingMasterBackendRequest req, IByteArrayMarshaller marshaller)
         {
             if (req == null)
             {
@@ -198,11 +194,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// Returns the bytes corresponding to the given exception
+        /// Gets the bytes.
         /// </summary>
-        /// <param name="ex">Exception to set in the response</param>
-        /// <returns>Serialized byte array</returns>
-        public byte[] GetBytes(Exception ex)
+        /// <param name="ex">The ex.</param>
+        /// <returns>memory buffer</returns>
+        /// <exception cref="ArgumentNullException">ex</exception>
+        public IMemoryBuffer GetBytes(Exception ex)
         {
             if (ex == null)
             {
@@ -219,22 +216,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
-        /// returns the bytes corresponding to the request given
-        /// </summary>
-        /// <param name="req">request to serialize</param>
-        /// <returns>serialization bytes</returns>
-        public byte[] GetBytes(IRingMasterBackendRequest req)
-        {
-            return GetBytes(req, this.marshaller);
-        }
-
-        /// <summary>
         /// returns the bytes corresponding to the results given
         /// </summary>
         /// <param name="resultCode">result code in the response</param>
         /// <param name="results">Content in the response</param>
         /// <returns>serialization bytes</returns>
-        public byte[] GetBytes(Code resultCode, IReadOnlyList<OpResult> results)
+        public IMemoryBuffer GetBytes(Code resultCode, IReadOnlyList<OpResult> results)
         {
             if (results == null)
             {
@@ -255,7 +242,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="data">bytes to deserialize</param>
         /// <returns>request deserialized</returns>
-        public IRingMasterBackendRequest GetRequest(byte[] data)
+        public IRingMasterBackendRequest GetRequest(IMemoryBuffer data)
         {
             if (data == null)
             {
@@ -315,7 +302,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             lock (this.childrenProcessorLock)
             {
                 this.nodesToProcess.Clear();
-                RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
+                this.serverInstrumentation.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
             }
 
             this.self.Close();
@@ -388,7 +375,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         return;
                     }
 
-                    RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
+                    this.serverInstrumentation.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
 
                     if (this.execution.InFlightCount == 0)
                     {
@@ -430,7 +417,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     {
                         this.nodesToProcess.Remove(oneKey);
 
-                        RingMasterServerInstrumentation.Instance.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
+                        this.serverInstrumentation.OnScheduledCommandQueueChange(this.nodesToProcess.Count);
                     }
                 }
                 catch (Exception ex)
@@ -439,7 +426,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     // as a bad thing. Instead we will just log it
                     if (this.isPrimary())
                     {
-                        RingMasterServerInstrumentation.Instance.OnUnexpectedException("ScheduledCommand", ex);
+                        this.serverInstrumentation.OnUnexpectedException("ScheduledCommand", ex);
                     }
                     else
                     {
@@ -474,7 +461,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="scheduledName">the name of the command to execute</param>
         private void ExecuteCommand(string scheduledName)
         {
-            byte[] resultbytes = null;
+            IMemoryBuffer resultBuffer = null;
 
             string scheduledCommandPath = GetCommandPath(scheduledName);
             string faultPath = GetFailurePath(scheduledName);
@@ -492,7 +479,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
                 try
                 {
-                    resultbytes = this.ExecuteCommandsAndGetResultsOnError(scheduledCommandPath, stat, req);
+                    resultBuffer = this.ExecuteCommandsAndGetResultsOnError(scheduledCommandPath, stat, req);
                 }
                 catch (InflightExistException inflight)
                 {
@@ -517,22 +504,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     throw;
                 }
 
-                resultbytes = this.GetBytes(ex);
+                resultBuffer = this.GetBytes(ex);
             }
 
-            if (resultbytes == null)
+            if (resultBuffer == null)
             {
                 // resultbytes is null, means success, and we are done.
-                RingMasterServerInstrumentation.Instance.OnScheduledCommandFinished(true, sw.ElapsedMilliseconds);
+                this.serverInstrumentation.OnScheduledCommandFinished(true, sw.ElapsedMilliseconds);
                 RingMasterEventSource.Log.ExecuteScheduledCommandCompleted(scheduledName, sw.ElapsedMilliseconds);
                 return;
             }
 
             // delete the command and report the result.
             // an exception here will mean we suspend the scheduler.
-            this.DeleteScheduledCommandAndWriteFailureNode(scheduledCommandPath, faultPath, resultbytes);
+            var resultBytes = resultBuffer.ToArray();
+            resultBuffer.Dispose();
+            this.DeleteScheduledCommandAndWriteFailureNode(scheduledCommandPath, faultPath, resultBytes);
 
-            RingMasterServerInstrumentation.Instance.OnScheduledCommandFinished(false, sw.ElapsedMilliseconds);
+            this.serverInstrumentation.OnScheduledCommandFinished(false, sw.ElapsedMilliseconds);
 
             RingMasterEventSource.Log.ExecuteScheduledCommandFailed(scheduledName, sw.ElapsedMilliseconds);
         }
@@ -700,7 +689,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="stat">the expected stat of the command node</param>
         /// <param name="req">the request to execute</param>
         /// <returns>null on success, or the bytes corresponsing to the execution error</returns>
-        private byte[] ExecuteCommandsAndGetResultsOnError(string scheduledCommandPath, IStat stat, IRingMasterBackendRequest req)
+        private IMemoryBuffer ExecuteCommandsAndGetResultsOnError(string scheduledCommandPath, IStat stat, IRingMasterBackendRequest req)
         {
             if (req == null)
             {
@@ -927,7 +916,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 throw new InvalidOperationException("data found is null");
             }
 
-            return this.GetRequest(data);
+            return this.GetRequest(new ByteArrayBackedBuffer(data));
         }
 
         /// <summary>

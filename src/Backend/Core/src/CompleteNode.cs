@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
@@ -39,7 +40,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Gets the children mapping in raw
         /// </summary>
-        /// <value>the children</value>
+        /// <value>the children.</value>
         public override IDictionary<string, IPersistedData> ChildrenMapping
         {
             get { return this.childrenMapping; }
@@ -344,20 +345,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return;
             }
 
-            // note: no watcher lock needed here as this method should only be executed under write lock
-            this.Watchers = newColl;
+            lock (this.Persisted)
+            {
+                this.Watchers = newColl;
+            }
         }
 
         /// <summary>
         /// Ensures the complete stat.
         /// </summary>
         /// <param name="persisted">The persisted.</param>
-        /// <returns>IStat.</returns>
-        internal static IMutableStat EnsureCompleteStat(IPersistedData persisted)
+        /// <param name="changeKind">Kind of the change.</param>
+        /// <returns>
+        /// IStat.
+        /// </returns>
+        internal static IMutableStat EnsureCompleteStat(IPersistedData persisted, ChangeKind changeKind)
         {
             if (persisted.Stat is FirstStat)
             {
-                return new MutableStat(persisted.Stat);
+                if (changeKind == ChangeKind.DataAndUserMetadataChanged)
+                {
+                    return new MutableStatWithMetadataVersion(persisted.Stat);
+                }
+                else
+                {
+                    return new MutableStat(persisted.Stat);
+                }
+            }
+
+            if (persisted.Stat is MutableStat && changeKind == ChangeKind.DataAndUserMetadataChanged)
+            {
+                return new MutableStatWithMetadataVersion(persisted.Stat);
             }
 
             return persisted.Stat;
@@ -378,17 +396,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Gets the children in sorted order.
         /// </summary>
         /// <param name="startingChildName">Starting child name to get the children</param>
-        /// <returns>List of names of children of this node in sorted order</returns>
-        protected override IEnumerable<string> GetSortedChildren(string startingChildName)
+        /// <param name="top">The top.</param>
+        /// <returns>
+        /// List of names of children of this node in sorted order
+        /// </returns>
+        protected override IEnumerable<string> GetSortedChildren(string startingChildName, int? top)
         {
             AtomicDictionaryFacade<string, IPersistedData> atomicDictionaryFacade = this.childrenMapping as AtomicDictionaryFacade<string, IPersistedData>;
             SortedNameValueDictionary<IPersistedData> sortedDictionary = atomicDictionaryFacade?.UnderlyingDictionary as SortedNameValueDictionary<IPersistedData>;
             if (sortedDictionary == null)
             {
-                return GetSortedChildrenWithCondition(this.childrenMapping.Keys, startingChildName);
+                return GetSortedChildrenWithCondition(this.childrenMapping.Keys, startingChildName, top);
             }
 
-            return sortedDictionary.GetKeysGreaterThan(startingChildName);
+            var sortedKeys = sortedDictionary.GetKeysGreaterThan(startingChildName);
+
+            if (top.HasValue)
+            {
+                sortedKeys = sortedKeys.Take(top.Value);
+            }
+
+            return sortedKeys;
         }
 
         /// <summary>
@@ -396,36 +424,54 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="names">Collection of children names</param>
         /// <param name="startingChildName">starting child name</param>
-        /// <returns>Collection of children names starting from the given name</returns>
-        private static IEnumerable<string> GetSortedChildrenWithCondition(ICollection<string> names, string startingChildName)
+        /// <param name="top">The top.</param>
+        /// <returns>
+        /// Collection of children names starting from the given name
+        /// </returns>
+        /// <exception cref="ArgumentNullException">names</exception>
+        private static IEnumerable<string> GetSortedChildrenWithCondition(ICollection<string> names, string startingChildName, int? top)
         {
             if (names == null)
             {
                 throw new ArgumentNullException(nameof(names));
             }
 
-            List<string> children;
-            if (string.IsNullOrEmpty(startingChildName))
+            var children = SortingArrayPool.Rent(names.Count);
+            int numElements;
+            try
             {
-                children = new List<string>(names);
-            }
-            else
-            {
-                children = new List<string>(names.Count);
-
-                // Restrict candidates to only names that are greater than the given starting child name.
-                foreach (string candidateChild in names)
+                if (string.IsNullOrEmpty(startingChildName))
                 {
-                    if (string.CompareOrdinal(candidateChild, startingChildName) > 0)
+                    numElements = names.Count;
+                    names.CopyTo(children, 0);
+                }
+                else
+                {
+                    numElements = 0;
+
+                    // Restrict candidates to only names that are greater than the given starting child name.
+                    foreach (string candidateChild in names)
                     {
-                        children.Add(candidateChild);
+                        if (string.CompareOrdinal(candidateChild, startingChildName) > 0)
+                        {
+                            children[numElements++] = candidateChild;
+                        }
                     }
                 }
+
+                Array.Sort(children, 0, numElements, StringComparer.Ordinal);
+
+                // size may be limited either by top or by number of elements if there are less children than top
+                int topCount = Math.Min(top ?? numElements, numElements);
+                var topArray = new string[topCount];
+                Array.Copy(children, 0, topArray, 0, topCount);
+
+                return topArray;
             }
-
-            children.Sort(StringComparer.Ordinal);
-
-            return children;
+            finally
+            {
+                SortingArrayPool.Return(children);
+            }
         }
     }
 }

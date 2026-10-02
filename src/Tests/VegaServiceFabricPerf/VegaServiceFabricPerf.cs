@@ -12,11 +12,12 @@ namespace Microsoft.Vega.Performance
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Azure.Networking.Infrastructure.RingMaster;
-    using Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Vega.Test.Helpers;
-    using VisualStudio.TestTools.UnitTesting;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
     /// The Vega Service Fabric Performance test class
@@ -219,7 +220,7 @@ namespace Microsoft.Vega.Performance
         {
             try
             {
-                if (cleanup)
+                if (cleanup && helperClient != null)
                 {
                     log("cleaning up test data...");
                     CleanupTestData();
@@ -231,12 +232,15 @@ namespace Microsoft.Vega.Performance
             }
             finally
             {
-                foreach (var client in clients)
+                if (clients != null)
                 {
-                    client.Dispose();
+                    foreach (var client in clients)
+                    {
+                        client.Dispose();
+                    }
                 }
 
-                helperClient.Dispose();
+                helperClient?.Dispose();
             }
         }
 
@@ -792,7 +796,7 @@ namespace Microsoft.Vega.Performance
                 {
                     SpinWait.SpinUntil(() => taskCount < asyncTaskCount || token.IsCancellationRequested);
                     var startTime = clock.Elapsed;
-                    var task = client.GetFullSubtree(path, true)
+                    var task = client.GetFullSubtree(path, RequestGetSubtree.GetSubtreeOptions.IncludeStats)
                         .ContinueWith(
                             t =>
                             {
@@ -896,15 +900,18 @@ namespace Microsoft.Vega.Performance
 
             log($"Starting test {testTitle} in {threadCount} threads");
 
-            var threads = Helpers.StartMultipleThreads(
-                threadCount,
-                (object n) => workload(clients[(int)n], cancellation.Token, (int)n).GetAwaiter().GetResult());
-
+            var systemInfo = SystemInfo.Deserialize(await helperClient.GetData(SystemInfo.SystemInfoPath, null));
+            log(systemInfo.ToString());
             var lastCount = Interlocked.Read(ref totalDataCount);
             var lastSize = Interlocked.Read(ref totalDataSize);
 
             var initialCount = lastCount;
             var initialSize = lastSize;
+
+            var threads = Helpers.StartMultipleThreads(
+                threadCount,
+                (object n) => workload(clients[(int)n], cancellation.Token, (int)n).GetAwaiter().GetResult());
+
             var stopwatch = Stopwatch.StartNew();
 
             for (int i = 0; i < durationInSeconds; i++)
@@ -924,12 +931,6 @@ namespace Microsoft.Vega.Performance
             }
 
             stopwatch.Stop();
-            var processedCount = Interlocked.Read(ref totalDataCount) - initialCount;
-            var processedSize = Interlocked.Read(ref totalDataSize) - initialSize;
-            var rate = processedCount / stopwatch.Elapsed.TotalSeconds;
-
-            log($"Stopping test {testTitle}. Data processed {processedSize} bytes in {processedCount} ops. Failures = {totalFailures}");
-            MdmHelper.LogBytesProcessed(processedSize, operationType);
             cancellation.Cancel();
 
             foreach (var thread in threads)
@@ -937,6 +938,15 @@ namespace Microsoft.Vega.Performance
                 thread.Join();
             }
 
+            var processedCount = Interlocked.Read(ref totalDataCount) - initialCount;
+            var processedSize = Interlocked.Read(ref totalDataSize) - initialSize;
+            var rate = processedCount / stopwatch.Elapsed.TotalSeconds;
+
+            log($"Stopping test {testTitle}. Data processed {processedSize} bytes in {processedCount} ops. Failures = {totalFailures}");
+            MdmHelper.LogBytesProcessed(processedSize, operationType);
+
+            systemInfo = SystemInfo.Deserialize(await helperClient.GetData(SystemInfo.SystemInfoPath, null));
+            log(systemInfo.ToString());
             log($"Stopped {testTitle}.");
 
             return rate;

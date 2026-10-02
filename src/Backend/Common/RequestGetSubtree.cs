@@ -48,6 +48,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public bool IncludeStats => this.Request.IncludeStats;
 
         /// <summary>
+        /// Gets a value indicating whether the result should include user metadata.
+        /// </summary>
+        public bool IncludeUserMetadata => this.Request.IncludeUserMetadata;
+
+        /// <summary>
         /// Gets the options for this request.
         /// </summary>
         public GetSubtreeOptions Options => this.Request.Options;

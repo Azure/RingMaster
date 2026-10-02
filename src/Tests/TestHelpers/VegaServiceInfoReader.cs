@@ -16,12 +16,14 @@ namespace Microsoft.Vega.Test.Helpers
         /// <summary>
         /// Gets the vega service information.
         /// </summary>
+        /// <param name="targetServiceIndex">Index of the target service.</param>
+        /// <param name="hostEndpoint">The host endpoint.</param>
         /// <returns>
         /// async task
         /// </returns>
-        public async Task<Tuple<string, string>> GetVegaServiceInfo()
+        public async Task<Tuple<string, string>> GetVegaServiceInfo(int targetServiceIndex, string hostEndpoint = "")
         {
-             return await Helpers.GetVegaServiceInfo();
+             return await Helpers.GetVegaServiceInfo(targetServiceIndex, hostEndpoint);
         }
     }
 }

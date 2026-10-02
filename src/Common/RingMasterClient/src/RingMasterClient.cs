@@ -63,10 +63,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 throw new ArgumentNullException(nameof(configuration));
             }
 
-            IPEndPoint[] endpoints = serverSpec.Endpoints;
-            if ((endpoints == null) || (endpoints.Length == 0))
+            if (serverSpec.Endpoints == null)
             {
-                throw new ArgumentException("Endpoints were not specified");
+                throw new ArgumentNullException(nameof(serverSpec.Endpoints));
+            }
+
+            if (serverSpec.Endpoints.Count == 0)
+            {
+                throw new ArgumentException(nameof(serverSpec.Endpoints));
             }
 
             if (watcher != null)
@@ -90,6 +94,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 transportConfiguration.ReceiveBufferSize = configuration.BufferSize;
                 transportConfiguration.SendQueueLength = configuration.RequestQueueLength;
                 transportConfiguration.AuthAsClient = true;
+                transportConfiguration.AllowAutoReconnect = configuration.AllowAutoReconnect;
+                transportConfiguration.MaxConnectionLifespan = configuration.MaxConnectionLifeSpan;
 
                 List<SecureTransport.SubjectRuleValidation> subjectRules = new List<SecureTransport.SubjectRuleValidation>();
 
@@ -139,12 +145,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     secureTransport,
                     cancellationToken);
 
-                foreach (var endpoint in endpoints)
-                {
-                    RingMasterClientEventSource.Log.Start(endpoint.ToString());
-                }
+                secureTransport.StartClient(
+                    configuration.SecureTransportValidationTimeout,
+                    configuration.SecureTransportStartTimeout,
+                    () => serverSpec.Endpoints);
 
-                secureTransport.StartClient(endpoints);
                 secureTransport = null;
             }
             finally
@@ -489,12 +494,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
         /// <param name="throwIfNodeExists">if true, and the error is <c>Nodeexists</c>, it generates an exception</param>
-        /// <returns>Task that tracks completion of this method</returns>
-        public Task Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, bool throwIfNodeExists)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that tracks completion of this method
+        /// </returns>
+        public Task Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, bool throwIfNodeExists, byte[] userMetadata = null)
         {
             RingMasterClientEventSource.Log.Create(path);
 
-            return this.requestHandler.Create(path, data, acl, createMode, throwIfNodeExists);
+            return this.requestHandler.Create(path, data, acl, createMode, throwIfNodeExists, userMetadata);
         }
 
         /// <summary>
@@ -504,12 +512,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="data">Data to associate with the node</param>
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
-        /// <returns>Task that will resolve on success to the path to the newly created node</returns>
-        public Task<string> Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that will resolve on success to the path to the newly created node
+        /// </returns>
+        public Task<string> Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, byte[] userMetadata = null)
         {
             RingMasterClientEventSource.Log.Create(path);
 
-            return this.requestHandler.Create(path, data, acl, createMode);
+            return this.requestHandler.Create(path, data, acl, createMode, userMetadata);
         }
 
         /// <summary>
@@ -534,12 +545,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="data">Data to associate with the node</param>
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
-        /// <returns>Task that will resolve on success to stat of the newly created node</returns>
-        public Task<IStat> CreateAndGetStat(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that will resolve on success to stat of the newly created node
+        /// </returns>
+        public Task<IStat> CreateAndGetStat(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, byte[] userMetadata = null)
         {
             RingMasterClientEventSource.Log.Create(path);
 
-            return this.requestHandler.CreateAndGetStat(path, data, acl, createMode);
+            return this.requestHandler.CreateAndGetStat(path, data, acl, createMode, userMetadata: userMetadata);
         }
 
         /// <summary>
@@ -611,7 +625,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <returns>Task that will resolve on success to the list of names of children of the node</returns>
         public Task<IReadOnlyList<string>> GetChildren(string path, IWatcher watcher, string retrievalCondition = null)
         {
-            RingMasterClientEventSource.Log.GetChildren(path, watcher != null, retrievalCondition);
+            RingMasterClientEventSource.Log.GetChildren(path, watcher != null, retrievalCondition ?? string.Empty);
 
             return this.requestHandler.GetChildren(path, watcher, retrievalCondition);
         }
@@ -639,19 +653,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             RingMasterClientEventSource.Log.GetData(path, watcher != null);
 
             return this.requestHandler.GetData(path, watcher);
-        }
-
-        /// <summary>
-        /// Gets the data and Stat associated with the node at the given path.
-        /// </summary>
-        /// <param name="path">Node path</param>
-        /// <param name="watcher">Watcher interface that receives notifications for changes to this path or null</param>
-        /// <returns>Task that will resolve on success to the data associated with the node and stat</returns>
-        public Task<Tuple<IStat, byte[]>> GetDataWithStat(string path, IWatcher watcher)
-        {
-            RingMasterClientEventSource.Log.GetDataWithStat(path, watcher != null);
-
-            return this.requestHandler.GetDataWithStat(path, watcher);
         }
 
         /// <summary>
@@ -831,7 +832,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// <summary>
             /// Gets or sets the endpoints to use to connect to the server.
             /// </summary>
-            public IPEndPoint[] Endpoints { get; set; }
+            [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly", Justification = "this is intended")]
+            public virtual IList<IPEndPoint> Endpoints { get; set; }
 
             /// <summary>
             /// Gets or sets a value indicating whether a secure connection must be established.
@@ -905,6 +907,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromMilliseconds(10000);
 
             /// <summary>
+            /// Gets or sets the SecureTransport client validation timeout.
+            /// </summary>
+            public TimeSpan SecureTransportValidationTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+            /// <summary>
+            /// Gets or sets the SecureTransport start timeout.
+            /// </summary>
+            public TimeSpan SecureTransportStartTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+            /// <summary>
             /// Gets or sets the frequency with which heartbeats are sent.
             /// </summary>
             public TimeSpan HeartBeatInterval { get; set; } = TimeSpan.FromMilliseconds(30000);
@@ -929,6 +941,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// Gets or sets the network buffer size.
             /// </summary>
             public int BufferSize { get; set; } = 65536;
+
+            /// <summary>
+            /// Gets or sets a value indicating whether the transport should auto reconnect when connection down.
+            /// </summary>
+            public bool AllowAutoReconnect { get; set; } = true;
+
+            /// <summary>
+            /// Gets or sets the maximum lifetime of a connection.
+            /// </summary>
+            public TimeSpan MaxConnectionLifeSpan { get; set; } = TimeSpan.FromDays(1);
         }
 
         private sealed class RingMasterRequestHandlerInstrumentation : RingMasterRequestHandler.IInstrumentation

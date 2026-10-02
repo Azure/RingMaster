@@ -3,12 +3,11 @@
   This root MSBuild file is automatically imported for all projects in the tree by MSBuild 15.0.
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- Poorman's restore before having MSBuild 15.8 -->
-  <PropertyGroup>
-    <_msbuildexe>$(MSBuildBinPath)\msbuild.exe</_msbuildexe>
-  </PropertyGroup>
-
-  <Import Project="$(MSBuildThisFileDirectory)build\LocalNuGet.targets" Condition="Exists($(_msbuildexe))" />
+  <!-- Ensure the bin directory is totally empty for projects using NoTargets -->
+  <Target Name="_copyNone" BeforeTargets="_CopyFilesMarkedCopyLocal" Condition="'$(UsingMicrosoftNoTargetsSdk)' == 'true'">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" />
+    </ItemGroup>
+  </Target>
   <Import Project="$(MSBuildThisFileDirectory)build\CloudBuild.targets" />
-
 </Project>

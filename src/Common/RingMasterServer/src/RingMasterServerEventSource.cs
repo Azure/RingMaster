@@ -4,7 +4,6 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
-    using System.Diagnostics;
     using System.Diagnostics.Tracing;
 
     /// <summary>
@@ -45,7 +44,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         [Event(5, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessRequestCompleted(ulong sessionId, ulong callId, long elapsedMilliseconds)
         {
-            this.WriteEvent(5, sessionId, callId, elapsedMilliseconds);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(5, sessionId, callId, elapsedMilliseconds);
+            }
         }
 
         [Event(6, Level = EventLevel.Error, Version = 1)]
@@ -81,13 +83,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         [Event(11, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessRequest(ulong sessionId, ulong callId, int requestType, string path, int packetLength, uint protocolVersion)
         {
-            this.WriteEvent(11, sessionId, callId, requestType, path, packetLength, protocolVersion);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(11, sessionId, callId, requestType, path, packetLength, protocolVersion);
+            }
         }
 
         [Event(12, Level = EventLevel.Verbose, Version = 1)]
         public void ProcessSessionInit(ulong sessionId, int resultCode)
         {
-            this.WriteEvent(12, sessionId, resultCode);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(12, sessionId, resultCode);
+            }
         }
 
         [Event(13, Level = EventLevel.Informational, Version = 1)]

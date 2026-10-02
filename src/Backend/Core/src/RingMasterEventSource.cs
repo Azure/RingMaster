@@ -4,8 +4,10 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
-    using System.Diagnostics;
+    using System;
     using System.Diagnostics.Tracing;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// RingMaster events
@@ -14,6 +16,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "This is an EventSource and methods map to trace messages")]
     internal sealed class RingMasterEventSource : EventSource
     {
+        private const int ArgsLength = 7;
+        private static readonly ObjectPool<object[]> ArgsPool = new ObjectPool<object[]>(() => new object[ArgsLength], o => o, size: Environment.ProcessorCount);
+
         static RingMasterEventSource()
         {
         }
@@ -103,9 +108,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         [Event(15, Level = EventLevel.Error, Version = 2)]
-        public void ProcessMessageFailed(ulong sessionId, ulong requestId, long zxid, int retryCount, long elapsedMilliseconds, string exception)
+        public void ProcessMessageFailed(ulong sessionId, ulong requestId, long zxid, int requestType, string path, int retryCount, long elapsedMilliseconds, string exception)
         {
-            this.WriteEvent(15, sessionId, requestId, zxid, retryCount, elapsedMilliseconds, exception);
+            this.WriteEvent(15, sessionId, requestId, zxid, requestType, path, retryCount, elapsedMilliseconds, exception);
         }
 
         [Event(16, Level = EventLevel.Error, Version = 1)]
@@ -126,22 +131,70 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             this.WriteEvent(18, sessionId, requestId, executionQueueId);
         }
 
-        [Event(19, Level = EventLevel.Verbose, Version = 2)]
+        /// <summary>
+        /// Trace that the message is processed successfully.
+        /// </summary>
+        /// <remarks>
+        /// This method allows avoiding still quite expensive string computation if the event is disabled.
+        /// Plus, overall, this method is called billions of times a day an might be off by default.
+        /// </remarks>
+        [NonEvent]
+        public void ProcessMessageSucceeded(ulong sessionId, ulong requestId, long zxid, int requestType, string path, long elapsedMilliseconds, RequestResponse response)
+        {
+            if (this.IsEnabled(EventLevel.Informational, Keywords.ProcessMessage))
+            {
+                this.ProcessMessageSucceeded(sessionId, requestId, zxid, requestType, path, elapsedMilliseconds, response.ToStringFast());
+            }
+        }
+
+        [Event(19, Version = 3, Keywords = Keywords.ProcessMessage)]
         public void ProcessMessageSucceeded(ulong sessionId, ulong requestId, long zxid, int requestType, string path, long elapsedMilliseconds, string response)
         {
-            this.WriteEvent(19, sessionId, requestId, zxid, requestType, path, elapsedMilliseconds, response);
+            if (this.IsEnabled(EventLevel.Informational, Keywords.ProcessMessage))
+            {
+                // This method is called a lot (like 10B times in a day), so the performance matters a lot.
+                // Based on various performance analysis, we decided to pool the object array instead of using
+                // "unsafe" implementation based on stack allocated 'EventData' followed by 'this.WriteEventCore' call.
+                // Even though this method boxes all the arguments, it's still faster than using 'EventData',
+                // because 'WriteEventCore' will copy all the strings arguments in DecodeObjects.
+                // Here is the benchmark results for 3 options:
+                // | Method                                                   | Mean       | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+                // |--------------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
+                // | ProcessMessageSucceeded_OldToString_WriteEvent           | 1,022.0 ns | 19.77 ns | 20.31 ns |  1.00 |    0.00 | 0.0687 |    1152 B |        1.00 |
+                // | ProcessMessageSucceeded_New_ToString_WriteEventCore      |   510.0 ns | 10.08 ns | 12.38 ns |  0.50 |    0.02 | 0.0467 |     784 B |        0.68 |
+                // | ProcessMessageSucceeded_NewToString_WriteEvent_WithCache |   477.6 ns |  2.55 ns |  2.39 ns |  0.47 |    0.01 | 0.0310 |     520 B |        0.45 |
+                // The first one is the old version, the second one uses 'EventData' and calls 'WriteEventCore'.
+                // Keeping the last one since it allocates way less than the version that uses 'WriteEventCore'.
+                var args = ArgsPool.Rent();
+
+                args[0] = sessionId;
+                args[1] = requestId;
+                args[2] = zxid;
+                args[3] = requestType;
+                args[4] = path;
+                args[5] = elapsedMilliseconds;
+                args[6] = response;
+                this.WriteEvent(19, args);
+                ArgsPool.PutInstance(args);
+            }
         }
 
         [Event(20, Level = EventLevel.Verbose, Version = 1)]
         public void RequestCreateSucceeded(ulong sessionId, ulong requestId, string path, long elapsedMilliseconds)
         {
-            this.WriteEvent(20, sessionId, requestId, path, elapsedMilliseconds);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(20, sessionId, requestId, path, elapsedMilliseconds);
+            }
         }
 
         [Event(21, Level = EventLevel.Verbose, Version = 1)]
         public void RequestGetChildrenSucceeded(ulong sessionId, ulong requestId, string path, string retrievalCondition, int childrenCount, long elapsedMilliseconds)
         {
-            this.WriteEvent(21, sessionId, requestId, path, retrievalCondition, childrenCount, elapsedMilliseconds);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(21, sessionId, requestId, path, retrievalCondition, childrenCount, elapsedMilliseconds);
+            }
         }
 
         [Event(22, Level = EventLevel.Error, Version = 1)]
@@ -213,31 +266,46 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(33, Level = EventLevel.Verbose, Version = 1)]
         public void WatcherSet(ulong sessionId, string childId, string watcherContext)
         {
-            this.WriteEvent(33, sessionId, childId, watcherContext);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(33, sessionId, childId, watcherContext);
+            }
         }
 
         [Event(34, Level = EventLevel.Verbose, Version = 1)]
         public void WatcherRemoved(ulong sessionId, string childId, string watcherContext)
         {
-            this.WriteEvent(34, sessionId, childId, watcherContext);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(34, sessionId, childId, watcherContext);
+            }
         }
 
         [Event(35, Level = EventLevel.Verbose, Version = 1)]
         public void TryRemoveOnTerminateAction(ulong sessionId, string actionName, bool wasRemoved)
         {
-            this.WriteEvent(35, sessionId, actionName, wasRemoved);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(35, sessionId, actionName, wasRemoved);
+            }
         }
 
         [Event(36, Level = EventLevel.Verbose, Version = 1)]
         public void RemoveOnTerminateAction(ulong sessionId, string actionName)
         {
-            this.WriteEvent(36, sessionId, actionName);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(36, sessionId, actionName);
+            }
         }
 
         [Event(37, Level = EventLevel.Verbose, Version = 1)]
         public void AddOnTerminateAction(ulong sessionId, string actionName)
         {
-            this.WriteEvent(37, sessionId, actionName);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(37, sessionId, actionName);
+            }
         }
 
         [Event(38, Level = EventLevel.Error, Version = 1)]
@@ -291,7 +359,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(46, Level = EventLevel.Verbose, Version = 1)]
         public void Executor_ProcessRequestCompleted(long sequenceNumber, long elapsedMilliseconds)
         {
-            this.WriteEvent(46, sequenceNumber, elapsedMilliseconds);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(46, sequenceNumber, elapsedMilliseconds);
+            }
         }
 
         [Event(47, Level = EventLevel.Error, Version = 1)]
@@ -309,7 +380,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(49, Level = EventLevel.Verbose, Version = 1)]
         public void Executor_RequestQueued(long sequenceNumber, ulong sessionId, ulong requestId)
         {
-            this.WriteEvent(49, sequenceNumber, sessionId, requestId);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(49, sequenceNumber, sessionId, requestId);
+            }
         }
 
         [Event(50, Level = EventLevel.Error, Version = 1)]
@@ -339,7 +413,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(54, Level = EventLevel.Verbose, Version = 1)]
         public void WatcherCollection_WatcherApplies(string path, ulong sessionId, string watchedPath)
         {
-            this.WriteEvent(54, path, sessionId, watchedPath);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(54, path, sessionId, watchedPath);
+            }
         }
 
         [Event(55, Level = EventLevel.Informational, Version = 1)]
@@ -399,7 +476,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(64, Level = EventLevel.Verbose, Version = 1)]
         public void Multi(ulong requestId, int requestCount, bool completeSynchronously)
         {
-            this.WriteEvent(64, requestId, requestCount, completeSynchronously);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(64, requestId, requestCount, completeSynchronously);
+            }
         }
 
         [Event(65, Level = EventLevel.Error, Version = 1)]
@@ -411,7 +491,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(66, Level = EventLevel.Verbose, Version = 1)]
         public void Batch(ulong requestId, int requestCount, bool completeSynchronously)
         {
-            this.WriteEvent(66, requestId, requestCount, completeSynchronously);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(66, requestId, requestCount, completeSynchronously);
+            }
         }
 
         [Event(67, Level = EventLevel.Error, Version = 1)]
@@ -423,19 +506,84 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         [Event(68, Level = EventLevel.Verbose, Version = 1)]
         public void LockCollectionAcquired(int threadId, string pathList)
         {
-            this.WriteEvent(68, threadId, pathList);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(68, threadId, pathList);
+            }
         }
 
         [Event(69, Level = EventLevel.Verbose, Version = 1)]
         public void LockCollectionReleased(int threadId)
         {
-            this.WriteEvent(69, threadId);
+            if (this.IsEnabled(EventLevel.Verbose, EventKeywords.All))
+            {
+                this.WriteEvent(69, threadId);
+            }
         }
 
         [Event(70, Level = EventLevel.Error, Version = 1)]
         public void RequestGetSubtreeFailed(ulong sessionId, ulong requestId, string path, string exception)
         {
             this.WriteEvent(70, sessionId, requestId, path, exception);
+        }
+
+        [Event(71, Level = EventLevel.Error, Version = 1)]
+        public void ProcessMessage_RootIsNull(ulong sessionId, ulong requestId)
+        {
+            this.WriteEvent(71, sessionId, requestId);
+        }
+
+        [Event(72, Level = EventLevel.Warning, Version = 1)]
+        public void AcquireWriterLockFailed(double timeSpentMs, int nodeLevel, string nodeName)
+        {
+            this.WriteEvent(72, timeSpentMs, nodeLevel, nodeName);
+        }
+
+        [Event(73, Level = EventLevel.Error, Version = 1)]
+        public void RequestSetDataAndUserMetadataFailed(ulong sessionId, ulong requestId, string path, string exception)
+        {
+            this.WriteEvent(73, sessionId, requestId, path, exception);
+        }
+
+        [Event(74, Level = EventLevel.Error, Version = 1)]
+        public void InvokeCallbackBeforeCompleteFailed(int requestType, string path, string exception)
+        {
+            this.WriteEvent(74, requestType, path, exception);
+        }
+
+        [Event(75, Level = EventLevel.Warning, Version = 1)]
+        public void IUnsafeTreeAccessAcquireWriteLockWarning(string message)
+        {
+            this.WriteEvent(75, message);
+        }
+
+        [Event(76, Level = EventLevel.Error, Version = 1)]
+        public void IUnsafeTreeAccessAcquireWriteLockFailed(string message)
+        {
+            this.WriteEvent(76, message);
+        }
+
+        [Event(77, Level = EventLevel.Warning, Version = 1)]
+        public void WatcherTerminateActionAcquireWriteLockWarning(ulong sessionId, string message)
+        {
+            this.WriteEvent(77, sessionId, message);
+        }
+
+        [Event(78, Level = EventLevel.Error, Version = 1)]
+        public void WatcherTerminateActionAcquireWriteLockFailed(ulong sessionId, string message)
+        {
+            this.WriteEvent(78, sessionId, message);
+        }
+
+        /// <summary>
+        /// A bit vector with keywords used by <see cref="RingMasterEventSource"/>.
+        /// </summary>
+        public static class Keywords
+        {
+            /// <summary>
+            /// The keyword used by <see cref="ProcessMessageSucceeded(ulong,ulong,long,int,string,long,string)"/>.
+            /// </summary>
+            public const EventKeywords ProcessMessage = (EventKeywords)0x0001;
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Watcher.Event;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
@@ -38,6 +39,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// The function used to retrieve settings
         /// </summary>
         private readonly Func<string, string> getSetting;
+
+        private readonly IRingMasterServerInstrumentation serverInstrumentation;
 
         /// <summary>
         /// the function to be used to get the runtime member set
@@ -108,8 +111,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="backend">the backend to use</param>
         /// <param name="getSettingFunction">Function to get settings</param>
-        public PseudoNodes(RingMasterBackendCore backend, Func<string, string> getSettingFunction)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        public PseudoNodes(RingMasterBackendCore backend, Func<string, string> getSettingFunction, IRingMasterServerInstrumentation serverInstrumentation)
         {
+            this.serverInstrumentation = serverInstrumentation ?? throw new ArgumentNullException(nameof(serverInstrumentation));
             if (getSettingFunction == null)
             {
                 getSettingFunction = (s) => null;
@@ -302,7 +307,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         public void SetupTreeStructure()
         {
-            LoopbackRingMaster rm = new LoopbackRingMaster(this.backend);
+            LoopbackRingMaster rm = new LoopbackRingMaster(this.backend, requestTimeout: 10000);
+            rm.MaxThreads = 1;
             try
             {
                 this.EnsureBaseTreeBuilt(rm);
@@ -508,7 +514,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     this.scheduler = new ScheduledCommand(
                         () => { return this.backend != null && this.backend.IsPrimary(); },
                         new LoopbackRingMaster(this.backend),
-                        new MarshallerChannel(null));
+                        new MarshallerChannel(null, new RecyclableMemoryStreamFactory()),
+                        this.serverInstrumentation);
                 }
 
                 this.scheduler.Start();
@@ -588,12 +595,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             if (this.backend.Factory != null)
             {
-                RingMasterServerInstrumentation.Instance.UpdatePersistentNodeCounts(this.backend.Factory.TotalData, this.backend.Factory.TotalNodes);
+                this.serverInstrumentation.UpdatePersistentNodeCounts(this.backend.Factory.TotalData, this.backend.Factory.TotalNodes);
             }
 
             if (this.backend.EphemeralFactory != null)
             {
-                RingMasterServerInstrumentation.Instance.UpdateEphemeralNodeCounts(this.backend.EphemeralFactory.TotalData, this.backend.EphemeralFactory.TotalNodes);
+                this.serverInstrumentation.UpdateEphemeralNodeCounts(this.backend.EphemeralFactory.TotalData, this.backend.EphemeralFactory.TotalNodes);
             }
         }
 

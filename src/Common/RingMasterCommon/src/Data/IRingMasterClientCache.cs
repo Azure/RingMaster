@@ -72,6 +72,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         byte[] Data { get; }
 
         /// <summary>
+        /// Gets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        byte[] UserMetadata { get; }
+
+        /// <summary>
         /// Gets the IStat.
         /// </summary>
         /// <value>The stat.</value>

@@ -68,13 +68,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// <exception cref="System.ArgumentException">IdProvider should not allow for  + IdForNull</exception>
         public ObjectTracker(UIdProvider objIdProvider, bool requireUniqueIds)
         {
-            if (objIdProvider == null)
-            {
-                throw new ArgumentNullException(nameof(objIdProvider));
-            }
-
             this.requireUniqueIds = requireUniqueIds;
-            this.objIdProvider = objIdProvider;
+            this.objIdProvider = objIdProvider.ThrowIfNull();
             if (!objIdProvider.IsIdInPast((long)IdForNull))
             {
                 throw new ArgumentException("IdProvider should not allow for " + IdForNull);

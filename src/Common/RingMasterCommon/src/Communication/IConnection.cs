@@ -50,8 +50,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
 
         /// <summary>
         /// Gets or sets the callback that must be invoked when a packet is received.
+        /// The callback should dispose of the packet when done with it.
         /// </summary>
-        Action<byte[]> OnPacketReceived { get; set; }
+        Func<IMemoryBuffer, Task> OnPacketReceived { get; set; }
 
         /// <summary>
         /// Gets or sets the callback that must be invoked when this connection is lost.
@@ -72,17 +73,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
         ProtocolNegotiatorDelegate DoProtocolNegotiation { get; set; }
 
         /// <summary>
-        /// Send a packet to the remote endpoint.
+        /// Starts sending a packet to the remote endpoint.
+        /// The method returns when the packet is added to the internal queue, and not when it was delivered.
         /// </summary>
-        /// <param name="packet">Packet to send</param>
-        void Send(byte[] packet);
+        /// <param name="packet">Packet to send. Connection implementation should dispose of the packet after sending.</param>
+        /// <remarks>
+        /// The method returns when the packet is added to the internal queue, and not when it is delivered.
+        /// Implementations may throw when the packet cannot be queued.
+        /// </remarks>
+        void Send(IMemoryBuffer packet);
 
         /// <summary>
         /// Send a packet to the remote endpoint.
         /// </summary>
-        /// <param name="packet">Packet to send</param>
+        /// <param name="packet">Packet to send. Connection implementation should dispose of the packet after sending.</param>
         /// <returns>A Task that tracks completion of the send</returns>
-        Task SendAsync(byte[] packet);
+        Task SendAsync(IMemoryBuffer packet);
 
         /// <summary>
         /// Disconnect the connection.
