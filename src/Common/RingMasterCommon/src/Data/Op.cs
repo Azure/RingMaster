@@ -6,7 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
     using System;
     using System.Collections.Generic;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// An operation that can be part of a <see cref="RequestMulti"/> or <see cref="RequestBatch"/>.
@@ -46,16 +46,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         public IRingMasterRequest Request { get; private set; }
 
         /// <summary>
-        /// Create a new instance of the <see cref="Op"/> class that represents a Create operation.
+        /// Create a new instance of the <see cref="Op" /> class that represents a Create operation.
         /// </summary>
         /// <param name="path">Path of the node to be created</param>
         /// <param name="data">Data to associate with the node</param>
-        /// <param name="acl"><see cref="Acl"/>s to associate with the node</param>
+        /// <param name="acl">
+        ///   <see cref="Acl" />s to associate with the node</param>
         /// <param name="mode">Creation mode of the node</param>
-        /// <returns>A Create operation</returns>
-        public static Op Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode mode)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// A Create operation
+        /// </returns>
+        public static Op Create(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode mode, byte[] userMetadata = null)
         {
-            return new Op(OpCode.Create, new RequestCreate(path, data, acl, mode));
+            return new Op(OpCode.Create, new RequestCreate(path, data, acl, mode, userMetadata: userMetadata));
         }
 
         /// <summary>
@@ -203,6 +207,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         }
 
         /// <summary>
+        /// Create a new instance of the <see cref="Op" /> class that represents a SetDataAndUserMetadata operation
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="data">The data.</param>
+        /// <param name="dataVersion">The data version.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <param name="userMetadataVersion">The user metadata version.</param>
+        /// <returns>
+        /// A SetDataAndUserMetadata operation
+        /// </returns>
+        public static Op SetDataAndUserMetadata(string path, byte[] data, int dataVersion, byte[] userMetadata, int userMetadataVersion)
+        {
+            return new Op(OpCode.SetDataAndUserMetadata, new RequestSetDataAndUserMetadata(path, data, dataVersion, userMetadata, userMetadataVersion));
+        }
+
+        /// <summary>
         /// Create a new instance of the <see cref="Op"/> class that represents a SetData operation.
         /// </summary>
         /// <param name="path">Path to the node whose data must be modified</param>
@@ -271,7 +291,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// <returns>A GetSubtree operation.</returns>
         public static Op GetSubtree(string path, string retrievalCondition, RequestGetSubtree.GetSubtreeOptions options)
         {
-            return new Op(OpCode.GetSubtree, new RequestGetSubtree(path, retrievalCondition, options));
+            return new Op(OpCode.GetSubtree, new RequestGetSubtree(PathDecoration.AddApiVersionToPath(path), retrievalCondition, options));
         }
     }
 }

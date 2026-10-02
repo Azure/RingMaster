@@ -4,8 +4,8 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol
 {
-    using Data;
-    using Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Type of content stored in a serialized Request or response.
@@ -66,10 +66,5 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// A <see cref="RedirectSuggested"/> object.
         /// </summary>
         Redirect = 10,
-
-        /// <summary>
-        /// An object.
-        /// </summary>
-        AnyObject = 255,
     }
 }

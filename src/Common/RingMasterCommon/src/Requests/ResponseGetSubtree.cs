@@ -4,7 +4,7 @@
 
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
-    using Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Response of a GetSubtree request.

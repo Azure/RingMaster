@@ -5,6 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
@@ -15,7 +16,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
     /// </summary>
     public sealed class RingMasterServer : IDisposable
     {
-        private readonly CancellationToken cancellationToken;
+        private readonly CancellationTokenSource cancellationToken;
         private readonly ICommunicationProtocol protocol;
         private readonly IRingMasterServerInstrumentation instrumentation;
 
@@ -32,9 +33,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
         {
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.instrumentation = instrumentation;
-            this.cancellationToken = cancellationToken;
+            this.cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            QueuedWorkItemPool.Default.Initialize(Environment.ProcessorCount * 2, cancellationToken);
+            QueuedWorkItemPool.Default.Initialize(Environment.ProcessorCount * 2, this.cancellationToken.Token);
         }
 
         /// <summary>
@@ -91,6 +92,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
         /// </summary>
         public void Dispose()
         {
+            this.cancellationToken.Cancel();
             RingMasterServerEventSource.Log.Disposed();
         }
 
@@ -110,7 +112,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
                 connection.DoPacketReceive = packetReciever;
             }
 
-            connection.OnPacketReceived = packet => session.OnPacketReceived(packet);
+            connection.OnPacketReceived = packet => session.OnPacketReceivedAsync(packet);
 
             connection.OnConnectionLost = () =>
             {

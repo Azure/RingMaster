@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="src\SortedDictExt.csproj" />
-    <ProjectFile Include="unittest\RingMasterBackendNativeUnitTest.csproj" />
+    <ProjectReference Include="src\SortedDictExt.csproj" />
+    <ProjectReference Include="unittest\RingMasterBackendNativeUnitTest.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

@@ -5,7 +5,8 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
-    using RingMaster.Data;
+    using System.Diagnostics;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Interface IRingMasterRequest
@@ -52,6 +53,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// Gets or sets the maximum time allowed for this request to be waiting on the execution queue
         /// </summary>
         int ExecutionQueueTimeoutMillis { get; set; }
+
+        /// <summary>
+        /// Gets or sets the request expiry time.
+        /// </summary>
+        TimeSpan RequestExpiryTime { get; set; }
+
+        /// <summary>
+        /// Gets the time before the request time out.
+        /// </summary>
+        TimeSpan TimeRemaining { get; }
+
+        /// <summary>Gets or sets a value indicating whether [invoke call back].</summary>
+        /// <value>
+        ///   <c>true</c> if [invoke call back]; otherwise, <c>false</c>.</value>
+        bool InvokeCallbackBeforeComplete { get; set; }
+
+        /// <summary>
+        /// Determines whether [is request expired].
+        /// </summary>
+        /// <returns>
+        ///   <c>true</c> if [is request expired]; otherwise, <c>false</c>.
+        /// </returns>
+        bool IsRequestExpired();
 
         /// <summary>
         /// Gets a value indicating whether this request is readonly

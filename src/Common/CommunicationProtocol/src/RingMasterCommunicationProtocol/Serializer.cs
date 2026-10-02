@@ -9,7 +9,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using System.Diagnostics;
     using System.IO;
     using System.Runtime.Serialization.Formatters.Binary;
+    using System.Text;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
@@ -27,6 +29,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Formatter to use to get the binary representation of objects.
         /// </summary>
         private static BinaryFormatter binaryFormatter = new BinaryFormatter();
+
+        /// <summary>
+        /// Memory stream factory to use.
+        /// </summary>
+        private readonly IMemoryStreamFactory memoryStreamFactory;
 
         /// <summary>
         /// Stream in which serialized data must be stored.
@@ -47,7 +54,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Initializes a new instance of the <see cref="Serializer"/> class.
         /// </summary>
         /// <param name="versionToUse">Version of the serialization format to use</param>
-        public Serializer(uint versionToUse)
+        /// <param name="memoryStreamFactory">Memory stream factory to use.</param>
+        public Serializer(uint versionToUse, IMemoryStreamFactory memoryStreamFactory)
         {
             if ((versionToUse < SerializationFormatVersions.MinimumSupportedVersion)
             || (versionToUse > SerializationFormatVersions.MaximumSupportedVersion))
@@ -57,9 +65,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     $"Version must be between {SerializationFormatVersions.MinimumSupportedVersion} and {SerializationFormatVersions.MaximumSupportedVersion} versionToUse={versionToUse}");
             }
 
+            if (memoryStreamFactory == null)
+            {
+                throw new ArgumentNullException(nameof(memoryStreamFactory));
+            }
+
             this.versionToUse = versionToUse;
-            this.memoryStream = new MemoryStream();
-            this.binaryWriter = new BinaryWriter(this.memoryStream);
+            this.memoryStreamFactory = memoryStreamFactory;
         }
 
         /// <summary>
@@ -73,8 +85,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 throw new ArgumentNullException("request");
             }
 
+            this.memoryStream = this.memoryStreamFactory.CreateStream($"SerializeRequest {request.Request.Path}");
+            this.binaryWriter = new BinaryWriter(this.memoryStream, Encoding.UTF8, true);
+
             this.binaryWriter.Write((uint)RequestType.RequestCall);
             this.binaryWriter.Write((ulong)request.CallId);
+            if (this.versionToUse >= SerializationFormatVersions.Version27)
+            {
+                this.binaryWriter.Write((int)request.ServerTimeoutMillis);
+            }
+
             this.SerializeRingmasterRequest(request.Request);
         }
 
@@ -88,6 +108,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 throw new ArgumentNullException("response");
             }
+
+            this.memoryStream = this.memoryStreamFactory.CreateStream($"SerializeResponse {response.ResponsePath}");
+            this.binaryWriter = new BinaryWriter(this.memoryStream, Encoding.UTF8, true);
 
             this.binaryWriter.Write((uint)RequestType.RequestResponse);
 
@@ -105,18 +128,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// Get a byte array that contains the serialized data.
         /// </summary>
         /// <returns>Byte array that contains serialized data</returns>
-        public byte[] GetBytes()
+        public IMemoryBuffer GetBytes()
         {
-            return this.memoryStream.ToArray();
+            return new MemoryStreamBackedBuffer(this.memoryStream);
         }
 
         /// <summary>
-        /// Disposes the object
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", Justification = "memoryStream is returned as part of the buffer. buffer manages the lifetime of the stream")]
         public void Dispose()
         {
-            this.memoryStream.Dispose();
-            this.binaryWriter.Dispose();
+            // note: we don't dispose the underlying stream as it is returned as part of the buffer
+            // up to consumer of the serializer to dispose the buffer which will dispose the stream
+            if (this.binaryWriter != null)
+            {
+                this.binaryWriter.Dispose();
+            }
         }
 
         /// <summary>
@@ -191,6 +219,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case RingMasterRequestType.GetSubtree:
                     this.SerializeRequestGetSubtree((RequestGetSubtree)ringMasterRequest);
                     break;
+                case RingMasterRequestType.SetDataAndUserMetadata:
+                    this.SerializeRequestSetDataAndUserMetadata((RequestSetDataAndUserMetadata)ringMasterRequest);
+                    break;
 
                 case RingMasterRequestType.None:
                 default:
@@ -206,6 +237,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         {
             this.binaryWriter.Write((ushort)request.RequestType);
             this.binaryWriter.Write((ulong)request.Uid);
+            if (this.versionToUse < SerializationFormatVersions.Version29 && request.RequestType == RingMasterRequestType.GetData)
+            {
+                // This means the server's version is less than 29, and thus cannot handle $apiversion in the path for getfullsubtree request.
+                request.Path = PathDecoration.GetPathWithoutApiVersion(request.Path, out int _);
+            }
+
             this.binaryWriter.Write((string)request.Path);
             this.SerializeSessionAuth(request.Auth);
             this.SerializeOperationOverrides(request.Overrides);
@@ -224,6 +261,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             if (this.versionToUse >= SerializationFormatVersions.Version21)
             {
                 this.binaryWriter.Write((ulong)request.TimeStreamId);
+            }
+
+            if (this.versionToUse >= SerializationFormatVersions.Version28)
+            {
+                this.binaryWriter.Write((bool)request.InvokeCallbackBeforeComplete);
             }
         }
 
@@ -275,6 +317,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             }
 
             this.binaryWriter.Write((byte)request.Options);
+        }
+
+        private void SerializeRequestSetDataAndUserMetadata(RequestSetDataAndUserMetadata request)
+        {
+            if (this.versionToUse < SerializationFormatVersions.Version29)
+            {
+                throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support SetDataAndUserMetadata", this.versionToUse));
+            }
+
+            this.SerializeData((byte[])request.Data);
+            this.binaryWriter.Write((int)request.DataVersion);
+            this.SerializeData((byte[])request.UserMetadata);
+            this.binaryWriter.Write((int)request.UserMetadataVersion);
         }
 
         /// <summary>
@@ -347,6 +402,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.Write((ushort)request.CreateMode);
             this.SerializeData((byte[])request.Data);
             this.SerializeAclList(request.Acl);
+
+            if (this.versionToUse >= SerializationFormatVersions.Version29)
+            {
+                this.SerializeData((byte[])request.UserMetadata);
+            }
         }
 
         /// <summary>
@@ -595,10 +655,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 {
                     var getDataResult = (OpResult.GetDataResult)operationResult;
                     this.SerializeStat(getDataResult.Stat);
-                    this.SerializeData(getDataResult.Bytes);
+                    this.SerializeData(getDataResult.Data);
                     if (this.versionToUse >= SerializationFormatVersions.Version14)
                     {
                         this.binaryWriter.Write((string)getDataResult.Path ?? string.Empty);
+                    }
+
+                    if (this.versionToUse >= SerializationFormatVersions.Version29)
+                    {
+                        this.SerializeData(getDataResult.UserMetadata);
                     }
 
                     return;
@@ -620,6 +685,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 {
                     var setDataResult = (OpResult.SetDataResult)operationResult;
                     this.SerializeStat(setDataResult.Stat);
+                    return;
+                }
+
+                case OpCode.SetDataAndUserMetadata:
+                {
+                    var setDataAndUserMetadata = (OpResult.SetDataAndUserMetadataResult)operationResult;
+                    this.SerializeStat(setDataAndUserMetadata.Stat);
                     return;
                 }
 
@@ -736,7 +808,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     this.SerializeData(evt.Data);
                     this.SerializeStat(evt.Stat);
                 }
+
+                if (this.versionToUse >= SerializationFormatVersions.Version26)
+                {
+                    this.SerializeNullableString(evt.ChildName);
+                    this.SerializeData(evt.ChildData);
+                    this.SerializeStat(evt.ChildStat);
+                }
+
+                if (this.versionToUse >= SerializationFormatVersions.Version29)
+                {
+                    this.SerializeData(evt.UserMetadata);
+                    this.SerializeData(evt.ChildUserMetadata);
+                }
             }
+        }
+
+        private void SerializeGetDataResponse(GetDataResponse getDataResponse)
+        {
+            this.SerializeData(getDataResponse.Data);
+            this.SerializeData(getDataResponse.UserMetadata);
         }
 
         /// <summary>
@@ -773,6 +864,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 if (data.Length > 0)
                 {
                     this.binaryWriter.Write((byte[])data);
+                }
+            }
+        }
+
+        private void SerializeData(IMemoryBuffer memoryBuffer)
+        {
+            bool isNull = memoryBuffer == null;
+            this.binaryWriter.Write((bool)isNull);
+            if (!isNull)
+            {
+                this.binaryWriter.Write(memoryBuffer.Length);
+                if (memoryBuffer.Length > 0)
+                {
+                    this.binaryWriter.Write(memoryBuffer.GetBuffer(), 0, memoryBuffer.Length);
                 }
             }
         }
@@ -819,6 +924,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             this.binaryWriter.Write((long)stat.Pzxid);
             this.binaryWriter.Write((long)stat.Ctime);
             this.binaryWriter.Write((long)stat.Mtime);
+
+            if (this.versionToUse >= SerializationFormatVersions.Version29)
+            {
+                this.binaryWriter.Write((int)stat.Uversion);
+            }
         }
 
         /// <summary>
@@ -827,7 +937,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <param name="content">Object to serialize</param>
         private void SerializeContent(object content)
         {
-            ContentType contentType = ContentType.AnyObject;
+            ContentType contentType = ContentType.Unknown;
             if (content is IRingMasterRequest)
             {
                 contentType = ContentType.Request;
@@ -856,7 +966,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             {
                 contentType = ContentType.AclList;
             }
-            else if (content is byte[])
+            else if (content is byte[] || content is IMemoryBuffer)
             {
                 contentType = ContentType.ByteArray;
             }
@@ -873,19 +983,30 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 this.SerializeContent(((Func<object>)content)());
                 return;
             }
+            else if (content is GetDataResponse)
+            {
+                if (this.versionToUse >= SerializationFormatVersions.Version29)
+                {
+                    contentType = ContentType.GetDataResponse;
+                }
+                else
+                {
+                    contentType = ContentType.ByteArray;
+                }
+            }
+            else if (content is null)
+            {
+                contentType = ContentType.Null;
+            }
 
             this.binaryWriter.Write((byte)contentType);
 
             switch (contentType)
             {
-                case ContentType.AnyObject:
-                    if (content != null)
-                    {
-                        Trace.TraceInformation("at PrivateSerializeContent(object obj) --> {0}", content.GetType().Name);
-                    }
+                case ContentType.Null:
 
-                    byte[] bytes = this.ToByteArray(content);
-                    this.SerializeData(bytes);
+                    // Use NullByteArray here for backward compatible.
+                    this.SerializeData(NullByteArray);
                     return;
                 case ContentType.Request:
                     this.SerializeRingmasterRequest((IRingMasterRequest)content);
@@ -900,7 +1021,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     this.SerializeAclList((IReadOnlyList<Acl>)content);
                     return;
                 case ContentType.ByteArray:
-                    this.SerializeData((byte[])content);
+                    if (content is GetDataResponse)
+                    {
+                        if (this.versionToUse >= SerializationFormatVersions.Version29)
+                        {
+                            this.SerializeGetDataResponse((GetDataResponse)content);
+                        }
+                        else
+                        {
+                            this.SerializeData(((GetDataResponse)content).Data);
+                        }
+                    }
+                    else if (content is IMemoryBuffer)
+                    {
+                        this.SerializeData((IMemoryBuffer)content);
+                    }
+                    else
+                    {
+                        this.SerializeData((byte[])content);
+                    }
+
                     return;
                 case ContentType.Stat:
                     this.SerializeStat((IStat)content);
@@ -915,6 +1055,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case ContentType.WatcherCall:
                     this.SerializeWatcherCall((WatcherCall)content);
                     return;
+                case ContentType.GetDataResponse:
+                    this.SerializeGetDataResponse((GetDataResponse)content);
+                    return;
+
+                case ContentType.Unknown:
+                    throw new FormatException("content type is unknown");
             }
         }
 

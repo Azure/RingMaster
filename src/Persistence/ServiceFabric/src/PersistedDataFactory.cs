@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Fabric;
+    using System.Linq;
     using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
@@ -34,9 +35,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// </summary>
         private const int DefaultReplicationGroupDataSize = 1024 * 1024;
 
-        private const string DataByIdDictionaryName = "dataById";
+        /// <summary>
+        /// Total change size of a replication group, beyond this value no further change list will be taken
+        /// </summary>
+        private const int DefaultReplicationGroupChangeSize = 2 * 1024;
+
+        private const string DefaultDataByIdDictionaryName = "dataById";
 
         private static readonly PersistedDataSerializer SerializerInstance = new PersistedDataSerializer();
+
+        private readonly string dataByIdDictionaryName = DefaultDataByIdDictionaryName;
 
         // Interface to the state manager that must be used to perform operations on ReliableCollections.
         private readonly IReliableStateManager stateManager;
@@ -64,13 +72,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="configuration">Configuration settings</param>
         /// <param name="instrumentation">Instrumentation consumer</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <param name="dataByIdDictionaryName">The data by id dictionary name</param>
         public PersistedDataFactory(
             IReliableStateManager stateManager,
             string name,
             Configuration configuration,
             IServiceFabricPersistenceInstrumentation instrumentation,
-            CancellationToken cancellationToken)
-            : this(stateManager, name, configuration, DefaultReplicationQueueSize, DefaultReplicationGroupDataSize, instrumentation, cancellationToken)
+            CancellationToken cancellationToken,
+            string dataByIdDictionaryName = DefaultDataByIdDictionaryName)
+            : this(stateManager, name, configuration, configuration.MaxReplicationQueueSize, configuration.MaxReplicationDataSize, configuration.MaxReplicationGroupChangeSize, instrumentation, cancellationToken, dataByIdDictionaryName)
         {
         }
 
@@ -82,22 +92,27 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="configuration">Configuration settings</param>
         /// <param name="replicationQueueSize">Size of replication queue in the base class</param>
         /// <param name="maxReplicationDataSize">Size of replication data group</param>
+        /// <param name="maxReplicationChangeSize">Size of number of changes in replication data group</param>
         /// <param name="instrumentation">Instrumentation consumer</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <param name="dataByIdDictionaryName">The data by id dictionary name</param>
         public PersistedDataFactory(
             IReliableStateManager stateManager,
             string name,
             Configuration configuration,
             int replicationQueueSize,
             int maxReplicationDataSize,
+            int maxReplicationChangeSize,
             IServiceFabricPersistenceInstrumentation instrumentation,
-            CancellationToken cancellationToken)
-            : base(name, instrumentation, cancellationToken, replicationQueueSize, maxReplicationDataSize, configuration.FixStatDuringLoad)
+            CancellationToken cancellationToken,
+            string dataByIdDictionaryName = DefaultDataByIdDictionaryName)
+            : base(name, instrumentation, cancellationToken, replicationQueueSize, maxReplicationDataSize, maxReplicationChangeSize, configuration.FixStatDuringLoad, configuration.MaxRetryCount)
         {
             this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
             this.configuration = configuration ?? new Configuration();
             this.instrumentation = instrumentation;
             this.cancellationToken = cancellationToken;
+            this.dataByIdDictionaryName = dataByIdDictionaryName;
 
             if (this.configuration.EnableActiveSecondary)
             {
@@ -191,9 +206,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <inheritdoc />
         protected override async Task StartLoadingData(CancellationToken cancellation)
         {
+            IEnumerable<PersistedData> dataList = null;
             ServiceFabricPersistenceEventSource.Log.StartLoadingData();
 
-            var result = await this.stateManager.TryGetAsync<IReliableDictionary2<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
+            var result = await this.stateManager.TryGetAsync<IReliableDictionary2<long, WinFabPersistence.PersistedData>>(this.dataByIdDictionaryName);
             if (result.HasValue)
             {
                 var dataById = result.Value;
@@ -207,7 +223,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
                     // is received.
                     if (!this.configuration.EnableActiveSecondary)
                     {
-                        await this.LoadDictionary(dataById, transaction, cancellation);
+                        dataList = await this.GetPersistedDataListFromReliableDictionary(dataById, transaction, cancellation);
+                    }
+                    else
+                    {
+                        // active secondary already have all data, no need to load.
+                        return;
                     }
 
                     await transaction.CommitAsync();
@@ -216,9 +237,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             else
             {
                 ServiceFabricPersistenceEventSource.Log.CreatingDataByIdDictionary();
-                await this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(DataByIdDictionaryName);
-                this.Load(new PersistedData[0]);
+                await this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(this.dataByIdDictionaryName);
+                dataList = Enumerable.Empty<PersistedData>();
             }
+
+            this.Load(dataList, this.configuration.IgnoreErrorsDuringLoad);
         }
 
         /// <summary>
@@ -254,12 +277,65 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <inheritdoc />
         protected override void OnDeactivate()
         {
+            if (!this.configuration.EnableActiveSecondary)
+            {
+                // There's no need to keep references.
+                // We will rebuild the node tree when we're primary anyways
+                this.PrepareForRebuild();
+            }
+
             ServiceFabricPersistenceEventSource.Log.OnDeactivate();
+        }
+
+        /// <inheritdoc />
+        protected override bool IsRetriable(Exception ex)
+        {
+            if (ex == null)
+            {
+                return false;
+            }
+
+            FabricException fabricException = ex as FabricException;
+            if (fabricException != null)
+            {
+                if (fabricException is FabricTransientException
+                    || fabricException is FabricNotPrimaryException || fabricException is FabricNotReadableException)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (ex is InvalidOperationException)
+            {
+                return true;
+            }
+
+            AggregateException aggregateException = ex as AggregateException;
+
+            if (aggregateException != null)
+            {
+                if (this.IsRetriable(aggregateException.InnerException))
+                {
+                    return true;
+                }
+
+                foreach (Exception innerException in aggregateException.InnerExceptions)
+                {
+                    if (this.IsRetriable(innerException))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private Task<IReliableDictionary<long, WinFabPersistence.PersistedData>> GetDataById(ITransaction transaction)
         {
-            return this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(transaction, DataByIdDictionaryName);
+            return this.stateManager.GetOrAddAsync<IReliableDictionary<long, WinFabPersistence.PersistedData>>(transaction, this.dataByIdDictionaryName);
         }
 
         private void OnStateManagerTransactionChangedHandler(object sender, NotifyTransactionChangedEventArgs e)
@@ -442,8 +518,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
         /// <param name="dataById">Dictionary to load</param>
         /// <param name="transaction">Transaction to use</param>
         /// <param name="cancellation">Cancellation token to indicate the cancellation of loading</param>
-        /// <returns>A <see cref="Task"/> that tracks execution of this method</returns>
-        private async Task LoadDictionary(
+        /// <returns>A <see cref="Task"/> that tracks execution of this method and returns the persisted data list</returns>
+        private async Task<List<PersistedData>> GetPersistedDataListFromReliableDictionary(
             IReliableDictionary<long, WinFabPersistence.PersistedData> dataById,
             ITransaction transaction,
             CancellationToken cancellation)
@@ -454,18 +530,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             try
             {
                 ServiceFabricPersistenceEventSource.Log.LoadDictionaryStartEnumeration(transaction.TransactionId);
-                IAsyncEnumerable<KeyValuePair<long, WinFabPersistence.PersistedData>> enumerable = await dataById.CreateEnumerableAsync(transaction);
+                var enumerable = await dataById.CreateEnumerableAsync(transaction);
                 using (var enumerator = enumerable.GetAsyncEnumerator())
                 {
                     while (await enumerator.MoveNextAsync(cancellation))
                     {
-                        dataList.Add(enumerator.Current.Value.Data);
+                        dataList.Add(enumerator.Current.Value.Data.Clone());
                     }
                 }
 
-                this.Load(dataList, this.configuration.IgnoreErrorsDuringLoad);
-
                 ServiceFabricPersistenceEventSource.Log.LoadDictionaryCompleted(dataList.Count, timer.ElapsedMilliseconds);
+
+                return dataList;
             }
             catch (Exception ex)
             {
@@ -495,6 +571,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.Servi
             /// Gets or sets a value indicating whether to fix the number of children in stat during load.
             /// </summary>
             public bool FixStatDuringLoad { get; set; } = false;
+
+            /// <summary>
+            /// Gets or sets a value indicating the maximum retry count for retriable failure during replicating the changes.
+            /// </summary>
+            public int MaxRetryCount { get; set; } = DefaultMaxRetryCount;
+
+            /// <summary>
+            /// Gets or sets the maximum data size (in bytes) that can be replicated in a single operation.
+            /// </summary>
+            public int MaxReplicationDataSize { get; set; } = DefaultReplicationGroupDataSize;
+
+            /// <summary>
+            /// Gets or sets the maximum data size (in bytes) that can be replicated in a single operation.
+            /// </summary>
+            public int MaxReplicationGroupChangeSize { get; set; } = DefaultReplicationGroupChangeSize;
+
+            /// <summary>
+            /// Gets or sets the maximum number of items that can be held in the replication queue.
+            /// </summary>
+            public int MaxReplicationQueueSize { get; set; } = DefaultReplicationQueueSize;
         }
 
         private sealed class Replication : IReplication

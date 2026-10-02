@@ -19,8 +19,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="options">Options for this request</param>
         /// <param name="watcher"><see cref="IWatcher"/> to associate with the node</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestGetData(string path, GetDataOptions options, IWatcher watcher, ulong uid = 0)
-            : this(path, options, null, watcher, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestGetData(string path, GetDataOptions options, IWatcher watcher, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : this(path, options, null, watcher, uid, invokeCallbackBeforeComplete)
         {
         }
 
@@ -32,8 +33,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="optionArgument">Argument for options</param>
         /// <param name="watcher"><see cref="IWatcher"/> to associate with the node</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestGetData(string path, GetDataOptions options, IGetDataOptionArgument optionArgument, IWatcher watcher, ulong uid = 0)
-            : base(RingMasterRequestType.GetData, path, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestGetData(string path, GetDataOptions options, IGetDataOptionArgument optionArgument, IWatcher watcher, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : base(RingMasterRequestType.GetData, path, uid, invokeCallbackBeforeComplete)
         {
             this.Watcher = watcher;
             this.Options = options;
@@ -70,6 +72,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             /// If the node for the path does not contain data, return the data of the closest ancestor with data that matches the argument.
             /// </summary>
             FaultbackOnParentDataWithMatch = 8,
+
+            /// <summary>
+            /// Include user metadata in the result.
+            /// </summary>
+            UserMetadataRequired = 16,
         }
 
         /// <summary>
@@ -126,6 +133,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             get
             {
                 return this.IsOptionSet(GetDataOptions.NoWildcardsForPath);
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether [user metadata required].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [user metadata required]; otherwise, <c>false</c>.
+        /// </value>
+        public bool UserMetadataRequired
+        {
+            get
+            {
+                return this.IsOptionSet(GetDataOptions.UserMetadataRequired);
             }
         }
 

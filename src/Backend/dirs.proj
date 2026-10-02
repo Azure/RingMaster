@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="Common\RingMasterBackendCommon.csproj" />
-    <ProjectFile Include="Core\dirs.proj" />
-    <ProjectFile Include="HelperTypes\dirs.proj" />
-    <ProjectFile Include="Instrumentation\RingMasterBackendInstrumentation.csproj" />
-    <ProjectFile Include="Native\dirs.proj" />
+    <ProjectReference Include="Common\RingMasterBackendCommon.csproj" />
+    <ProjectReference Include="Core\dirs.proj" />
+    <ProjectReference Include="HelperTypes\dirs.proj" />
+    <ProjectReference Include="Instrumentation\RingMasterBackendInstrumentation.csproj" />
+    <ProjectReference Include="Native\dirs.proj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

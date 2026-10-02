@@ -7,3 +7,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Microsoft.RingMaster.Backend.Server")]
 [assembly: InternalsVisibleTo("Microsoft.RingMaster.Backend.CoreUnitTest")]
 [assembly: InternalsVisibleTo("Microsoft.RingMaster.Backend.CoreStress")]
+[assembly: InternalsVisibleTo("MicroBenchmarks")]

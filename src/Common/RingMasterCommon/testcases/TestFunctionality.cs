@@ -25,6 +25,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         /// </summary>
         private const string TestPrefix = "/$rmbvt/TestFunctionality";
 
+        private const RequestGetData.GetDataOptions GetDataWithStatAndMetadataOption = RequestGetData.GetDataOptions.UserMetadataRequired;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TestFunctionality"/> class.
         /// </summary>
@@ -706,6 +708,172 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             }
         }
 
+
+        /// <summary>
+        /// Tests the create node with user metadata.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestCreateNodeWithUserMetadata()
+        {
+            string nodeName = string.Format("$bvt_TestCreateNodeWithMetadata{0}", Guid.NewGuid());
+            string nodePath = string.Format("{0}/{1}", TestFunctionality.TestPrefix, nodeName);
+            byte[] nodeData = Guid.NewGuid().ToByteArray();
+            byte[] nodeMetadata = Guid.NewGuid().ToByteArray();
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string createdNodeName = await ringMaster.Create(nodePath, nodeData, null, CreateMode.Persistent, nodeMetadata);
+
+                Assert.AreEqual(createdNodeName, nodeName);
+
+                IStat stat = await ringMaster.Exists(nodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+
+                var retrievedNodeDataMetadataAndStat = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, watcher: null);
+                var retrievedData = await ringMaster.GetData(nodePath, null);
+
+                VerifyBytesAreEqual(nodeMetadata, retrievedNodeDataMetadataAndStat.UserMetadata);
+                VerifyBytesAreEqual(nodeData, retrievedNodeDataMetadataAndStat.Data);
+                VerifyBytesAreEqual(nodeData, retrievedData);
+
+                Assert.IsTrue(retrievedNodeDataMetadataAndStat.Stat.Equals(stat));
+                Assert.AreEqual(1, retrievedNodeDataMetadataAndStat.Stat.Uversion);
+            }
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                IStat stat = await ringMaster.Exists(nodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+
+                var retrievedNodeDataMetadataAndStat = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, watcher: null);
+                var retrievedData = await ringMaster.GetData(nodePath, null);
+
+                VerifyBytesAreEqual(nodeMetadata, retrievedNodeDataMetadataAndStat.UserMetadata);
+                VerifyBytesAreEqual(nodeData, retrievedNodeDataMetadataAndStat.Data);
+                VerifyBytesAreEqual(nodeData, retrievedData);
+
+                Assert.IsTrue(retrievedNodeDataMetadataAndStat.Stat.Equals(stat));
+
+                await ringMaster.Delete(nodePath, -1);
+            }
+        }
+
+        public async Task TestCreateNodeWithUserMetadataOnExistingNode()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string nodeName = string.Format("$bvt_TestCreateNodeWithUserMetadataOnExistingNode{0}", Guid.NewGuid());
+                string nodePath = string.Format("{0}/{1}", TestFunctionality.TestPrefix, nodeName);
+                byte[] nodeData = Guid.NewGuid().ToByteArray();
+                byte[] nodeMetadata = Guid.NewGuid().ToByteArray();
+                byte[] nodeMetadata2 = Guid.NewGuid().ToByteArray();
+
+                string createdNodeName = await ringMaster.Create(nodePath, nodeData, null, CreateMode.Persistent, nodeMetadata);
+
+                Assert.AreEqual(createdNodeName, nodeName);
+
+                IStat stat = await ringMaster.Exists(nodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+
+                var retrievedNodeDataMetadataStat = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, watcher: null);
+
+                VerifyBytesAreEqual(nodeData, retrievedNodeDataMetadataStat.Data);
+                VerifyBytesAreEqual(nodeMetadata, retrievedNodeDataMetadataStat.UserMetadata);
+
+                IStat stat1 = await ringMaster.Exists(nodePath, watcher: null);
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Nodeexists,
+                    async () =>
+                    {
+                        await ringMaster.Create(nodePath, null, null, CreateMode.Persistent, nodeMetadata2);
+                    },
+                    "Nodeexists error if an attempt is made to create a node that already exists");
+
+                var retrieve2 = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, watcher: null);
+                VerifyBytesAreEqual(nodeMetadata, retrieve2.UserMetadata);
+
+                IStat stat2 = await ringMaster.Exists(nodePath, watcher: null);
+                Assert.AreEqual(stat1.Version, stat2.Version);
+
+                string name2 = await ringMaster.Create(nodePath, null, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, nodeMetadata2);
+
+                // Verify that the create returns null
+                Assert.AreEqual(name2, null);
+
+                retrieve2 = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, watcher: null);
+                VerifyBytesAreEqual(nodeMetadata2, retrieve2.UserMetadata, "after second create we should see a new user metadata");
+                Assert.AreEqual(2, retrieve2.Stat.Uversion);
+
+                IStat stat3 = await ringMaster.Exists(nodePath, watcher: null);
+                Assert.AreEqual(stat1.Version + 1, stat3.Version);
+
+                await ringMaster.Delete(nodePath, -1);
+            }
+        }
+
+        public async Task TestCreateNodeWithDataOrMetadataExceedsMaxLength(int maxDataLength, int maxMetadataLength)
+        {
+            if (maxDataLength <= 1)
+            {
+                throw new ArgumentOutOfRangeException($"{nameof(maxDataLength)}");
+            }
+
+            if (maxMetadataLength <= 1)
+            {
+                throw new ArgumentOutOfRangeException($"{nameof(maxMetadataLength)}");
+            }
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string nodeName = string.Format("$bvt_TestCreateNodeWithDataOrMetadataExceedsMaxLength{0}", Guid.NewGuid());
+                string nodePath = string.Format("{0}/{1}", TestFunctionality.TestPrefix, nodeName);
+                byte[] nodeData = new byte[maxDataLength];
+                byte[] nodeMetadata = new byte[maxMetadataLength];
+
+                string createdNodeName = await ringMaster.Create(nodePath, nodeData, null, CreateMode.Persistent, nodeMetadata);
+                Assert.AreEqual(createdNodeName, nodeName);
+                IStat stat = await ringMaster.Exists(nodePath, watcher: null);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+
+                byte[] nodeData2 = new byte[maxDataLength - 1];
+                byte[] nodeMetadata2 = new byte[maxMetadataLength + 1];
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.Create(nodePath, nodeData2, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, nodeMetadata2);
+                    },
+                    "node metadata exceeds maximum allowed size.");
+
+                var dataMetadataAndStat = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, null);
+
+                // Create request failed because user metadata exceeds maximum length. Data, metadata and stat should remain unchanged.
+                VerifyBytesAreEqual(nodeData, dataMetadataAndStat.Data);
+                VerifyBytesAreEqual(nodeMetadata, dataMetadataAndStat.UserMetadata);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+
+                nodeData2 = new byte[maxDataLength + 1];
+                nodeMetadata2 = new byte[maxMetadataLength - 1];
+
+                await VerifyRingMasterException(
+                    RingMasterException.Code.Badarguments,
+                    async () =>
+                    {
+                        await ringMaster.Create(nodePath, nodeData2, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, nodeMetadata2);
+                    },
+                    "node data exceeds maximum allowed size.");
+
+                dataMetadataAndStat = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, null);
+
+                // Create request failed because user metadata exceeds maximum length. Data, metadata and stat should remain unchanged.
+                VerifyBytesAreEqual(nodeData, dataMetadataAndStat.Data);
+                VerifyBytesAreEqual(nodeMetadata, dataMetadataAndStat.UserMetadata);
+                VerifyStatForFreshlyCreatedNode(stat, expectedDataLength: nodeData.Length);
+            }
+        }
+
         /// <summary>
         /// Verify that the node path can contain unicode characters.
         /// </summary>
@@ -990,6 +1158,55 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         }
 
         /// <summary>
+        /// Verify that attempted deletion of a not-empty node doesn't fail if the right flag is set.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestDeleteWithAllowNotEmptyFlag()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string nodeName = string.Format("$bvt_TestDeleteWithAllowNotEmptyFlag{0}", Guid.NewGuid());
+                string nodePath = string.Format("{0}/{1}", TestFunctionality.TestPrefix, nodeName);
+                string childNodePath = string.Format("{0}/child", nodePath);
+
+                string createdNodeName = await ringMaster.Create(nodePath, null, null, CreateMode.Persistent);
+                Assert.AreEqual(createdNodeName, nodeName);
+
+                createdNodeName = await ringMaster.Create(childNodePath, null, null, CreateMode.Persistent);
+                Assert.AreEqual(createdNodeName, "child");
+
+                // Deleting a non-empty node should not work unless the flag is set.
+                try
+                {
+                    await ringMaster.Delete(nodePath, -1);
+                    Assert.Fail("Should have thrown because we tried to delete a non-empty node.");
+                }
+                catch (RingMasterException ex)
+                {
+                    Assert.AreEqual(RingMasterException.Code.Notempty, ex.ErrorCode);
+                }
+
+                // Deleting a non-empty node should "succeed" even if the flag is set, but the node will still exist.
+                bool result = await ringMaster.Delete(nodePath, -1, DeleteMode.SuccessEvenIfNotEmpty);
+                Assert.IsTrue(result);
+
+                var stat = await ringMaster.Exists(nodePath, null);
+                Assert.IsNotNull(stat);
+
+                stat = await ringMaster.Exists(childNodePath, null);
+                Assert.IsNotNull(stat);
+
+                // Now we'll delete for real.
+                result = await ringMaster.Delete(nodePath, -1, DeleteMode.CascadeDelete);
+                Assert.IsTrue(result);
+
+                // We should be able to stack these flags.
+                result = await ringMaster.Delete(nodePath, -1, DeleteMode.SuccessEvenIfNotEmpty | DeleteMode.SuccessEvenIfNodeDoesntExist);
+                Assert.IsTrue(result);
+            }
+        }
+
+        /// <summary>
         /// Verify that data associated with a sub tree can be retrieved using the <c>path/$fullsubtree$</c>
         /// syntax.
         /// </summary>
@@ -1009,35 +1226,64 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 byte[] node1Data = Guid.NewGuid().ToByteArray();
                 byte[] node2Data = Guid.NewGuid().ToByteArray();
 
-                await ringMaster.Create(rootPath, rootData, null, CreateMode.Persistent);
-                await ringMaster.Create(node1Path, node1Data, null, CreateMode.Persistent);
-                await ringMaster.Create(node2Path, node2Data, null, CreateMode.Persistent);
+                byte[] nodeMetadata = Guid.NewGuid().ToByteArray();
+                byte[] node1Metadata = Guid.NewGuid().ToByteArray();
+                byte[] node2Metadata = Guid.NewGuid().ToByteArray();
 
-                Func<bool, Task> testFunc = async (withStat) =>
+                await ringMaster.Create(rootPath, rootData, null, CreateMode.Persistent, nodeMetadata);
+                await ringMaster.Create(node1Path, node1Data, null, CreateMode.Persistent, node1Metadata);
+                await ringMaster.Create(node2Path, node2Data, null, CreateMode.Persistent, node2Metadata);
+
+                await ringMaster.Create(rootPath, rootData, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, nodeMetadata);
+                await ringMaster.Create(node1Path, node1Data, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, node1Metadata);
+                await ringMaster.Create(node2Path, node2Data, null, CreateMode.Persistent | CreateMode.SuccessEvenIfNodeExistsFlag, node2Metadata);
+
+                Func<RequestGetSubtree.GetSubtreeOptions, Task> testFunc = async (options) =>
                 {
-                    TreeNode root = await ringMaster.GetFullSubtree(rootPath, withStat);
+                    TreeNode root = await ringMaster.GetFullSubtree(rootPath, options);
 
                     Assert.AreEqual(rootNodeName, root.Name);
                     VerifyBytesAreEqual(rootData, root.Data);
-                    Assert.AreEqual(withStat, root.Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeStats), root.Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata), root.UserMetadata != null);
                     Assert.AreEqual(2, root.Children.Count);
 
                     Assert.AreEqual("node1", root.Children[0].Name);
                     VerifyBytesAreEqual(node1Data, root.Children[0].Data);
-                    Assert.AreEqual(withStat, root.Children[0].Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeStats), root.Children[0].Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata), root.Children[0].UserMetadata != null);
                     Assert.IsNull(root.Children[0].Children);
 
                     Assert.AreEqual("node2", root.Children[1].Name);
                     VerifyBytesAreEqual(node2Data, root.Children[1].Data);
-                    Assert.AreEqual(withStat, root.Children[1].Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeStats), root.Children[1].Stat != null);
+                    Assert.AreEqual(options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata), root.Children[1].UserMetadata != null);
                     Assert.IsNull(root.Children[1].Children);
+
+                    if (options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeStats))
+                    {
+                        Assert.AreEqual(2, root.Stat.Uversion, root.Children[0].Stat.Uversion);
+                        Assert.AreEqual(2, root.Children[1].Stat.Uversion);
+                    }
+
+                    if (options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata))
+                    {
+                        VerifyBytesAreEqual(nodeMetadata, root.UserMetadata);
+                        VerifyBytesAreEqual(node1Metadata, root.Children[0].UserMetadata);
+                        VerifyBytesAreEqual(node2Metadata, root.Children[1].UserMetadata);
+                    }
+                    else
+                    {
+                        Assert.IsNull(root.UserMetadata);
+                        Assert.IsNull(root.Children[0].UserMetadata);
+                        Assert.IsNull(root.Children[1].UserMetadata);
+                    }
                 };
 
-                // Get full sub-tree with stat
-                await testFunc(true);
-
-                // Get full sub-tree without stat
-                await testFunc(false);
+                await testFunc(RequestGetSubtree.GetSubtreeOptions.None);
+                await testFunc(RequestGetSubtree.GetSubtreeOptions.IncludeStats);
+                await testFunc(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata);
+                await testFunc(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata | RequestGetSubtree.GetSubtreeOptions.IncludeStats);
 
                 await ringMaster.Delete(rootPath, -1, DeleteMode.CascadeDelete);
             }
@@ -1106,6 +1352,69 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.AreEqual(3, statSetData.Version);
 
                 await ringMaster.Delete(nodePath, -1);
+            }
+        }
+
+        /// <summary>
+        /// Tests the set user metadata.
+        /// </summary>
+        /// <returns></returns>
+        public async Task TestSetDataAndUserMetadata()
+        {
+            string nodeName = string.Format("$bvt_TestSetDataAndUserMetadata{0}", Guid.NewGuid());
+            string nodePath = string.Format("{0}/{1}", TestFunctionality.TestPrefix, nodeName);
+            byte[] nodeuserMetadata = Guid.NewGuid().ToByteArray();
+            byte[] nodeData = Guid.NewGuid().ToByteArray();
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                string createdNodeName = await ringMaster.Create(nodePath, null, null, CreateMode.Persistent);
+
+                Assert.AreEqual(createdNodeName, nodeName);
+
+                IStat statCreate = await ringMaster.Exists(nodePath, watcher: null);
+
+                VerifyStatForFreshlyCreatedNode(statCreate, expectedDataLength: 0);
+
+                IStat statSetMetadata = await ringMaster.SetDataAndUserMetadata(nodePath, nodeData, statCreate.Version, nodeuserMetadata, statCreate.Uversion);
+
+                // Node has just been modified so Czxid (create transaction id)
+                // must not be equal to Mzxid (modify transaction id).
+                Assert.AreNotEqual(statSetMetadata.Czxid, statSetMetadata.Mzxid);
+
+                // Czxid and Ctime must have the same values they had when the
+                // node was created.
+                Assert.AreEqual(statCreate.Czxid, statSetMetadata.Czxid);
+
+                Assert.AreEqual(statCreate.Ctime, statSetMetadata.Ctime);
+
+                // Since no children were added or deleted, Pzxid must be
+                // the same as Czxid.
+                Assert.AreEqual(statSetMetadata.Czxid, statSetMetadata.Pzxid);
+
+                Assert.AreEqual(2, statSetMetadata.Version);
+
+                // But no children were added or ACLs changed, so
+                // those versions must be 1.
+                Assert.AreEqual(1, statSetMetadata.Cversion);
+                Assert.AreEqual(1, statSetMetadata.Aversion);
+
+                // There are no children.
+                Assert.AreEqual(0, statSetMetadata.NumChildren);
+
+                Assert.AreEqual(2, statSetMetadata.Uversion);
+
+                var retrieved = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, null);
+                Assert.IsTrue(statSetMetadata.Equals(retrieved.Stat));
+                VerifyBytesAreEqual(nodeData, retrieved.Data);
+                VerifyBytesAreEqual(nodeuserMetadata, retrieved.UserMetadata);
+            }
+
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                var retrieved = await ringMaster.GetData(nodePath, GetDataWithStatAndMetadataOption, null);
+                Assert.AreEqual(2, retrieved.Stat.Uversion);
+                VerifyBytesAreEqual(nodeuserMetadata, retrieved.UserMetadata);
             }
         }
 
@@ -1232,7 +1541,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     var nodePath = string.Format("{0}/TestMulti_{1}", TestFunctionality.TestPrefix, Guid.NewGuid());
                     var nodeData = Guid.NewGuid().ToByteArray();
 
-                    createOperations.Add(Op.Create(nodePath, nodeData, null, CreateMode.Persistent));
+                    createOperations.Add(Op.Create(nodePath, nodeData, null, CreateMode.Persistent, nodeData));
                     nodePathList.Add(nodePath);
                     nodeDataList.Add(nodeData);
                 }
@@ -1249,9 +1558,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
 
                 // Now retrieve the data for the created nodes using a multi operation
                 var getDataOperations = new List<Op>();
-                foreach (var nodePath in nodePathList)
+                for (int i = 0; i < NumberOfNodes; i++)
                 {
-                    getDataOperations.Add(Op.GetData(nodePath, RequestGetData.GetDataOptions.None, null));
+                    var nodePath = nodePathList[i];
+                    if (i == 0)
+                    {
+                        getDataOperations.Add(Op.GetData(nodePath, RequestGetData.GetDataOptions.None, null));
+                    }
+                    else if (i == 1)
+                    {
+                        getDataOperations.Add(Op.GetData(nodePath, RequestGetData.GetDataOptions.NoStatRequired, null));
+                    }
+                    else if (i == 2)
+                    {
+                        getDataOperations.Add(Op.GetData(nodePath, RequestGetData.GetDataOptions.UserMetadataRequired, null));
+                    }
+                    else
+                    {
+                        getDataOperations.Add(Op.GetData(nodePath, RequestGetData.GetDataOptions.NoStatRequired | RequestGetData.GetDataOptions.UserMetadataRequired, null));
+                    }
                 }
 
                 IReadOnlyList<OpResult> getDataResults = await ringMaster.Multi(getDataOperations);
@@ -1269,8 +1594,35 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
 
                     var getDataResult = result as OpResult.GetDataResult;
                     Assert.IsNotNull(getDataResult);
-                    Assert.AreEqual(expectedData.Length, getDataResult.Bytes.Length);
-                    Assert.IsTrue(expectedData.SequenceEqual(getDataResult.Bytes));
+                    Assert.AreEqual(expectedData.Length, getDataResult.Data.Length);
+                    Assert.IsTrue(expectedData.SequenceEqual(getDataResult.Data));
+
+                    if (i == 0)
+                    {
+                        Assert.IsNotNull(getDataResult.Stat);
+                        Assert.AreEqual(1, getDataResult.Stat.Version);
+                        Assert.AreEqual(1, getDataResult.Stat.Uversion);
+                        Assert.IsNull(getDataResult.UserMetadata);
+                    }
+                    else if (i == 1)
+                    {
+                        Assert.IsNull(getDataResult.Stat);
+                        Assert.IsNull(getDataResult.UserMetadata);
+                    }
+                    else if (i == 2)
+                    {
+                        Assert.IsNotNull(getDataResult.Stat);
+                        Assert.AreEqual(1, getDataResult.Stat.Version);
+                        Assert.AreEqual(1, getDataResult.Stat.Uversion);
+                        Assert.IsNotNull(getDataResult.UserMetadata);
+                        Assert.IsTrue(expectedData.SequenceEqual(getDataResult.UserMetadata));
+                    }
+                    else
+                    {
+                        Assert.IsNull(getDataResult.Stat);
+                        Assert.IsNotNull(getDataResult.UserMetadata);
+                        Assert.IsTrue(expectedData.SequenceEqual(getDataResult.UserMetadata));
+                    }
                 }
 
                 // Now change the data for all the nodes using a multi operation
@@ -1289,6 +1641,23 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     Assert.AreEqual(OpCode.SetData, result.ResultType);
                     Assert.AreEqual(RingMasterException.Code.Ok, result.ErrCode);
                     Assert.IsNotNull(result is OpResult.SetDataResult);
+                }
+
+                // Now change the user metadata for all the nodes using a multi operation
+                var setDataAndUserMetadataOperations = new List<Op>();
+                foreach (var nodePath in nodePathList)
+                {
+                    setDataAndUserMetadataOperations.Add(Op.SetDataAndUserMetadata(nodePath, Guid.NewGuid().ToByteArray(), -1, Guid.NewGuid().ToByteArray(), 1));
+                }
+
+                IReadOnlyList<OpResult> setdataAndUserMetadataResults = await ringMaster.Multi(setDataAndUserMetadataOperations);
+
+                Assert.AreEqual(NumberOfNodes, setDataAndUserMetadataOperations.Count);
+                foreach (var result in setdataAndUserMetadataResults)
+                {
+                    Assert.AreEqual(OpCode.SetDataAndUserMetadata, result.ResultType);
+                    Assert.AreEqual(RingMasterException.Code.Ok, result.ErrCode);
+                    Assert.IsNotNull(result is OpResult.SetDataAndUserMetadataResult);
                 }
 
                 // Now check all nodes
@@ -1327,11 +1696,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     Assert.IsNotNull(result is OpResult.CheckResult);
                 }
 
+                // Now test get subtree in multi
+                List<Op> getSubtreeOperations = new List<Op>();
+                foreach (var nodePath in nodePathList)
+                {
+                    getSubtreeOperations.Add(Op.GetSubtree(nodePath, ">:2:", RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata | RequestGetSubtree.GetSubtreeOptions.IncludeStats));
+                }
+
+                IReadOnlyList<OpResult> getSubtreeResults = await ringMaster.Multi(getSubtreeOperations);
+                foreach (var result in getSubtreeResults)
+                {
+                    Assert.AreEqual(OpCode.GetSubtree, result.ResultType);
+                    Assert.AreEqual(RingMasterException.Code.Ok, result.ErrCode);
+                    var getResult = result as OpResult.GetSubtreeResult;
+                    Assert.IsNotNull(getResult);
+                    var subtree = TreeNode.Deserialize(getResult.SerializedSubtree);
+                    Assert.IsNotNull(subtree.Data);
+                    Assert.IsNotNull(subtree.Stat);
+                    Assert.AreEqual(2, subtree.Stat.Uversion, subtree.Stat.Version);
+                    Assert.IsNotNull(subtree.UserMetadata);
+                }
+
                 // Now delete all nodes using a multi operation
                 var deleteOperations = new List<Op>();
                 foreach (var nodePath in nodePathList)
                 {
-                    deleteOperations.Add(Op.Delete(nodePath, 2));
+                    deleteOperations.Add(Op.Delete(nodePath, 3));
                 }
 
                 IReadOnlyList<OpResult> deleteResults = await ringMaster.Multi(deleteOperations);
@@ -1522,23 +1912,66 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         }
 
         /// <summary>
+        /// Tests the get data.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
+        public async Task TestGetData()
+        {
+            using (var ringMaster = this.ConnectToRingMaster())
+            {
+                var nodeData = Guid.NewGuid().ToByteArray();
+                var nodePath = $"{TestFunctionality.TestPrefix}/$bvt_TestGetData_{Guid.NewGuid()}";
+                var nodeMetadata = Guid.NewGuid().ToByteArray();
+
+                await ringMaster.Create(nodePath, nodeData, null, CreateMode.PersistentAllowPathCreation, nodeMetadata);
+
+                var justData = await ringMaster.GetData(nodePath, RequestGetData.GetDataOptions.NoStatRequired, null);
+                VerifyBytesAreEqual(nodeData, justData.Data);
+                Assert.IsNull(justData.Stat);
+                Assert.IsNull(justData.UserMetadata);
+
+                var dataWithStat = await ringMaster.GetData(nodePath, RequestGetData.GetDataOptions.None, null);
+                VerifyBytesAreEqual(nodeData, dataWithStat.Data);
+                Assert.IsNotNull(dataWithStat.Stat);
+                Assert.AreEqual(1, dataWithStat.Stat.Version, dataWithStat.Stat.Uversion);
+                Assert.IsNull(dataWithStat.UserMetadata);
+
+                var dataWithMetadata = await ringMaster.GetData(nodePath, RequestGetData.GetDataOptions.NoStatRequired | RequestGetData.GetDataOptions.UserMetadataRequired, null);
+                VerifyBytesAreEqual(nodeData, dataWithMetadata.Data);
+                Assert.IsNull(dataWithMetadata.Stat);
+                Assert.IsNotNull(dataWithMetadata.UserMetadata);
+                VerifyBytesAreEqual(nodeMetadata, dataWithMetadata.UserMetadata);
+
+                var dataWithStatAndMetadata = await ringMaster.GetData(nodePath, RequestGetData.GetDataOptions.UserMetadataRequired, null);
+                VerifyBytesAreEqual(nodeData, dataWithStatAndMetadata.Data);
+                VerifyBytesAreEqual(nodeMetadata, dataWithStatAndMetadata.UserMetadata);
+                Assert.IsNotNull(dataWithStatAndMetadata.Stat);
+                Assert.AreEqual(1, dataWithStat.Stat.Version, dataWithStat.Stat.Uversion);
+            }
+        }
+
+        /// <summary>
         /// Verifies GetSubtree operation returns nodes in depth-first order and that continuations work as expected.
         /// </summary>
         /// <returns>A <see cref="Task"/> that tracks completion of this test</returns>
-        public async Task TestGetSubtree(bool includeStat)
+        public async Task TestGetSubtree(bool includeStat, bool includeMetadata)
         {
             var parentName = $"$bvt_TestGetSubtree_{Guid.NewGuid()}";
             var parentPath = $"{TestFunctionality.TestPrefix}/{parentName}";
             var requestOptions = includeStat ? RequestGetSubtree.GetSubtreeOptions.IncludeStats : RequestGetSubtree.GetSubtreeOptions.None;
+            if (includeMetadata)
+            {
+                requestOptions |= RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata;
+            }
 
             using (var ringMaster = this.ConnectToRingMaster())
             {
                 await ringMaster.Create(parentPath, Encoding.UTF8.GetBytes("p"), null, CreateMode.Persistent);
-                await ringMaster.Create($"{parentPath}/b1", Encoding.UTF8.GetBytes("b1"), null, CreateMode.Persistent);
-                await ringMaster.Create($"{parentPath}/b1/c1", null, null, CreateMode.Persistent);
-                await ringMaster.Create($"{parentPath}/b1/c2", Encoding.UTF8.GetBytes("b1c2"), null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b1", Encoding.UTF8.GetBytes("b1"), null, CreateMode.Persistent, Encoding.UTF8.GetBytes("b1metadata"));
+                await ringMaster.Create($"{parentPath}/b1/c1", null, null, CreateMode.Persistent, Encoding.UTF8.GetBytes("b1c1metadata"));
+                await ringMaster.Create($"{parentPath}/b1/c2", Encoding.UTF8.GetBytes("b1c2"), null, CreateMode.Persistent, Encoding.UTF8.GetBytes("b1c2metadata"));
                 await ringMaster.Create($"{parentPath}/b2", Encoding.UTF8.GetBytes("b2"), null, CreateMode.Persistent);
-                await ringMaster.Create($"{parentPath}/b4", null, null, CreateMode.Persistent);
+                await ringMaster.Create($"{parentPath}/b4", null, null, CreateMode.Persistent, Encoding.UTF8.GetBytes("b4metadata"));
                 await ringMaster.Create($"{parentPath}/b4/c1", Encoding.UTF8.GetBytes("b4c1"), null, CreateMode.Persistent);
 
                 // for the first response, we expect /p, /p/b1, and /p/b1/c1
@@ -1550,18 +1983,36 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 treeRoot.Name.Should().Be(parentName);
                 Encoding.UTF8.GetString(treeRoot.Data).Should().Be("p");
                 Assert.AreEqual(includeStat, treeRoot.Stat != null);
+                if (treeRoot.Stat != null)
+                {
+                    Assert.AreEqual(1, treeRoot.Stat.Uversion);
+                }
+
+                Assert.IsNull(treeRoot.UserMetadata);
                 treeRoot.Children.Count.Should().Be(1);
 
                 // /p/b1
                 treeRoot.Children[0].Name.Should().Be("b1");
                 Encoding.UTF8.GetString(treeRoot.Children[0].Data).Should().Be("b1");
                 Assert.AreEqual(includeStat, treeRoot.Children[0].Stat != null);
+                Assert.AreEqual(includeMetadata, treeRoot.Children[0].UserMetadata != null);
+                if (includeMetadata)
+                {
+                    Encoding.UTF8.GetString(treeRoot.Children[0].UserMetadata).Should().Be("b1metadata");
+                }
+
                 treeRoot.Children[0].Children.Count.Should().Be(1);
 
                 // /p/b1/c1
                 treeRoot.Children[0].Children[0].Name.Should().Be("c1");
                 treeRoot.Children[0].Children[0].Data.Should().Be(null);
                 Assert.AreEqual(includeStat, treeRoot.Children[0].Children[0].Stat != null);
+                Assert.AreEqual(includeMetadata, treeRoot.Children[0].Children[0].UserMetadata != null);
+                if (includeMetadata)
+                {
+                    Encoding.UTF8.GetString(treeRoot.Children[0].Children[0].UserMetadata).Should().Be("b1c1metadata");
+                }
+
                 treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
 
                 // second response we expect /p, /p/b1, /p/b1/c1 (from continuation, without data/stats), plus /p/b1/c2, /p/b2, /p/b4
@@ -1573,36 +2024,52 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 treeRoot.Name.Should().Be(parentName);
                 treeRoot.Data.Should().Be(null);
                 treeRoot.Stat.Should().Be(null);
+                treeRoot.UserMetadata.Should().Be(null);
                 treeRoot.Children.Count.Should().Be(3);
 
                 // /p/b1
                 treeRoot.Children[0].Name.Should().Be("b1");
                 treeRoot.Children[0].Data.Should().Be(null);
                 treeRoot.Children[0].Stat.Should().Be(null);
+                treeRoot.Children[0].UserMetadata.Should().Be(null);
                 treeRoot.Children[0].Children.Count.Should().Be(2);
 
                 // /p/b1/c1
                 treeRoot.Children[0].Children[0].Name.Should().Be("c1");
                 treeRoot.Children[0].Children[0].Data.Should().Be(null);
                 treeRoot.Children[0].Children[0].Stat.Should().Be(null);
+                treeRoot.Children[0].Children[0].UserMetadata.Should().Be(null);
                 treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
 
                 // /p/b1/c2
                 treeRoot.Children[0].Children[1].Name.Should().Be("c2");
                 Encoding.UTF8.GetString(treeRoot.Children[0].Children[1].Data).Should().Be("b1c2");
                 Assert.AreEqual(includeStat, treeRoot.Children[0].Children[1].Stat != null);
+                Assert.AreEqual(includeMetadata, treeRoot.Children[0].Children[1].UserMetadata != null);
+                if (includeMetadata)
+                {
+                    Encoding.UTF8.GetString(treeRoot.Children[0].Children[1].UserMetadata).Should().Be("b1c2metadata");
+                }
+
                 treeRoot.Children[0].Children[1].Children.Should().BeNullOrEmpty();
 
                 // /p/b2
                 treeRoot.Children[1].Name.Should().Be("b2");
                 Encoding.UTF8.GetString(treeRoot.Children[1].Data).Should().Be("b2");
                 Assert.AreEqual(includeStat, treeRoot.Children[1].Stat != null);
+                Assert.IsNull(treeRoot.Children[1].UserMetadata);
                 treeRoot.Children[1].Children.Should().BeNullOrEmpty();
 
                 // /p/b4
                 treeRoot.Children[2].Name.Should().Be("b4");
                 treeRoot.Children[2].Data.Should().Be(null);
                 Assert.AreEqual(includeStat, treeRoot.Children[2].Stat != null);
+                Assert.AreEqual(includeMetadata, treeRoot.Children[2].UserMetadata != null);
+                if (includeMetadata)
+                {
+                    Encoding.UTF8.GetString(treeRoot.Children[2].UserMetadata).Should().Be("b4metadata");
+                }
+
                 treeRoot.Children[2].Children.Should().BeNullOrEmpty();
 
                 // third response we expect /p and /p/b4 (from continuation, without data), plus /p/b4/c1
@@ -1615,11 +2082,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 treeRoot.Name.Should().Be(parentName);
                 treeRoot.Data.Should().Be(null);
                 treeRoot.Stat.Should().Be(null);
+                treeRoot.UserMetadata.Should().Be(null);
                 treeRoot.Children.Count.Should().Be(1);
 
                 // /p/b4
                 treeRoot.Children[0].Name.Should().Be("b4");
                 treeRoot.Children[0].Data.Should().Be(null);
+                treeRoot.Children[0].Stat.Should().Be(null);
                 treeRoot.Children[0].Stat.Should().Be(null);
                 treeRoot.Children[0].Children.Count.Should().Be(1);
 
@@ -1627,6 +2096,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 treeRoot.Children[0].Children[0].Name.Should().Be("c1");
                 Encoding.UTF8.GetString(treeRoot.Children[0].Children[0].Data).Should().Be("b4c1");
                 Assert.AreEqual(includeStat, treeRoot.Children[0].Children[0].Stat != null);
+                treeRoot.Children[0].Children[0].UserMetadata.Should().Be(null);
                 treeRoot.Children[0].Children[0].Children.Should().BeNullOrEmpty();
             }
         }
@@ -1874,38 +2344,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
             await ringMaster.Delete("/$metadata/scheduler/failures/" + scheduleName, -1, true);
         }
 
-        /// <summary>
-        /// Verify that all fields of the <see cref="IStat"/> data structure are set
-        /// to sensible values for a newly created node.
-        /// </summary>
-        /// <param name="stat">The stat to verify</param>
-        /// <param name="expectedDataLength">Expected data length for the newly created node</param>
-        /// <param name="context">The context in which this verification is being performed</param>
-        private static void VerifyStatForFreshlyCreatedNode(IStat stat, int expectedDataLength = 0, string context = null)
-        {
-            // Node exists, so stat should not be null
-            Assert.IsNotNull(stat);
-
-            // Node has just been created so Czxid (create transaction id)
-            // must be equal to Mzxid (modify transaction id). Similarly,
-            // Ctime must be equal to Mtime.
-            Assert.AreEqual(stat.Czxid, stat.Mzxid, string.Format("Czxid vs Mzxid {0}", context));
-            Assert.AreEqual(stat.Ctime, stat.Mtime, string.Format("Ctime vs Mtime {0}", context));
-
-            // Since no children were added or deleted, Pzxid must be
-            // the same as Czxid.
-            Assert.AreEqual(stat.Czxid, stat.Pzxid);
-
-            // No Changes yet, so version must be 1.
-            Assert.AreEqual(1, stat.Version);
-            Assert.AreEqual(1, stat.Cversion);
-            Assert.AreEqual(1, stat.Aversion);
-
-            // There are no children and the node has no data.
-            Assert.AreEqual(0, stat.NumChildren);
-            Assert.AreEqual(expectedDataLength, stat.DataLength);
-        }
-
         private async Task VerifyCreateEphemeralNode(string nodeName, string nodePath, CreateMode createMode)
         {
             using (var ringMaster = this.ConnectToRingMaster())
@@ -2140,13 +2578,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
 
                 if (optionArgument != null)
                 {
-                    Assert.IsNotNull(result.Bytes);
-                    Assert.AreEqual(parentNodeData.Length, result.Bytes.Length);
-                    CollectionAssert.AreEqual(parentNodeData, result.Bytes);
+                    Assert.IsNotNull(result.Data);
+                    Assert.AreEqual(parentNodeData.Length, result.Data.Length);
+                    CollectionAssert.AreEqual(parentNodeData, result.Data);
                 }
                 else
                 {
-                    Assert.IsNull(result.Bytes);
+                    Assert.IsNull(result.Data);
                 }
             }
         }
@@ -2197,9 +2635,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                     Assert.AreEqual(OpCode.GetData, result.ResultType);
                     Assert.AreEqual(RingMasterException.Code.Ok, result.ErrCode);
 
-                    Assert.IsNotNull(result.Bytes);
-                    Assert.AreEqual(parentNodeData.Length, result.Bytes.Length);
-                    CollectionAssert.AreEqual(parentNodeData, result.Bytes);
+                    Assert.IsNotNull(result.Data);
+                    Assert.AreEqual(parentNodeData.Length, result.Data.Length);
+                    CollectionAssert.AreEqual(parentNodeData, result.Data);
                 }
                 else
                 {
@@ -2254,7 +2692,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
         {
             try
             {
-                var rootNode = await ringMaster.GetFullSubtree(path, true);
+                var rootNode = await ringMaster.GetFullSubtree(path, RequestGetSubtree.GetSubtreeOptions.IncludeStats);
                 return CountNode(rootNode);
             }
             catch (RingMasterException e)

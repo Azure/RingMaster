@@ -14,19 +14,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
     public class RequestCreate : AbstractRingMasterRequest
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestCreate"/> class.
+        /// Initializes a new instance of the <see cref="RequestCreate" /> class.
         /// </summary>
         /// <param name="path">Path to the node</param>
         /// <param name="data">Data that will be associated with the newly created node</param>
-        /// <param name="acl">List of <see cref="Acl"/>s that will be associated with the newly created node</param>
+        /// <param name="acl">List of <see cref="Acl" />s that will be associated with the newly created node</param>
         /// <param name="createMode">Specifies how the node must be created</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestCreate(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, ulong uid = 0)
-            : base(RingMasterRequestType.Create, path, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        public RequestCreate(string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, ulong uid = 0, bool invokeCallbackBeforeComplete = false, byte[] userMetadata = null)
+            : base(RingMasterRequestType.Create, path, uid, invokeCallbackBeforeComplete)
         {
             this.Data = data;
             this.Acl = acl;
             this.CreateMode = createMode;
+            this.UserMetadata = userMetadata;
         }
 
         /// <summary>
@@ -34,6 +37,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// </summary>
         /// <value>The data.</value>
         public byte[] Data { get; set; }
+
+        /// <summary>
+        /// Gets or sets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata { get; set; }
 
         /// <summary>
         /// Gets or sets the <see cref="Acl"/>s that will be associated with the node when it is created.

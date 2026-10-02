@@ -8,6 +8,7 @@ namespace Microsoft.Vega.VegaLogAnalyzer
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
+    using System.Text;
     using System.Text.RegularExpressions;
 
     /// <summary>
@@ -27,23 +28,25 @@ namespace Microsoft.Vega.VegaLogAnalyzer
 
         private const int MessageIndex = 17;
 
-        private static string numChildrenRegex = $"numChildren=\"\"([^\"]+)\"\"";
+        private static string numChildrenRegex = $"numChildren=\"[\"]?([^\"]+)[\"]?\"";
 
-        private static string idRegex = $"id=\"\"([^\"]+)\"\"";
+        private static string idRegex = $"id=\"[\"]?([^\"]+)[\"]?\"";
 
-        private static string parentIdRegex = $"parentId=\"\"([^\"]+)\"\"";
+        private static string parentIdRegex = $"parentId=\"[\"]?([^\"]+)[\"]?\"";
 
-        private static string nameRegex = $"name=\"\"([^\"]+)\"\"";
+        private static string nameRegex = $"name=\"[\"]?([^\"]+)[\"]?\"";
 
-        private static string parentNameRegex = $"parentName=\"\"([^\"]+)\"\"";
+        private static string parentNameRegex = $"parentName=\"[\"]?([^\"]+)[\"]?\"";
 
-        private static string logFilePath = @"E:\data\Logs_2018_06_21_19_01.csv";
+        private static string logFilePath = @"E:\data\Logs_2018_07_31_16_21.csv";
 
         private static Dictionary<long, TreeNode> dict = new Dictionary<long, TreeNode>();
 
         private static int totalMismatchCount = 0;
 
         private static Action<string> log = s => Console.WriteLine(s);
+
+        private static PathValidator pathValidator;
 
         /// <summary>
         /// Defines the entry point of the application.
@@ -56,52 +59,69 @@ namespace Microsoft.Vega.VegaLogAnalyzer
             int processLoadCompletedCount = 0;
             int completeRebuildConnectWithParentCount = 0;
             string line;
-            StreamReader file = new StreamReader(logFilePath);
+
             bool isValidRow = false;
-
-            while ((line = file.ReadLine()) != null)
+            try
             {
-                totalCount++;
-                string[] parts = line.Split(",");
-                if (parts[TaskNameIndex] == LoadTreeStarted)
+                var logFiles = logFilePath.Split(';');
+                foreach (var logFile in logFiles)
                 {
-                    isValidRow = true;
-                    continue;
-                }
+                    StreamReader file = new StreamReader(logFile);
+                    while ((line = file.ReadLine()) != null)
+                    {
+                        totalCount++;
+                        string[] parts = line.Split(",");
+                        if (parts[TaskNameIndex] == LoadTreeStarted)
+                        {
+                            isValidRow = true;
+                            continue;
+                        }
 
-                if (parts[TaskNameIndex] == LoadTreeCompleted)
-                {
-                    isValidRow = false;
-                    break;
-                }
+                        if (parts[TaskNameIndex] == LoadTreeCompleted)
+                        {
+                            isValidRow = false;
+                            break;
+                        }
 
-                if (!isValidRow)
-                {
-                    continue;
-                }
+                        if (!isValidRow)
+                        {
+                            continue;
+                        }
 
-                validRowCount++;
-                if (parts[TaskNameIndex] == ProcessLoadCompleted)
-                {
-                    processLoadCompletedCount++;
-                    ProcessLoadCompletedLog(parts[MessageIndex]);
-                }
-                else if (parts[TaskNameIndex] == CompleteRebuildConnectWithParent)
-                {
-                    completeRebuildConnectWithParentCount++;
-                    CompleteRebuildConnectWithParentLog(parts[MessageIndex]);
+                        validRowCount++;
+                        if (parts[TaskNameIndex] == ProcessLoadCompleted)
+                        {
+                            processLoadCompletedCount++;
+                            ProcessLoadCompletedLog(parts[MessageIndex]);
+                        }
+                        else if (parts[TaskNameIndex] == CompleteRebuildConnectWithParent)
+                        {
+                            completeRebuildConnectWithParentCount++;
+                            CompleteRebuildConnectWithParentLog(parts[MessageIndex]);
+                        }
+                    }
+
+                    file.Close();
                 }
             }
+            catch (Exception ex)
+            {
+                log(ex.ToString());
+                throw;
+            }
 
-            file.Close();
             log($"Finished reading log file. totalLine: {totalCount}, number of {ProcessLoadCompleted} task: {processLoadCompletedCount}, " +
                 $"number of {CompleteRebuildConnectWithParent} task: {completeRebuildConnectWithParentCount}");
 
+            pathValidator = new PathValidator();
+
             ValidateTree(dict[0]);
+
+            log($"total number of nodes {GetAllChildrenCount(dict[0])}");
+
             ValidateNames(dict[1]);
             FindOrphanNodes();
-
-            log($"total mismatch count: {totalMismatchCount}");
+            log($"total num of children mismatch count: {totalMismatchCount} out of {processLoadCompletedCount}");
         }
 
         private static void CompleteRebuildConnectWithParentLog(string message)
@@ -178,7 +198,8 @@ namespace Microsoft.Vega.VegaLogAnalyzer
             if (root.NumChildren != root.Children.Count)
             {
                 totalMismatchCount++;
-                log($"Num of children count mismatch found! Node Id {root.Id}. Count in Stat: {root.NumChildren}, actual count: {root.Children.Count}");
+
+                // log($"Num of children count mismatch found! Node Id {root.Id}. Count in Stat: {root.NumChildren}, actual count: {root.Children.Count}");
             }
 
             foreach (var child in root.Children)
@@ -189,72 +210,31 @@ namespace Microsoft.Vega.VegaLogAnalyzer
 
         private static void ValidateNames(TreeNode root)
         {
-            Queue<TreeNode> queue = new Queue<TreeNode>();
-            queue.Enqueue(root);
-            int level = 0;
-            while (queue.Count != 0)
-            {
-                int size = queue.Count;
-                level++;
-                for (int i = 0; i < size; i++)
-                {
-                    TreeNode curr = queue.Dequeue();
-                    foreach (var n in curr.Children)
-                    {
-                        queue.Enqueue(n);
-                    }
-
-                    if (!IsNodeNameValid(curr.Name, level))
-                    {
-                        log($"Found unusual names at level {level}: {curr.Name}, {curr.Id}");
-                    }
-                }
-            }
+            ValidateNames(root, new StringBuilder());
         }
 
-        private static bool IsNodeNameValid(string name, int level)
+        private static void ValidateNames(TreeNode root, StringBuilder sb)
         {
-            if (level == 1)
+            if (root == null)
             {
-                return name == "/";
-            }
-            else if (level == 2)
-            {
-                return name.StartsWith("MadariUserData") || name.StartsWith("$");
-            }
-            else if (level == 3)
-            {
-                return name.StartsWith("%2Fvnets%2F");
-            }
-            else if (level == 4)
-            {
-                return name.StartsWith("mappings") || name.StartsWith("privateip");
-            }
-            else if (level == 5)
-            {
-                return name.StartsWith("lnmid") || name.StartsWith("v4ca") || name.StartsWith("v6ca") || name.StartsWith("lnms");
-            }
-            else if (level == 6)
-            {
-                var parts = name.Split(".");
-                if (parts.Length == 4)
-                {
-                    // assume the name is valid IP address
-                    return true;
-                }
-                else
-                {
-                    // name is Guid
-                    parts = name.Split("-");
-                    return parts.Length >= 5;
-                }
-            }
-            else if (level == 7)
-            {
-                return name == "ca";
+                return;
             }
 
-            return false;
+            int length = sb.Length;
+            sb.Append($"/{root.Name}");
+            var path = sb.ToString().Substring(2);
+
+            if (!pathValidator.IsPathValid(path))
+            {
+                log($"Invalid path: {path}");
+            }
+
+            foreach (var child in root.Children)
+            {
+                ValidateNames(child, sb);
+            }
+
+            sb.Remove(length, root.Name.Length + 1);
         }
 
         private static void FindOrphanNodes()
@@ -266,8 +246,7 @@ namespace Microsoft.Vega.VegaLogAnalyzer
 
                 if (!dict.ContainsKey(parentId) && node.Id != 0)
                 {
-                    log($"Found orphan node. Node id {pair.Key}, parent id {parentId}, " +
-                        $"num of children (from stat): {node.NumChildren}, actual num: {node.Children.Count}, total number of children {GetAllChildrenCount(node)}");
+                    log($"Found orphan node. Node id {pair.Key}, Total number of children {GetAllChildrenCount(node)}");
                 }
             }
         }

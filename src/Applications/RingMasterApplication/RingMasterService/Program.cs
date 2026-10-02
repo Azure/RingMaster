@@ -7,18 +7,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
     using System;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
-    using System.Diagnostics.Tracing;
     using System.Fabric;
     using System.IO;
-    using System.Reflection;
     using System.Threading;
-
+    using System.Threading.Tasks;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;
-    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.Extensions.Configuration;
     using Microsoft.ServiceFabric.Services.Runtime;
-    using RingMasterApplication.Utilities;
 
     /// <summary>
     /// RingMaster service.
@@ -39,17 +37,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
             var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
             IConfiguration appSettings = builder.Build();
-
             RingMasterApplicationHelper.AttachDebugger(int.Parse(appSettings["DebuggerAttachTimeout"]));
 
-            LogFileEventTracing.Start(Path.Combine(appSettings["LogFolder"], "RingMasterService.LogPath"));
-            Trace.Listeners.Add(new LogFileTraceListener());
+            LogFileEventTracer tracer = CreateTracer(appSettings);
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             AppDomain.CurrentDomain.ProcessExit +=
                 (sender, eventArgs) =>
                 {
-                    LogFileEventTracing.Stop();
+                    tracer.Stop();
+                };
+
+            TaskScheduler.UnobservedTaskException +=
+                (sender, eventArgs) =>
+                {
+                    Trace.TraceError($"RingMasterService.UnobservedTaskException. {eventArgs.Exception}");
                 };
 
             using (FabricRuntime fabricRuntime = FabricRuntime.Create())
@@ -67,7 +69,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
                         monitoringConfiguration.IfxSession,
                         monitoringConfiguration.MdmAccount);
 
-                    AddAllEventSources();
+                    tracer.RegisterAllEventSources();
 
                     var ringMasterMetricsFactory = IfxInstrumentation.CreateMetricsFactory(
                         monitoringConfiguration.MdmAccount,
@@ -100,32 +102,55 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             }
         }
 
-        private static void AddAllEventSources()
+        private static LogFileEventTracer CreateTracer(IConfiguration appSettings)
         {
-            // Ensure the event source is loaded
-            Assembly.GetAssembly(typeof(Backend.RingMasterBackendCore))
-                .GetType("Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.RingMasterEventSource")
-                ?.GetProperty("Log")
-                ?.GetValue(null);
-            Assembly.GetAssembly(typeof(AbstractPersistedDataFactory))
-                .GetType("Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.PersistenceEventSource")
-                ?.GetProperty("Log")
-                ?.GetValue(null);
-            Assembly.GetAssembly(typeof(WinFabPersistence.PersistedData))
-                .GetType("Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.ServiceFabric.ServiceFabricPersistenceEventSource")
-                ?.GetProperty("Log")
-                ?.GetValue(null);
-            Assembly.GetAssembly(typeof(Transport.SecureTransport))
-                .GetType("Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport.SecureTransportEventSource")
-                ?.GetProperty("Log")
-                ?.GetValue(null);
+            bool useLegacyLogFileTracer = UseLegacyLogFileTracer(appSettings);
+            int logFileSize = GetLogFileSize(appSettings);
+            string logDirectory = Path.Combine(Environment.GetEnvironmentVariable("RINGMASTER_LOG_PATH").ThrowIfNull(), "RingMasterService.LogPath");
 
-            var level = EventLevel.Informational;
-            LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Fabric-RingMasterService", level, "RingMasterService");
-            LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Backend-RingMasterEvents", level, "RingMasterBackendCore");
-            LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence", EventLevel.Warning, "Persistence");
-            LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence-ServiceFabric", level, "ServiceFabricPersistence");
-            LogFileEventTracing.AddEventSource("Microsoft-Azure-Networking-Infrastructure-RingMaster-SecureTransport", level, "SecureTransport");
+            return new LogFileEventTracer(useV2: !useLegacyLogFileTracer, logDirectory, logFileSize);
+        }
+
+        private static bool UseLegacyLogFileTracer(IConfiguration appSettings)
+        {
+            const bool defaultValue = false;
+            const string settingName = "UseLegacyLogFileTracer";
+
+            try
+            {
+                var settingAsString = appSettings[settingName];
+                if (settingAsString == null)
+                {
+                    return defaultValue;
+                }
+
+                return bool.Parse(settingAsString);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"RingMasterService: failing to get {settingName}. Using the defaults. " + ex);
+                return defaultValue;
+            }
+        }
+
+        private static int GetLogFileSize(IConfiguration appSettings)
+        {
+            const int DefaultLogFileSize = 50 * 1024 * 1024;
+            try
+            {
+                var logFileSizeAsString = appSettings["LogFileSizeInMb"];
+                if (logFileSizeAsString == null)
+                {
+                    return DefaultLogFileSize;
+                }
+
+                return int.Parse(logFileSizeAsString) * 1024 * 1024;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("RingMasterService: failing to get the log file size from the config. Using the defaults. " + ex);
+                return DefaultLogFileSize;
+            }
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

@@ -2,9 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppVer)</TargetFramework>
     <RootNamespace>Microsoft.Vega.Test</RootNamespace>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +14,10 @@
     <ProjectReference Include="..\..\Common\RingMasterCommon\src\RingMasterCommon.csproj" />
     <ProjectReference Include="..\..\Common\SecureTransport\src\SecureTransport.csproj" />
     <ProjectReference Include="..\..\Persistence\InMemory\src\InMemoryPersistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Pipelines" />
   </ItemGroup>
 
   <Import Project="$(StyleCopProps)" />

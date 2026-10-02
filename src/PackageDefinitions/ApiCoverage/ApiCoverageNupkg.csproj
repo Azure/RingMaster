@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\NuprojCommon.props" />
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppVer)</TargetFramework>
+    <NoBuild>true</NoBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageId>ApiCoverageTool$(NamePostfix)</PackageId>
+    <PackageVersion>$(BuildNumber)</PackageVersion>
+    <Authors>vegab@microsoft.com</Authors>
+    <Title>ApiCoverageTool</Title>
+    <Description>Tool to calculate API coverage</Description>
+    <Copyright>Copyright (c) Microsoft Corporation</Copyright>
+    <PackageProjectUrl>https://b</PackageProjectUrl>
+    <PackageTags>ApiCoverageTool</PackageTags>
+    <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
+    <RepositoryBranch>$(GitBranchName)</RepositoryBranch>
+    <RepositoryCommit>$(GitCommitHash)</RepositoryCommit>
+    <PackageOutputPath>$(OutputRoot)\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SRCROOT)\Tools\ApiCoverage\ApiCoverageCalculator\ApiCoverageCalculator.csproj" PrivateAssets="All" />
+    <ProjectReference Include="$(SRCROOT)\Tools\ApiCoverage\CoverageInfoExtractor\CoverageInfoExtractor.csproj" SkipGetTargetFrameworkProperties="true">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="PopulateContent" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <READMEMARKDOWN Include="$(OutputRoot)\ApiCoverageCalculator\$(NetCoreAppVer)\README.md" />
+      <ApiCoverageNetCore Include="$(OutputRoot)\ApiCoverageCalculator\$(NetCoreAppVer)\*" Exclude="$(OutputRoot)\ApiCoverageCalculator\$(NetCoreAppVer)\*.json"/>
+      <ApiCoverageNetFramework Include="$(OutputRoot)\ApiCoverageCalculator\net462\*" />
+      <CoverageInfoExtractor Include="$(OutputRoot)\CoverageInfoExtractor\*" />
+
+      <Content Include="@(READMEMARKDOWN)">
+        <PackagePath>tools</PackagePath>
+      </Content>
+      <Content Include="@(ApiCoverageNetCore)" Exclude="@(READMEMARKDOWN)">
+        <PackagePath>tools\$(NetCoreAppVer)\ApiCoverageCalculator</PackagePath>
+      </Content>
+      <Content Include="@(ApiCoverageNetFramework)" Exclude="@(READMEMARKDOWN)">
+        <PackagePath>tools\net462\ApiCoverageCalculator</PackagePath>
+      </Content>
+      <Content Include="@(CoverageInfoExtractor)">
+        <PackagePath>tools\$(NetCoreAppVer)\CoverageInfoExtractor</PackagePath>
+      </Content>
+      <Content Include="@(CoverageInfoExtractor)">
+        <PackagePath>tools\net462\CoverageInfoExtractor</PackagePath>
+      </Content>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -116,6 +116,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private bool disposed = false;
 
         /// <summary>
+        /// Current connection's remote endpoint
+        /// </summary>
+        private string remoteEndpoint;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RingMasterRequestHandler"/> class.
         /// </summary>
         /// <param name="configuration">Configuration settings</param>
@@ -226,7 +231,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 }
 
                 int pendingRequestCount = this.outgoingRequestsAvailable.CurrentCount;
-                RingMasterClientEventSource.Log.RequestQueueFull(requestWrapper.CallId, pendingRequestCount);
+                RingMasterClientEventSource.Log.RequestQueueFull(requestWrapper.CallId, pendingRequestCount, this.remoteEndpoint);
                 this.instrumentation.RequestQueueFull(requestWrapper.CallId, requestWrapper.WrappedRequest.RequestType, pendingRequestCount);
                 throw RingMasterClientException.RequestQueueFull(pendingRequestCount);
             }
@@ -239,26 +244,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         public void Close()
         {
-            RingMasterClientEventSource.Log.CloseRequestHandler();
-            this.outgoingRequests.CompleteAdding();
-
-            // Don't accept any more response packets.
-            this.incomingResponses.CompleteAdding();
-
-            // Explicitly cancel the cancellation source to indicate that
-            // the lifetime of this instance is over.
-            this.cancellationTokenSource.Cancel();
-
-            this.manageRequestsTask.Wait();
-            this.manageResponsesTask.Wait();
+            this.Close(false);
         }
 
         /// <summary>
-        /// Dispose this request handler.
+        /// Closes this request handler (if not closed already) and disposes it.
         /// </summary>
         public void Dispose()
         {
             RingMasterClientEventSource.Log.DisposeRequestHandler();
+            this.Close(true);
             this.Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -275,6 +270,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 RingMasterClientEventSource.Log.CompleteWithException(exception.Message);
                 throw exception;
             }
+        }
+
+        /// <summary>
+        /// Closes the handler. If fromDispose is true, it will do it in an idempotent
+        /// way (i.e. if close has been invoker previously, it is a no-op). But if fromDispose is true,
+        /// this call fails if a previous Close has been invoked already. This is for backcompat.
+        /// </summary>
+        /// <param name="fromDispose">true if this close is invoked from the dispose path</param>
+        private void Close(bool fromDispose)
+        {
+            // if this close comes from dispose, make it idempotent.
+            if (fromDispose && this.outgoingRequests.IsCompleted)
+            {
+                return;
+            }
+
+            RingMasterClientEventSource.Log.CloseRequestHandler();
+            this.outgoingRequests.CompleteAdding();
+
+            // Don't accept any more response packets.
+            this.incomingResponses.CompleteAdding();
+
+            // Explicitly cancel the cancellation source to indicate that
+            // the lifetime of this instance is over.
+            this.cancellationTokenSource.Cancel();
+
+            this.manageRequestsTask.GetAwaiter().GetResult();
+            this.manageResponsesTask.GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -344,27 +367,56 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 }
             }
 
+            int processTimeLeft = this.Timeout - (int)(request.ElapsedInTicks / TimeSpan.TicksPerMillisecond);
+
+            // the process time left maybe less than 0 because race condition with ManageRequestLifetime
+            // In this case we don't need to send the request.
+            if (processTimeLeft <= 0)
+            {
+                RingMasterClientEventSource.Log.RequestNoProcessTimeLeft(request.CallId, (ushort)request.WrappedRequest.RequestType, request.WrappedRequest.Path);
+                this.SetRequestTimeout(request);
+                return;
+            }
+
             RequestCall call = new RequestCall
             {
                 CallId = request.CallId,
                 Request = request.WrappedRequest,
+                ServerTimeoutMillis = processTimeLeft,
             };
 
             try
             {
                 this.cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                byte[] requestPacket = this.communicationProtocol.SerializeRequest(call, connection.ProtocolVersion);
-                RingMasterClientEventSource.Log.Send(connection.Id, call.CallId, requestPacket.Length);
+                var requestPacket = this.communicationProtocol.SerializeRequest(call, connection.ProtocolVersion);
+                var requestLength = requestPacket.Length;
+                RingMasterClientEventSource.Log.Send(connection.Id, call.CallId, requestLength);
 
                 await connection.SendAsync(requestPacket);
-                this.instrumentation.RequestSent(call.CallId, call.Request.RequestType, requestPacket.Length);
+                this.instrumentation.RequestSent(call.CallId, call.Request.RequestType, requestLength);
             }
             catch (Exception ex)
             {
-                RingMasterClientEventSource.Log.RequestSendFailed(connection.Id, request.CallId, ex.ToString());
+                RingMasterClientEventSource.Log.RequestSendFailed(connection.Id, request.CallId, ex.ToString(), this.remoteEndpoint);
                 this.instrumentation.RequestSendFailed(request.CallId, request.WrappedRequest.RequestType);
                 throw;
+            }
+        }
+
+        private void SetRequestTimeout(RequestWrapper request)
+        {
+            if (this.requestMap.ContainsKey(request.CallId))
+            {
+                lock (this.requestMap)
+                {
+                    request = this.RemoveRequestFromMap(request.CallId);
+                }
+
+                if (request != null)
+                {
+                    this.NotifyRequestFailed(request, RingMasterException.Code.Operationtimeout);
+                }
             }
         }
 
@@ -374,16 +426,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="connection">The new connection</param>
         private void OnNewConnection(IConnection connection)
         {
-            connection.OnPacketReceived = packet => this.OnPacketReceived(connection, packet);
+            this.remoteEndpoint = connection.RemoteEndPoint.ToString();
 
-            CancellationTokenSource connectionLifetime = CancellationTokenSource.CreateLinkedTokenSource(this.cancellationTokenSource.Token);
+            connection.OnPacketReceived = packet =>
+            {
+                this.OnPacketReceived(connection, packet);
+                return Task.CompletedTask;
+            };
+
+            var connectionLifetime = CancellationTokenSource.CreateLinkedTokenSource(this.cancellationTokenSource.Token);
             var connectionLifetimeTask = Task.Run(() => this.ManageConnectionLifetime(connection, connectionLifetime.Token));
 
             connection.OnConnectionLost = () =>
             {
-                RingMasterClientEventSource.Log.ConnectionLost(connection.Id);
+                RingMasterClientEventSource.Log.ConnectionLost(connection.Id, this.remoteEndpoint);
                 connectionLifetime.Cancel();
-                Task.WaitAny(connectionLifetimeTask);
+                connectionLifetimeTask.GetAwaiter().GetResult();
                 connectionLifetime.Dispose();
             };
         }
@@ -393,14 +451,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         /// <param name="connection">Connection through which the packet was received</param>
         /// <param name="responsePacket">The response packet that was received</param>
-        private void OnPacketReceived(IConnection connection, byte[] responsePacket)
+        private void OnPacketReceived(IConnection connection, IMemoryBuffer responsePacket)
         {
             if (this.incomingResponses.IsAddingCompleted)
             {
                 return;
             }
 
-            RingMasterClientEventSource.Log.OnPacketReceived(connection.Id, responsePacket.Length);
+            var packetLength = responsePacket.Length;
+            RingMasterClientEventSource.Log.OnPacketReceived(connection.Id, packetLength);
             try
             {
                 this.incomingResponses.Add(new ResponseWrapper
@@ -410,11 +469,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 });
 
                 this.responsesAvailable.Release();
-                this.instrumentation.ResponseQueued(responsePacket.Length);
+                this.instrumentation.ResponseQueued(packetLength);
             }
             catch (Exception ex)
             {
-                RingMasterClientEventSource.Log.OnPacketReceivedFailed(connection.Id, ex.ToString());
+                RingMasterClientEventSource.Log.OnPacketReceivedFailed(connection.Id, ex.ToString(), this.remoteEndpoint);
                 throw;
             }
         }
@@ -441,7 +500,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             }
             catch (TaskCanceledException)
             {
-                RingMasterClientEventSource.Log.ManageRequestLifetimeTaskCanceled();
+                RingMasterClientEventSource.Log.ManageRequestLifetimeTaskCanceled(this.remoteEndpoint);
             }
             finally
             {
@@ -453,7 +512,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
                 this.DrainPendingRequests();
                 this.DrainWatchers();
-                RingMasterClientEventSource.Log.ManageRequestLifetimeTaskCompleted();
+                RingMasterClientEventSource.Log.ManageRequestLifetimeTaskCompleted(this.remoteEndpoint);
             }
         }
 
@@ -470,7 +529,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 this.instrumentation.ConnectionCreated(connection.Id, connection.RemoteEndPoint, connection.RemoteIdentity);
                 await this.Init(connection, 0, string.Empty);
 
-                RingMasterClientEventSource.Log.OnNewConnectionInitialized(connection.Id, connection.RemoteEndPoint.ToString(), connection.RemoteIdentity);
+                RingMasterClientEventSource.Log.OnNewConnectionInitialized(connection.Id, this.remoteEndpoint, connection.RemoteIdentity);
 
                 while (!lifetimeToken.IsCancellationRequested)
                 {
@@ -485,7 +544,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                             // Queue the request for send, no need to wait for the transport to actually
                             // send the request. If the transport fails to send the request, the error will be logged
                             // and the request will timeout.
-                            Task unused = this.SendRequest(connection, request);
+                            _ = this.SendRequest(connection, request)
+                                .ContinueWith(t =>
+                                {
+                                    if (t.IsFaulted)
+                                    {
+                                        RingMasterClientEventSource.Log.RequestSendFailed(connection.Id, request.CallId, t.Exception.ToString(), this.remoteEndpoint);
+                                    }
+                                });
                         }
                     }
                     else
@@ -493,7 +559,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                         bool heartBeatResult = await this.SendHeartbeat(connection);
                         if (!heartBeatResult)
                         {
-                            RingMasterClientEventSource.Log.HeartbeatFailure(connection.Id);
+                            RingMasterClientEventSource.Log.HeartbeatFailure(connection.Id, this.remoteEndpoint);
                             break;
                         }
                     }
@@ -501,11 +567,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             }
             catch (OperationCanceledException)
             {
-                RingMasterClientEventSource.Log.ManageConnectionLifetimeTaskCanceled(connection.Id);
+                RingMasterClientEventSource.Log.ManageConnectionLifetimeTaskCanceled(connection.Id, this.remoteEndpoint);
             }
             catch (Exception ex)
             {
-                RingMasterClientEventSource.Log.ManageConnectionLifetimeTaskFailed(connection.Id, ex.ToString());
+                RingMasterClientEventSource.Log.ManageConnectionLifetimeTaskFailed(connection.Id, ex.ToString(), this.remoteEndpoint);
             }
             finally
             {
@@ -536,7 +602,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 {
                     await this.responsesAvailable.WaitAsync(lifetimeToken);
                     ResponseWrapper wrapper = this.incomingResponses.Take();
-                    RequestResponse response = this.communicationProtocol.DeserializeResponse(wrapper.SerializedResponse, wrapper.ProtocolVersion);
+                    RequestResponse response = this.communicationProtocol.DeserializeResponse(wrapper.SerializedResponse.GetBuffer(), wrapper.SerializedResponse.Length, wrapper.ProtocolVersion);
+                    wrapper.SerializedResponse.Dispose();
                     this.ProcessResponse(response);
                 }
             }
@@ -544,13 +611,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             {
                 if (!(ex is OperationCanceledException))
                 {
-                    RingMasterClientEventSource.Log.ManageResponsesTaskFailed(ex.ToString());
+                    RingMasterClientEventSource.Log.ManageResponsesTaskFailed(ex.ToString(), this.remoteEndpoint);
                     this.instrumentation.InvalidPacketReceived();
                     this.cancellationTokenSource.Cancel();
                 }
             }
 
-            RingMasterClientEventSource.Log.ManageResponsesTaskCompleted();
+            RingMasterClientEventSource.Log.ManageResponsesTaskCompleted(this.remoteEndpoint);
         }
 
         /// <summary>
@@ -581,14 +648,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     }
                     else
                     {
-                        RingMasterClientEventSource.Log.UnexpectedResponse(response.CallId);
+                        RingMasterClientEventSource.Log.UnexpectedResponse(response.CallId, this.remoteEndpoint);
                         this.instrumentation.UnexpectedResponseReceived(response.CallId);
                     }
                 }
             }
             catch (Exception ex)
             {
-                RingMasterClientEventSource.Log.ProcessResponseFailed(response.CallId, ex.ToString());
+                RingMasterClientEventSource.Log.ProcessResponseFailed(response.CallId, ex.ToString(), this.remoteEndpoint);
                 throw;
             }
         }
@@ -651,7 +718,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 
             RingMasterClientEventSource.Log.ProcessResponse(callId, response.ResponsePath, response.ResultCode);
             this.instrumentation.ResponseProcessed(request.CallId, request.WrappedRequest.RequestType, response.ResultCode, TimeSpan.FromTicks(request.ElapsedInTicks));
-            Task.Run(() =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
                 request.TaskCompletionSource.SetResult(response);
 
@@ -715,7 +782,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 {
                     var request = this.requestMap.Values.First();
                     this.RemoveRequestFromMap(request.CallId);
-                    RingMasterClientEventSource.Log.NotifyConnectionLoss(request.CallId);
+                    RingMasterClientEventSource.Log.NotifyConnectionLoss(request.CallId, this.remoteEndpoint);
                     this.NotifyRequestFailed(request, RingMasterException.Code.Connectionloss);
                     this.instrumentation.RequestAborted(request.CallId, request.WrappedRequest.RequestType);
                 }
@@ -875,7 +942,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             }
 
             var elapsed = TimeSpan.FromTicks(request.ElapsedInTicks);
-            RingMasterClientEventSource.Log.NotifyResponseTimeout(request.CallId, (long)elapsed.TotalMilliseconds);
+            RingMasterClientEventSource.Log.NotifyResponseTimeout(request.CallId, (long)elapsed.TotalMilliseconds, this.remoteEndpoint);
             this.instrumentation.RequestTimedOut(request.CallId, request.WrappedRequest.RequestType, elapsed);
             this.NotifyRequestFailed(request, RingMasterException.Code.Operationtimeout);
 
@@ -944,7 +1011,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         private struct ResponseWrapper
         {
-            public byte[] SerializedResponse;
+            public IMemoryBuffer SerializedResponse;
             public uint ProtocolVersion;
         }
 
@@ -1052,7 +1119,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// Wraps a watcher with a unique id and ensures
         /// that single use watchers are not invoked multiple times.
         /// </summary>
-        private sealed class WatcherWrapper : IWatcher
+        private sealed class WatcherWrapper : IWatcher, IDisposable
         {
             /// <summary>
             /// The request handler associated with this watcher.
@@ -1067,15 +1134,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// <summary>
             /// Queue of events received.
             /// </summary>
-            private readonly Queue<WatchedEvent> eventQueue;
+            private readonly ConcurrentQueue<WatchedEvent> eventQueue;
 
             /// <summary>
-            /// TaskCompletionSource that will be signalled once the response for the request that installed the watcher is received.
+            /// The event available
             /// </summary>
-            private readonly TaskCompletionSource<object> readyToDispatch = new TaskCompletionSource<object>();
+            private readonly SemaphoreSlim eventAvailable;
+
+            // Prevent the double disposal
+            private bool disposed = false;
+
+            private bool watcherRemoved = false;
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="WatcherWrapper"/> class.
+            /// Initializes a new instance of the <see cref="WatcherWrapper" /> class.
             /// </summary>
             /// <param name="handler">The request handler associated with this watcher</param>
             /// <param name="watcherId">Unique Id of the watcher</param>
@@ -1087,7 +1159,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 this.watcher = watcher;
                 this.Id = watcherId;
                 this.Path = path;
-                this.eventQueue = new Queue<WatchedEvent>();
+                this.eventQueue = new ConcurrentQueue<WatchedEvent>();
+                this.eventAvailable = new SemaphoreSlim(0);
             }
 
             /// <summary>
@@ -1117,12 +1190,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             }
 
             /// <summary>
+            /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            /// </summary>
+            public void Dispose()
+            {
+                this.Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            /// <summary>
             /// Enable dispatch for this watcher.
             /// </summary>
             public void EnableDispatch()
             {
                 RingMasterClientEventSource.Log.EnableDispatch(this.Id, this.Path);
-                this.readyToDispatch.SetResult(null);
+                Task.Run(this.DispatchEvent);
             }
 
             /// <summary>
@@ -1136,31 +1218,49 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                     throw new ArgumentNullException(nameof(evt));
                 }
 
-                lock (this)
-                {
-                    this.handler.instrumentation.WatcherNotificationReceived(evt.EventType);
-                    this.eventQueue.Enqueue(evt);
-                }
-
-                Task.Run(this.DispatchEvent);
+                this.handler.instrumentation.WatcherNotificationReceived(evt.EventType);
+                this.eventQueue.Enqueue(evt);
+                this.eventAvailable.Release();
             }
 
             private async Task DispatchEvent()
             {
-                // Watcher notifications can be dispatched only after the
-                // response for the request that installed the watcher is
-                // processed.
-                await this.readyToDispatch.Task;
-
-                // Dispatch all events received so far in the order they were
-                // received.
-                lock (this)
+                try
                 {
-                    while (this.eventQueue.Count > 0)
+                    while (!this.watcherRemoved)
                     {
-                        WatchedEvent evt = this.eventQueue.Dequeue();
-                        RingMasterClientEventSource.Log.DispatchWatcherNotification(this.Id, evt.Path, (int)evt.EventType);
-                        this.watcher.Process(evt);
+                        await this.eventAvailable.WaitAsync();
+                        if (this.eventQueue.TryDequeue(out WatchedEvent evt))
+                        {
+                            if (evt.EventType == WatchedEvent.WatchedEventType.WatcherRemoved)
+                            {
+                                this.watcherRemoved = true;
+                            }
+
+                            RingMasterClientEventSource.Log.DispatchWatcherNotification(this.Id, evt.Path, (int)evt.EventType);
+                            this.watcher.Process(evt);
+                        }
+                        else
+                        {
+                            // eventQueue should not empty since the eventAvailable is set.
+                            RingMasterClientEventSource.Log.DispatchWatcherEventQueueEmpty(this.Id, this.Path);
+                            throw RingMasterClientException.DispatchWatcherEventQueueEmpty(this.Id, this.Path);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    RingMasterClientEventSource.Log.DispatchWatcherFailed(this.Id, this.Path, ex.ToString());
+                }
+            }
+
+            private void Dispose(bool isDisposing)
+            {
+                if (isDisposing)
+                {
+                    if (!this.disposed)
+                    {
+                        this.eventAvailable.Dispose();
                     }
                 }
             }

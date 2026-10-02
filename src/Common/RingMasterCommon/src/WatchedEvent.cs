@@ -13,25 +13,40 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     public class WatchedEvent
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="WatchedEvent"/> class.
+        /// Initializes a new instance of the <see cref="WatchedEvent" /> class.
         /// </summary>
         /// <param name="eventType">Type of the event</param>
         /// <param name="keeperState">State of the keeper</param>
         /// <param name="path">The path of the node associated with this notification</param>
         /// <param name="data">Changed data of the node</param>
         /// <param name="stat">Stat of the node</param>
+        /// <param name="childName">Name of the child.</param>
+        /// <param name="childData">The child data.</param>
+        /// <param name="childStat">The child stat.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <param name="childUserMetadata">The child user metadata.</param>
         public WatchedEvent(
             WatchedEventType eventType,
             WatchedEventKeeperState keeperState,
             string path,
             byte[] data = null,
-            Data.IStat stat = null)
+            Data.IStat stat = null,
+            string childName = null,
+            byte[] childData = null,
+            Data.IStat childStat = null,
+            byte[] userMetadata = null,
+            byte[] childUserMetadata = null)
         {
             this.EventType = eventType;
             this.KeeperState = keeperState;
             this.Path = path;
             this.Data = data;
             this.Stat = stat;
+            this.ChildName = childName;
+            this.ChildData = childData;
+            this.ChildStat = childStat;
+            this.UserMetadata = userMetadata;
+            this.ChildUserMetadata = childUserMetadata;
         }
 
         /// <summary>
@@ -68,6 +83,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// Watcher set on the node has been removed.
             /// </summary>
             WatcherRemoved,
+
+            /// <summary>
+            /// The node data and user metadata changed
+            /// </summary>
+            NodeDataAndUserMetadataChanged,
         }
 
         /// <summary>
@@ -128,9 +148,43 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public byte[] Data { get; private set; }
 
         /// <summary>
+        /// Gets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata { get; private set; }
+
+        /// <summary>
         /// Gets the state after the change
         /// </summary>
         public Data.IStat Stat { get; private set; }
+
+        /// <summary>
+        /// Gets the name of the child.
+        /// </summary>
+        /// <value>
+        /// The name of the child.
+        /// </value>
+        public string ChildName { get; private set; }
+
+        /// <summary>
+        /// Gets the child's stat.
+        /// </summary>
+        public Data.IStat ChildStat { get; private set; }
+
+        /// <summary>
+        /// Gets the child data.
+        /// </summary>
+        public byte[] ChildData { get; private set; }
+
+        /// <summary>
+        /// Gets the child user metadata.
+        /// </summary>
+        /// <value>
+        /// The child user metadata.
+        /// </value>
+        public byte[] ChildUserMetadata { get; private set; }
 
         /// <summary>
         /// Determines whether the specified <see cref="object" /> is equal to this instance.
@@ -181,12 +235,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public override string ToString()
         {
             return string.Format(
-                "Event:{0} KeeperState:{1} Path:{2} Data:({3}) Stat:{4}",
+                "Event:{0} KeeperState:{1} Path:{2} Data:[{3}] Stat:{4} ChildName:{5} ChildData:({6}) ChildStat:{7} UserMetadata:[{8}] ChildUserMetadata:[{9}]",
                 this.EventType,
                 this.KeeperState,
                 this.Path,
                 this.Data?.Length,
-                this.Stat?.ToString());
+                this.Stat?.ToString(),
+                this.ChildName,
+                this.ChildData?.Length,
+                this.ChildStat?.ToString(),
+                this.UserMetadata?.Length,
+                this.ChildUserMetadata?.Length);
         }
     }
 }

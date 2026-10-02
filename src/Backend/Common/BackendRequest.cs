@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using IRingMasterRequest = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.IRingMasterRequest;
     using ISessionAuth = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.ISessionAuth;
@@ -150,6 +151,41 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public IRingMasterRequest WrappedRequest => this.Request;
 
         /// <summary>
+        /// Gets or sets the server timeout time in time span.
+        /// </summary>
+        public TimeSpan RequestExpiryTime
+        {
+            get
+            {
+                return this.request.RequestExpiryTime;
+            }
+
+            set
+            {
+                this.request.RequestExpiryTime = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the time before the request time out.
+        /// </summary>
+        public TimeSpan TimeRemaining => this.request.TimeRemaining;
+
+        /// <inheritdoc/>
+        public bool InvokeCallbackBeforeComplete
+        {
+            get
+            {
+                return this.request.InvokeCallbackBeforeComplete;
+            }
+
+            set
+            {
+                this.request.InvokeCallbackBeforeComplete = value;
+            }
+        }
+
+        /// <summary>
         /// Gets the request object
         /// </summary>
         protected TRequest Request => this.request;
@@ -161,6 +197,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public bool IsReadOnly()
         {
             return this.request.IsReadOnly();
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequestExpired()
+        {
+            return this.request.IsRequestExpired();
         }
 
         /// <summary>
@@ -272,6 +314,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     return new RequestMove((RequestDefinitions.RequestMove)request, null, null);
                 case RingMasterRequestType.GetSubtree:
                     return new RequestGetSubtree((RequestDefinitions.RequestGetSubtree)request, null, null);
+                case RingMasterRequestType.SetDataAndUserMetadata:
+                    return new RequestSetDataAndUserMetadata((RequestDefinitions.RequestSetDataAndUserMetadata)request, null, null);
             }
 
             throw new InvalidOperationException();

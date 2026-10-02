@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
-
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using IOperationOverrides = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.IOperationOverrides;
     using ISessionAuth = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.ISessionAuth;
     using Perm = Microsoft.Azure.Networking.Infrastructure.RingMaster.Data.Acl.Perm;
@@ -66,7 +66,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Acquires all locks
         /// </summary>
         /// <param name="cancelled">Flag to cancel the long-running lock acquisition</param>
-        void LockAll(ref bool cancelled);
+        /// <param name="request">The request.</param>
+        void LockAll(ref bool cancelled, IRingMasterRequest request);
 
         /// <summary>
         /// snaps the stat of the given persisted data if appropriate
@@ -137,6 +138,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="prevData">Data to be applied on abortion of append</param>
         /// <param name="prevStat">Stat to be used on abortion of append</param>
         void AppendSetData(IPersistedData persisted, long txTime, byte[] prevData, IMutableStat prevStat);
+
+        /// <summary>
+        /// Appends the set user metadata.
+        /// </summary>
+        /// <param name="persisted">The persisted.</param>
+        /// <param name="txTime">The tx time.</param>
+        /// <param name="prevData">The previous data.</param>
+        /// <param name="prevUserMetadata">The previous user metadata.</param>
+        /// <param name="prevStat">The previous stat.</param>
+        void AppendSetDataAndUserMetadata(IPersistedData persisted, long txTime, byte[] prevData, byte[] prevUserMetadata, IMutableStat prevStat);
 
         /// <summary>
         /// Appends a poison pill for the given path.

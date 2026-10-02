@@ -37,4 +37,5 @@ message GetServiceInstanceIdentitiesReply {
 message StartJobRequest {
 	string scenario = 1;
 	repeated DistTestCommonProto.JobParameter parameters = 2;
+	int32 serviceInstanceCount = 3;
 }

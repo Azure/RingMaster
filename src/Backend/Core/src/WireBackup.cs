@@ -370,6 +370,35 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         }
 
         /// <summary>
+        /// Appends the set user metadata.
+        /// </summary>
+        /// <param name="id">The identifier.</param>
+        /// <param name="data">The data.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <param name="txtime">The txtime.</param>
+        /// <param name="xid">The xid.</param>
+        public void AppendSetDataAndUserMetadata(ulong id, byte[] data, byte[] userMetadata, long txtime, long xid)
+        {
+            if (this.toUpload == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.SetTx(xid);
+                var dataString = ToString(data);
+                var userMetadataString = ToString(userMetadata);
+                string line = string.Join("|", "SU", txtime, xid, id, dataString.Length, dataString, userMetadataString.Length, userMetadataString);
+                this.AppendLine(line);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ignorable exception on Wirebackup AppendSetDataAndUserMetadata: " + e.Message);
+            }
+        }
+
+        /// <summary>
         /// Appends Create to file
         /// </summary>
         /// <param name="node">Node object</param>

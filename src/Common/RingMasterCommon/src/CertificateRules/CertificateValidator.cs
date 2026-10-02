@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System.Linq;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
-    using CertificateRules;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CertificateRules;
 
     /// <summary>
     /// This class helps build the CertificateValidator rules

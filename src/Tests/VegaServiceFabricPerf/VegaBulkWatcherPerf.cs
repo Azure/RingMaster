@@ -67,7 +67,7 @@ namespace Microsoft.Vega.Performance
         /// <summary>
         /// Request timeout to the backend
         /// </summary>
-        private static int requestTimeout = 100 * 1000;
+        private static int requestTimeout = 10 * 1000;
 
         /// <summary>
         /// Simulate multiple notification services having multiple connections to the backend
@@ -87,7 +87,7 @@ namespace Microsoft.Vega.Performance
         /// <summary>
         /// RingMaster clients
         /// </summary>
-        private static RingMasterClient[] clients;
+        private static IRingMasterRequestHandler[] clients;
 
         /// <summary>
         /// Total amount of data being processed
@@ -159,12 +159,14 @@ namespace Microsoft.Vega.Performance
                 server = serviceInfo.Item1;
             }
 
-            clients = Enumerable.Range(0, channelCount).Select(n => new RingMasterClient(
-                connectionString: server,
+            clients = Enumerable.Range(0, channelCount).Select(n => new RetriableRingMasterClient(
+                s => new RingMasterClient(
+                connectionString: s,
                 clientCerts: null,
                 serverCerts: null,
                 requestTimeout: requestTimeout,
-                watcher: null))
+                watcher: null),
+                server))
                 .ToArray();
 
             VegaServiceFabricPerf.InitializeMdm(serviceInfo?.Item2, appSettings);
@@ -176,6 +178,11 @@ namespace Microsoft.Vega.Performance
         [ClassCleanup]
         public static void TestClassCleanup()
         {
+            if (clients == null)
+            {
+                return;
+            }
+
             foreach (var client in clients)
             {
                 client.Dispose();
@@ -185,31 +192,9 @@ namespace Microsoft.Vega.Performance
         /// <summary>
         /// Tests the bulk watcher.
         /// </summary>
+        /// <returns>async task</returns>
         [TestMethod]
-        public void TestBulkWatcher()
-        {
-            this.TestBulkWatcherAsync().GetAwaiter().GetResult();
-        }
-
-        private static async Task ShowProgress(CancellationToken cancellation)
-        {
-            var lastCount = Interlocked.Read(ref totalDataCount);
-            var lastSize = Interlocked.Read(ref totalDataSize);
-
-            while (!cancellation.IsCancellationRequested)
-            {
-                await Task.Delay(1000).ConfigureAwait(false);
-
-                var count = Interlocked.Read(ref totalDataCount);
-                var size = Interlocked.Read(ref totalDataSize);
-                log($"Count={count} +{count - lastCount} Size={size / 1024}k +{(size - lastSize) / 1024}k");
-
-                lastCount = count;
-                lastSize = size;
-            }
-        }
-
-        private async Task TestBulkWatcherAsync()
+        public async Task TestBulkWatcher()
         {
             var cancellationSource = new CancellationTokenSource();
             var cancellation = cancellationSource.Token;
@@ -333,6 +318,24 @@ namespace Microsoft.Vega.Performance
             Assert.IsTrue(await this.DeleteNodeTree(cancellation).ConfigureAwait(false));
         }
 
+        private static async Task ShowProgress(CancellationToken cancellation)
+        {
+            var lastCount = Interlocked.Read(ref totalDataCount);
+            var lastSize = Interlocked.Read(ref totalDataSize);
+
+            while (!cancellation.IsCancellationRequested)
+            {
+                await Task.Delay(1000).ConfigureAwait(false);
+
+                var count = Interlocked.Read(ref totalDataCount);
+                var size = Interlocked.Read(ref totalDataSize);
+                log($"Count={count} +{count - lastCount} Size={size / 1024}k +{(size - lastSize) / 1024}k");
+
+                lastCount = count;
+                lastSize = size;
+            }
+        }
+
         private async Task<bool> CreateNodeTree(CancellationToken cancellation)
         {
             totalDataCount = 0;
@@ -447,7 +450,7 @@ namespace Microsoft.Vega.Performance
                         try
                         {
                             var operationStartTime = stopwatch.Elapsed;
-                            var data = await clients[partitionCount % channelCount].GetData(path, false).ConfigureAwait(false);
+                            var data = await clients[partitionCount % channelCount].GetData(path, null, false).ConfigureAwait(false);
                             var operationDuration = stopwatch.Elapsed - operationStartTime;
                             MdmHelper.LogOperationDuration((long)operationDuration.TotalMilliseconds, OperationType.BulkWatcherReadNode);
 

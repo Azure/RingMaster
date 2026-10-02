@@ -20,10 +20,10 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ $_ -ne $null -and $_.Length -gt 0 })]
-    [string[]] $ProjFiles = "..\Backend\HelperTypes\unittest\HelperTypesUnitTest.csproj",
+    [string[]] $ProjFiles = ".\dirs.proj",
 
     [Parameter(Mandatory = $true)]
-    [string] $SlnFile = "test.sln",
+    [string] $SlnFile = "dirs.sln",
 
     [string] $Exclude = "sfproj|nupkg"
     )
@@ -37,6 +37,7 @@ $nuprojType = '{FF286327-C783-4F7A-AB73-9BCBAD0D4460}'
 $wcfProjType = '{3D9AD99F-2412-4246-B90B-4EAA41C64699}'
 $testProjType = '{3AC096D0-A1C2-E12C-1390-A8335801FDAB}'
 $folderType = '{2150E333-8FDC-42A3-9474-1A3956D46DE8}'
+$netcoreType = '{9A19103F-16F7-4668-BE54-9A1E7A4F7556}'
 
 # Proj files parsed so far
 $files = @{}
@@ -67,7 +68,17 @@ function ParseProjFile($projFile)
     $projGuid = $null
     $projType = $null
     
-    if ($projXml.Project | Get-Member PropertyGroup) {
+    # New project format, e.g. dotnet core
+    if ($projXml.Project.HasAttribute('Sdk')) {
+        $projGuid = New-Guid
+        if ($projXml.Project.GetAttribute('Sdk') -eq 'Microsoft.Build.Traversal') {
+            $projType = $folderType
+        }
+        else {
+            $projType = $netcoreType
+        }
+    }
+    elseif ($projXml.Project | Get-Member PropertyGroup) {
         $projXml.Project.PropertyGroup | % {
             $_.ChildNodes | % {
                 if ($_.Name -eq "ProjectGuid") {
@@ -79,11 +90,6 @@ function ParseProjFile($projFile)
                 }
             }
         }
-    }
-
-    # New project format, e.g. dotnet core
-    if ($projGuid -eq $null -and ($projXml.Project | Get-Member -Name Sdk)) {
-        $projGuid = [Guid]::NewGuid()
     }
 
     if ($projGuid -ne $null) {
@@ -111,20 +117,26 @@ function ParseProjFile($projFile)
 
     if ($projXml.Project | Get-Member -Name ItemGroup) {
         $projXml.Project.ItemGroup | % {
-            $_.ChildNodes | % {
-                if ($_.OuterXml.StartsWith("<ProjectReference") -or $_.OuterXml.StartsWith("<ProjectFile")) {
-                    $name = ExpandEnvVariable $_.Include
-                    if ($name -notmatch "^[a-z]:\\") {
-                        $name = Join-Path ([IO.Path]::GetDirectoryName($projFile)) $name
-                    }
+            $currentItemGroup = $_
+            try{
+                $_.ChildNodes | % {
+                    if ($_.OuterXml.StartsWith("<ProjectReference") -or $_.OuterXml.StartsWith("<ProjectFile")) {
+                        $name = ExpandEnvVariable $_.Include
+                        if ($name -notmatch "^[a-z]:\\") {
+                            $name = Join-Path ([IO.Path]::GetDirectoryName($projFile)) $name
+                        }
 
-                    Write-Verbose "Resolving $name"
-                    $name = Resolve-Path -Relative $name -ErrorAction Ignore
-                    if (-not ([string]::IsNullOrEmpty($name))) {
-                        Write-Verbose "checking $name"
-                        ParseProjFile $name
+                        Write-Verbose "Resolving $name"
+                        $name = Resolve-Path -Relative $name -ErrorAction Ignore
+                        if (-not ([string]::IsNullOrEmpty($name))) {
+                            Write-Verbose "checking $name"
+                            ParseProjFile $name
+                        }
                     }
                 }
+            }
+            catch {
+                # Most likey we hit "<ItemGroup/>". Ignore it.
             }
         }
     }
@@ -201,11 +213,17 @@ $content += "Global
 
 $projects.Keys | % {
     $guid = $_
+    if ($projects[$guid][2] -eq $netcoreType) {
+        $platform = "Any CPU"
+    }
+    else {
+        $platform = "x64"
+    }
 
-    $content += "`t`t${guid}.Debug|x64.ActiveCfg = Debug|x64"
-    $content += "`t`t${guid}.Debug|x64.Build.0 = Debug|x64"
-    $content += "`t`t${guid}.Release|x64.ActiveCfg = Release|x64"
-    $content += "`t`t${guid}.Release|x64.Build.0 = Release|x64"
+    $content += "`t`t${guid}.Debug|x64.ActiveCfg = Debug|$platform"
+    $content += "`t`t${guid}.Debug|x64.Build.0 = Debug|$platform"
+    $content += "`t`t${guid}.Release|x64.ActiveCfg = Release|$platform"
+    $content += "`t`t${guid}.Release|x64.Build.0 = Release|$platform"
 }
 
 $content += "`tEndGlobalSection

@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>$(NetCoreAppVer);net462</TargetFrameworks>
+    <RuntimeFrameworkVersion>$(DotNetCoreVersion)</RuntimeFrameworkVersion> 
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\CoverageInfoExtractor\MethodCoverageInfoModel\MethodCoverageInfo.cs" Link="MethodCoverageInfo.cs" />
+    <Compile Include="..\CoverageInfoExtractor\MethodCoverageInfoModel\MethodCoverageInfoKey.cs" Link="MethodCoverageInfoKey.cs" />
+    <Compile Include="..\CoverageInfoExtractor\MethodCoverageInfoModel\MethodCoverageInfoValue.cs" Link="MethodCoverageInfoValue.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.CodeDom" />
+    <PackageReference Include="System.Security.Permissions" />
+    <PackageReference Include="System.ServiceModel.Primitives" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CalculationRequests.json.sample">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <Import Project="$(StyleCopProps)" />
+</Project>

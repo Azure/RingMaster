@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Microsoft.Azure.Networking.Infrastructure.RingMaster.RSLValidation</RootNamespace>
+    <AssemblyName>Microsoft.RingMaster.Test.RSLValidation</AssemblyName>
+    <CoverageDisabled>true</CoverageDisabled>
+    <EnableQTest>false</EnableQTest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Common.RSL.amd64" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(PkgCommon_RSL_amd64)\lib\rsl.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>False</Visible>
+    </Content>
+    <None Include="RunRSLValidationUnitTest.cmd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

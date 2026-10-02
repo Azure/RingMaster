@@ -37,7 +37,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         }
 
         /// <summary>
-        /// Options for get data.
+        /// Options for get subtree. Making it starts from 2 to differentiate it from the old boolean value after serialization.
+        /// This is essential to make the ringmaster client backward compatible
         /// </summary>
         [Flags]
         public enum GetSubtreeOptions : byte
@@ -45,12 +46,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             /// <summary>
             /// No options.
             /// </summary>
-            None = 0,
+            None = 1 << 1,
 
             /// <summary>
             /// Include stats for each node in the subtree.
             /// </summary>
-            IncludeStats = 1,
+            IncludeStats = 1 << 2,
+
+            /// <summary>
+            /// Include user metadata for each node in the subtree.
+            /// </summary>
+            IncludeUserMetadata = 1 << 3,
         }
 
         /// <summary>
@@ -61,6 +67,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             get
             {
                 return this.Options.HasFlag(GetSubtreeOptions.IncludeStats);
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the result should include user metadata.
+        /// </summary>
+        public bool IncludeUserMetadata
+        {
+            get
+            {
+                return this.Options.HasFlag(GetSubtreeOptions.IncludeUserMetadata);
             }
         }
 

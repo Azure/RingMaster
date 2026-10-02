@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="RingMasterBackend\RingMasterBackendNupkg.csproj" />
-    <ProjectFile Include="RingMasterClient\RingMasterClientNupkg.csproj" />
-    <ProjectFile Include="RingMasterCommon\RingMasterCommonNupkg.csproj" />
-    <ProjectFile Include="RingMasterTools\RingMasterToolsNupkg.csproj" />
-    <ProjectFile Include="RingMasterPersistence\RingMasterPersistenceNupkg.csproj" />
-    <ProjectFile Include="ServiceFabricApplication\ServiceFabricApplicationNupkg.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="ApiCoverage\ApiCoverageNupkg.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="RingMasterBackend\RingMasterBackendNupkg.csproj" />
+    <ProjectReference Include="RingMasterClient\RingMasterClientNupkg.csproj" />
+    <ProjectReference Include="RingMasterCommon\RingMasterCommonNupkg.csproj" />
+    <ProjectReference Include="RingMasterPersistence\RingMasterPersistenceNupkg.csproj" />
+    <ProjectReference Include="RingMasterTools\RingMasterToolsNupkg.csproj" />
+    <ProjectReference Include="ServiceFabricApplication\ServiceFabricApplicationNupkg.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="VegaDistributedTest\VegaDistributedTestNupkg.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

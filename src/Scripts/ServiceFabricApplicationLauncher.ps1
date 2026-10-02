@@ -3,8 +3,7 @@
     Launches pubsub service in local Service Fabric simulation cluster
 
 .PARAMETER Action
-    Specifies the action to take, Start - deploy and start the app, Stop - stop and deregister, Install - install service
-    fabric and setup local cluster, Uninstall - uninstall service fabric
+    Specifies the action to take, Start - deploy and start the app, Stop - stop and deregister.
 
 .PARAMETER ServiceFabricPackage
     Specifies the list of application package to deploy and start.
@@ -33,7 +32,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("Start", "Upgrade", "Deploy", "Stop", "Upsize", "Install", "Uninstall")]
+    [ValidateSet("Start", "Upgrade", "Deploy", "Stop", "Upsize")]
     [string] $Action = "Deploy",
 
     [string] $ServiceFabricPackage = @("E:\RD\Networking\Vega\out\debug-AMD64\MdsAgentApplication-Pkg\MdsAgentApplication"),
@@ -88,6 +87,9 @@ function MakeAppName([string] $appTypeName)
     if ($a.EndsWith("ServiceApplication")) {
         $a = $a.Replace("ServiceApplication", "")
     }
+    elseif ($a.EndsWith("AppType")) {
+        $a = $a.Replace("AppType", "")
+    }
 
     return "fabric:/$a"
 }
@@ -98,6 +100,9 @@ function MakeServiceName([string] $appTypeName, [string] $serviceTypeName, [int]
     $st = $serviceTypeName
     if ($st.EndsWith("ServiceType")) {
         $st = $st.Replace("ServiceType", "")
+    }
+    elseif ($st.EndsWith("Type")) {
+        $st = $st.Replace("Type", "")
     }
 
     if ($st -eq "RingMasterService")
@@ -258,7 +263,7 @@ function ConnectServiceFabric
         {
             WriteLine "Connect-ServiceFabricCluster, default"
             WriteLine "ConnectionEndpoint:$ClusterEndpoint"
-            Connect-ServiceFabricCluster -ConnectionEndpoint $ClusterEndpoint -Verbose
+            Connect-ServiceFabricCluster -Verbose
         }
         else
         {
@@ -357,11 +362,17 @@ function StartService
         $param | Format-Table -AutoSize | Out-String -width 150 | WriteLine
         New-ServiceFabricApplication -ApplicationName $appName `
             -ApplicationTypeName $appType.Name -ApplicationTypeVersion $appType.Version -ApplicationParameter $param -Verbose
-            
-        $serviceTypes | % {
-            $serviceName = MakeServiceName $appType.Name $_.Name 0
-            WriteLine "Creating new service instance [$serviceName]..."
-            New-ServiceFabricServiceFromTemplate -ApplicationName $appName -ServiceName $serviceName -ServiceTypeName $_.Name -Verbose
+
+        $svcs = Get-ServiceFabricService -ApplicationName $appName
+        if ($svcs -eq $null) {
+            $serviceTypes | % {
+                $serviceName = MakeServiceName $appType.Name $_.Name 0
+                WriteLine "Creating new service instance [$serviceName]..."
+                New-ServiceFabricServiceFromTemplate -ApplicationName $appName -ServiceName $serviceName -ServiceTypeName $_.Name -Verbose
+            }
+        }
+        else {
+            WriteLine "Default services have been created. No service is created from the template"
         }
     }
 
@@ -489,7 +500,7 @@ else {
 # Deploy is new for deployment template. Start/Upgrade is legacy and CDP uses them.
 if (($Action -eq "Deploy") -or ($Action -eq "Start") -or ($Action -eq "Upgrade")) {
     if (-not $sfInstalled) {
-        throw "ServiceFabric not installed.  Invoke with 'Install' action to install it"
+        throw "ServiceFabric not installed."
     }
 
     ConnectServiceFabric
@@ -498,7 +509,7 @@ if (($Action -eq "Deploy") -or ($Action -eq "Start") -or ($Action -eq "Upgrade")
 }
 elseif ($Action -eq "Upsize") {
     if (-not $sfInstalled) {
-        throw "ServiceFabric not installed.  Invoke with 'Install' action to install it"
+        throw "ServiceFabric not installed."
     }
 
     ConnectServiceFabric
@@ -507,7 +518,7 @@ elseif ($Action -eq "Upsize") {
 }
 elseif ($Action -eq "Stop") {
     if (-not $sfInstalled) {
-        throw "ServiceFabric not installed.  Invoke with 'Install' action to install it"
+        throw "ServiceFabric not installed."
     }
 
     ConnectServiceFabric

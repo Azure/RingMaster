@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include=".\client\SecureTransportClientTool.csproj" />
-    <ProjectFile Include=".\service\SecureTransportServiceTool.csproj" />
-    <ProjectFile Include=".\src\SecureTransport.csproj" />
-    <ProjectFile Include=".\unittest\SecureTransportUnitTest.csproj" />
+    <ProjectReference Include=".\client\SecureTransportClientTool.csproj" />
+    <ProjectReference Include=".\service\SecureTransportServiceTool.csproj" />
+    <ProjectReference Include=".\src\SecureTransport.csproj" />
+    <ProjectReference Include=".\unittest\SecureTransportUnitTest.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

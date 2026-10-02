@@ -6,7 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
     using System.Collections.Generic;
-    using RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Base class for <see cref="IRingMasterRequest"/>s that are composed of other requests.
@@ -20,8 +20,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="requests">List of requests</param>
         /// <param name="completeSynchronously"><c>true</c> if the server must ensure durability before returning</param>
         /// <param name="uid">Unique Id of the request</param>
-        internal AbstractRingMasterCompoundRequest(RingMasterRequestType requestType, IReadOnlyList<IRingMasterRequest> requests, bool completeSynchronously, ulong uid)
-            : base(requestType, string.Empty, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        internal AbstractRingMasterCompoundRequest(RingMasterRequestType requestType, IReadOnlyList<IRingMasterRequest> requests, bool completeSynchronously, ulong uid, bool invokeCallbackBeforeComplete = false)
+            : base(requestType, string.Empty, uid, invokeCallbackBeforeComplete)
         {
             this.Requests = requests;
             this.CompleteSynchronously = completeSynchronously;

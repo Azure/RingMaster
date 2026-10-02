@@ -12,10 +12,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
     using System.Threading;
 
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.IfxInstrumentation;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric;
     using Microsoft.Extensions.Configuration;
     using Microsoft.ServiceFabric.Services.Runtime;
-    using RingMasterApplication.Utilities;
 
     /// <summary>
     /// RingMaster watchdog.
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterWatchdo
 
             RingMasterApplicationHelper.AttachDebugger(int.Parse(appSettings["DebuggerAttachTimeout"]));
 
-            LogFileEventTracing.Start(Path.Combine(appSettings["LogFolder"], "RingMasterWatchdog.LogPath"));
+            LogFileEventTracing.Start(Path.Combine(Environment.GetEnvironmentVariable("RINGMASTER_LOG_PATH"), "RingMasterWatchdog.LogPath"));
 
             AppDomain.CurrentDomain.ProcessExit +=
                 (sender, eventArgs) =>

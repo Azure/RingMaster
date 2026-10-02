@@ -1,0 +1,29 @@
+﻿# assuming the following path pattern are valid path. 
+# To add new regex, make sure the variable in {} exists in PathValidator.helperRegex.
+
+# the root node
+^/$ 
+
+# metedata nodes created by vega
+^/\$metadata(.*)
+
+# nodes created by vega
+^/\$bulkwatcher$
+
+$^/MadariUserData{NumberRegex}$
+$^/MadariUserData{NumberRegex}/fabric%3A%2Fmadari%2Fmadariservice%2F{TwoDigitsRegex}$
+$^/MadariUserData{NumberRegex}/fabric%3A%2Fmadari%2Fmadariservice%2F{TwoDigitsRegex}/HealthWatchdogProberNode$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/privateip$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/lnmid$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/v4ca$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/v6ca$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/lnms$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/privateip/lnmid$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/v4ca/{Ipv4Regex}$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/lnms/{ClusterNameRegex}_{GuidRegex}$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/privateip/lnmid/{ClusterNameRegex}_{GuidRegex}$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/lnms/{ClusterNameRegex}_{GuidRegex}$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/privateip/lnmid/{ClusterNameRegex}_{GuidRegex}/ca$
+$^/MadariUserData{NumberRegex}/%2Fvnets%2F{GuidRegex}/mappings/lnms/{ClusterNameRegex}_{GuidRegex}/ca$

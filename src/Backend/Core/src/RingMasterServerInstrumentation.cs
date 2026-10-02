@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Class RingMasterServerInstrumentation. This class cannot be inherited.
@@ -360,6 +361,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="elapsed">Duration from the response is ready to the change is fully replicated</param>
         public void OnResponseWaitForReplication(TimeSpan elapsed)
+        {
+        }
+
+        /// <inheritdoc/>
+        public void CallbackBeforeComplete(string path, byte[] data, IStat stat, byte[] userMetadata)
+        {
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleteTerminationFailure()
         {
         }
     }

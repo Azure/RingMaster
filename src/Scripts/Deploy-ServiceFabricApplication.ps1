@@ -27,10 +27,14 @@ $connParams.Add("ConnectionEndpoint", "localhost:19000")
 $connParams.Add("TimeoutSec", 10)
 $connParams.Add("WarningAction", 'SilentlyContinue')
 
+$TimeoutInMinute = 5
+$startTime = [DateTime]::UtcNow
 while ($true) {
     try {
         $testWarnings = @()
         $isConnSuccesfull = Test-ServiceFabricClusterConnection -TimeoutSec 5 -WarningAction SilentlyContinue -WarningVariable testWarnings
+        "Deploy Warnings:"
+        $testWarnings
         if ($isConnSuccesfull -and ($testWarnings.Count -eq 0)) {
             Write-Host "Local Cluster ready status: 100% completed."
             break
@@ -41,6 +45,13 @@ while ($true) {
         Connect-ServiceFabricCluster @connParams
     }
     catch [System.Exception] {}
+
+    if (([DateTime]::UtcNow - $startTime).TotalMinutes -gt $TimeoutInMinute) {
+        $script:exitCode = -1
+        throw "Local Cluster do not become ready after waiting for $TimeoutInMinute minutes."
+    }
+
+    Start-Sleep -Seconds 5
 }
 
 function GetImageStoreConnectionString

@@ -9,14 +9,17 @@
         <Program>Microsoft.RingMaster.RingMasterService.exe</Program>
       </ExeHost>
     </EntryPoint>
+    <EnvironmentVariables>
+      <EnvironmentVariable Name="RINGMASTER_LOG_PATH" Value="overridden" />
+    </EnvironmentVariables>
   </CodePackage>
   <ConfigPackage Name="Config" Version="@BUILDNUMBER@" />
   <Resources>
     <Endpoints>
-      <Endpoint Name="ServiceEndpoint" Protocol="tcp" Type="Internal" Port="99" />
+      <Endpoint Name="ServiceEndpoint" Protocol="tcp" Type="Internal" Port="0" />
       <Endpoint Name="ReadOnlyEndpoint" Protocol="tcp" Type="Internal" />
       <Endpoint Name="ReplicatorEndpoint" Protocol="tcp" Type="Internal" />
-      <Endpoint Name="ZkprServiceEndpoint" Protocol="tcp" Port="100" Type="Internal" />
+      <Endpoint Name="ZkprServiceEndpoint" Protocol="tcp" Port="0" Type="Internal" />
     </Endpoints>
   </Resources>
 </ServiceManifest>

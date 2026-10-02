@@ -102,12 +102,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
 
             connection.OnPacketReceived = packet =>
             {
+                // We need to get the data and dispose the packet before the completion of the method.
+                // Otherwise, once this method is done, the client might assume that the packet is no longer valid
+                // and reuse it.
+
+                // To preserve original behavior, this callback runs 'session.OnPacketReceived' asynchronously
+                // and returns the completed task immediately.
+                var packetBytes = packet.ToArray();
+                packet.Dispose();
+
                 Task.Run(
                     async () =>
                     {
                         try
                         {
-                            await session.OnPacketReceived(packet);
+                            await session.OnPacketReceived(packetBytes);
                         }
                         catch (Exception ex)
                         {
@@ -115,6 +124,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper
                         }
                     },
                     this.cancellationToken);
+
+                return Task.CompletedTask;
             };
 
             connection.OnConnectionLost = () =>

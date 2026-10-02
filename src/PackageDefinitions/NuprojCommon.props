@@ -3,6 +3,7 @@
 
   <PropertyGroup>
     <NamePostfix Condition="!$(GitBranchName.StartsWith('release'))">-$(GitBranchName)</NamePostfix>
+    <NoWarn>NU5100,NU5128,NU5130</NoWarn>
   </PropertyGroup>
 
   <Target Name="AddReleaseNotes" BeforeTargets="GenerateNuSpec">

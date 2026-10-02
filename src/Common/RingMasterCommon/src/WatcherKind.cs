@@ -18,8 +18,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         OneUse = 0x01,
 
         /// <summary>
-        /// If the watcher notification includes data or children list
+        /// If the watcher notification includes data or child's change
         /// </summary>
-        IncludeData = 0x02,
+        IncludeDataAndChildChange = 0x02,
     }
 }

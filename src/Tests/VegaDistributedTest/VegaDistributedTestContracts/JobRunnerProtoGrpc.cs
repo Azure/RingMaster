@@ -17,7 +17,7 @@ namespace Microsoft.Vega.JobRunnerProto {
     static readonly grpc::Marshaller<global::Microsoft.Vega.JobRunnerProto.GetJobMetricsRequest> __Marshaller_GetJobMetricsRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::Microsoft.Vega.JobRunnerProto.GetJobMetricsRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::Microsoft.Vega.JobRunnerProto.GetJobMetricsReply> __Marshaller_GetJobMetricsReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::Microsoft.Vega.JobRunnerProto.GetJobMetricsReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::Microsoft.Vega.JobRunnerProto.GetServiceInstanceIdentityReply> __Marshaller_GetServiceInstanceIdentityReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::Microsoft.Vega.JobRunnerProto.GetServiceInstanceIdentityReply.Parser.ParseFrom);
-    static readonly grpc::Marshaller<global::Microsoft.Vega.JobRunnerProto.StartJobRequest> __Marshaller_StartJobRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::Microsoft.Vega.JobRunnerProto.StartJobRequest.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::Microsoft.Vega.JobRunnerProto.InitJobRequest> __Marshaller_InitJobRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::Microsoft.Vega.JobRunnerProto.InitJobRequest.Parser.ParseFrom);
 
     static readonly grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty> __Method_CancelRunningJob = new grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty>(
         grpc::MethodType.Unary,
@@ -47,11 +47,25 @@ namespace Microsoft.Vega.JobRunnerProto {
         __Marshaller_Empty,
         __Marshaller_GetServiceInstanceIdentityReply);
 
-    static readonly grpc::Method<global::Microsoft.Vega.JobRunnerProto.StartJobRequest, global::Microsoft.Vega.DistTestCommonProto.Empty> __Method_StartJob = new grpc::Method<global::Microsoft.Vega.JobRunnerProto.StartJobRequest, global::Microsoft.Vega.DistTestCommonProto.Empty>(
+    static readonly grpc::Method<global::Microsoft.Vega.JobRunnerProto.InitJobRequest, global::Microsoft.Vega.DistTestCommonProto.Empty> __Method_InitializeJob = new grpc::Method<global::Microsoft.Vega.JobRunnerProto.InitJobRequest, global::Microsoft.Vega.DistTestCommonProto.Empty>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "InitializeJob",
+        __Marshaller_InitJobRequest,
+        __Marshaller_Empty);
+
+    static readonly grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty> __Method_StartJob = new grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty>(
         grpc::MethodType.Unary,
         __ServiceName,
         "StartJob",
-        __Marshaller_StartJobRequest,
+        __Marshaller_Empty,
+        __Marshaller_Empty);
+
+    static readonly grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty> __Method_CleanupJob = new grpc::Method<global::Microsoft.Vega.DistTestCommonProto.Empty, global::Microsoft.Vega.DistTestCommonProto.Empty>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CleanupJob",
+        __Marshaller_Empty,
         __Marshaller_Empty);
 
     /// <summary>Service descriptor</summary>
@@ -83,7 +97,17 @@ namespace Microsoft.Vega.JobRunnerProto {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
-      public virtual global::System.Threading.Tasks.Task<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJob(global::Microsoft.Vega.JobRunnerProto.StartJobRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::Microsoft.Vega.DistTestCommonProto.Empty> InitializeJob(global::Microsoft.Vega.JobRunnerProto.InitJobRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      public virtual global::System.Threading.Tasks.Task<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      public virtual global::System.Threading.Tasks.Task<global::Microsoft.Vega.DistTestCommonProto.Empty> CleanupJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -177,21 +201,53 @@ namespace Microsoft.Vega.JobRunnerProto {
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetServiceInstanceIdentity, null, options, request);
       }
-      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty StartJob(global::Microsoft.Vega.JobRunnerProto.StartJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty InitializeJob(global::Microsoft.Vega.JobRunnerProto.InitJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return InitializeJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty InitializeJob(global::Microsoft.Vega.JobRunnerProto.InitJobRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_InitializeJob, null, options, request);
+      }
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> InitializeJobAsync(global::Microsoft.Vega.JobRunnerProto.InitJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return InitializeJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> InitializeJobAsync(global::Microsoft.Vega.JobRunnerProto.InitJobRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_InitializeJob, null, options, request);
+      }
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty StartJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
-      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty StartJob(global::Microsoft.Vega.JobRunnerProto.StartJobRequest request, grpc::CallOptions options)
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty StartJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_StartJob, null, options, request);
       }
-      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJobAsync(global::Microsoft.Vega.JobRunnerProto.StartJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJobAsync(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
-      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJobAsync(global::Microsoft.Vega.JobRunnerProto.StartJobRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> StartJobAsync(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_StartJob, null, options, request);
+      }
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty CleanupJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CleanupJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      public virtual global::Microsoft.Vega.DistTestCommonProto.Empty CleanupJob(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CleanupJob, null, options, request);
+      }
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> CleanupJobAsync(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CleanupJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      public virtual grpc::AsyncUnaryCall<global::Microsoft.Vega.DistTestCommonProto.Empty> CleanupJobAsync(global::Microsoft.Vega.DistTestCommonProto.Empty request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CleanupJob, null, options, request);
       }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       protected override JobRunnerSvcClient NewInstance(ClientBaseConfiguration configuration)
@@ -209,7 +265,9 @@ namespace Microsoft.Vega.JobRunnerProto {
           .AddMethod(__Method_GetJobState, serviceImpl.GetJobState)
           .AddMethod(__Method_GetJobMetrics, serviceImpl.GetJobMetrics)
           .AddMethod(__Method_GetServiceInstanceIdentity, serviceImpl.GetServiceInstanceIdentity)
-          .AddMethod(__Method_StartJob, serviceImpl.StartJob).Build();
+          .AddMethod(__Method_InitializeJob, serviceImpl.InitializeJob)
+          .AddMethod(__Method_StartJob, serviceImpl.StartJob)
+          .AddMethod(__Method_CleanupJob, serviceImpl.CleanupJob).Build();
     }
 
   }

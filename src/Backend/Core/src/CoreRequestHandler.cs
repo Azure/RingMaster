@@ -7,6 +7,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using BackendRequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.RequestInit;
     using CommonRequestInit = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestInit;
@@ -21,6 +23,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     {
         private readonly IRingMasterRequestExecutor executor;
         private readonly ClientSession session;
+        private readonly MarshallerChannel marshaller = new MarshallerChannel(null, new RecyclableMemoryStreamFactory());
 
         private long lastAssignedCallId = 0;
         private bool isDisposed = false;
@@ -30,13 +33,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="executor">Interface to an object that can execute RingMasterRequests</param>
         /// <param name="initRequest">Init request</param>
-        public CoreRequestHandler(IRingMasterRequestExecutor executor, CommonRequestInit initRequest = null)
+        /// <param name="serverInstrumentation">The ringmaster server instrumentation</param>
+        public CoreRequestHandler(IRingMasterRequestExecutor executor, CommonRequestInit initRequest = null, IRingMasterServerInstrumentation serverInstrumentation = null)
         {
             this.executor = executor ?? throw new ArgumentNullException(nameof(executor));
-            this.session = new ClientSession((requestCall, clientSession, responseAction) =>
-            {
-                this.executor.ProcessMessage(requestCall.Request, clientSession, responseAction);
-            });
+            this.session = new ClientSession(
+                (requestCall, clientSession, responseAction) =>
+                {
+                    this.executor.ProcessMessage(requestCall.Request, clientSession, responseAction);
+                },
+                serverInstrumentation);
 
             BackendRequestInit backendInitRequest = (initRequest != null)
                 ? new BackendRequestInit(initRequest, null)
@@ -64,6 +70,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <inheritdoc />
         public Task<RequestResponse> Request(IRingMasterRequest request)
         {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
             var tcs = new TaskCompletionSource<RequestResponse>();
             this.RequestOverlapped(
                 request,
@@ -75,6 +86,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     }
                     else
                     {
+                        var memoryBuffer = response.Content as IMemoryBuffer;
+                        if (memoryBuffer != null)
+                        {
+                            // memory buffer is internal usage only and we shouldn't expose outside
+                            using (memoryBuffer)
+                            {
+                                var responseBytes = memoryBuffer.ToArray();
+                                response.Content = responseBytes;
+                            }
+                        }
+
                         tcs.SetResult(response);
                     }
                 });

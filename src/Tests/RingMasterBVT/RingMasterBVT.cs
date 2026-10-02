@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
     using System.Configuration;
     using System.Diagnostics;
     using System.IO;
+    using System.Runtime.InteropServices;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Microsoft.Extensions.Configuration;
@@ -45,17 +46,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         public static void StartBackendTool(TestContext context)
         {
             // Only start the backend tool on CloudBuild. In other environment, start it manually.
-            if (Environment.GetEnvironmentVariable("TestEnvironment") == "QTEST")
+            // if (Environment.GetEnvironmentVariable("TestEnvironment") == "QTEST")
             {
                 backendProcess = new Process();
-                backendProcess.StartInfo.FileName = "dotnet";
 
-                string backendProcessPath = Path.Combine(
-                    Environment.CurrentDirectory,
-                    "backendtool",
-                    "Microsoft.RingMaster.RingMasterBackendTool.dll");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    string backendProcessPath = Path.Combine(
+                        Environment.CurrentDirectory,
+                        "backendtool",
+                        "Microsoft.RingMaster.RingMasterBackendTool.exe");
 
-                backendProcess.StartInfo.Arguments = backendProcessPath + " 2099";
+                    backendProcess.StartInfo.FileName = backendProcessPath;
+                    backendProcess.StartInfo.Arguments = " 2099";
+                }
+                else
+                {
+                    backendProcess.StartInfo.FileName = "dotnet";
+
+                    string backendProcessPath = Path.Combine(
+                        Environment.CurrentDirectory,
+                        "backendtool",
+                        "Microsoft.RingMaster.RingMasterBackendTool.dll");
+
+                    backendProcess.StartInfo.Arguments = backendProcessPath + " 2099";
+                }
+
                 backendProcess.StartInfo.RedirectStandardOutput = false;
                 backendProcess.StartInfo.UseShellExecute = true;
                 backendProcess.StartInfo.CreateNoWindow = false;
@@ -80,7 +96,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         public void SetupTest()
         {
             var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
+            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("BVTappSettings.json");
             IConfiguration appSettings = builder.Build();
 
             this.ringMasterAddress = appSettings["RingMasterAddress"];

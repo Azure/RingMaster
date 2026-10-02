@@ -52,6 +52,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         int Aversion { get; }
 
         /// <summary>
+        /// Gets the version number of the most recent change to this node's user metadata.
+        /// </summary>
+        int Uversion { get; }
+
+        /// <summary>
         /// Gets the length of the data associated with this node.
         /// </summary>
         int DataLength { get; }

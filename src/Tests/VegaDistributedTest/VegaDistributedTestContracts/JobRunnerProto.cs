@@ -31,23 +31,31 @@ namespace Microsoft.Vega.JobRunnerProto {
             "c1JlcXVlc3QSEgoKbWV0cmljTmFtZRgBIAEoCRISCgpzdGFydEluZGV4GAIg",
             "ASgFEhAKCHBhZ2VTaXplGAMgASgFIigKEkdldEpvYk1ldHJpY3NSZXBseRIS",
             "Cgpqb2JNZXRyaWNzGAEgAygBIkIKH0dldFNlcnZpY2VJbnN0YW5jZUlkZW50",
-            "aXR5UmVwbHkSHwoXc2VydmljZUluc3RhbmNlSWRlbnRpdHkYASABKAkiaQoP",
-            "U3RhcnRKb2JSZXF1ZXN0EhAKCHNjZW5hcmlvGAEgASgJEkQKCnBhcmFtZXRl",
-            "cnMYAiADKAsyMC5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3Rv",
-            "LkpvYlBhcmFtZXRlcjLXBAoMSm9iUnVubmVyU3ZjEmoKEENhbmNlbFJ1bm5p",
-            "bmdKb2ISKS5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3RvLkVt",
-            "cHR5GikuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90by5FbXB0",
-            "eSIAEmsKC0dldEpvYlN0YXRlEikuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RD",
-            "b21tb25Qcm90by5FbXB0eRovLk1pY3Jvc29mdC5WZWdhLkpvYlJ1bm5lclBy",
-            "b3RvLkdldEpvYlN0YXRlUmVwbHkiABJ5Cg1HZXRKb2JNZXRyaWNzEjMuTWlj",
-            "cm9zb2Z0LlZlZ2EuSm9iUnVubmVyUHJvdG8uR2V0Sm9iTWV0cmljc1JlcXVl",
-            "c3QaMS5NaWNyb3NvZnQuVmVnYS5Kb2JSdW5uZXJQcm90by5HZXRKb2JNZXRy",
-            "aWNzUmVwbHkiABKJAQoaR2V0U2VydmljZUluc3RhbmNlSWRlbnRpdHkSKS5N",
-            "aWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3RvLkVtcHR5Gj4uTWlj",
-            "cm9zb2Z0LlZlZ2EuSm9iUnVubmVyUHJvdG8uR2V0U2VydmljZUluc3RhbmNl",
-            "SWRlbnRpdHlSZXBseSIAEmcKCFN0YXJ0Sm9iEi4uTWljcm9zb2Z0LlZlZ2Eu",
-            "Sm9iUnVubmVyUHJvdG8uU3RhcnRKb2JSZXF1ZXN0GikuTWljcm9zb2Z0LlZl",
-            "Z2EuRGlzdFRlc3RDb21tb25Qcm90by5FbXB0eSIAYgZwcm90bzM="));
+            "aXR5UmVwbHkSHwoXc2VydmljZUluc3RhbmNlSWRlbnRpdHkYASABKAkiQQoP",
+            "VGVzdE5vZGVDb250ZXh0EhIKCnRlc3ROb2RlSWQYASABKAUSGgoSdGFyZ2V0",
+            "U2VydmljZUluZGV4GAIgASgFIrEBCg5Jbml0Sm9iUmVxdWVzdBIQCghzY2Vu",
+            "YXJpbxgBIAEoCRJECgpwYXJhbWV0ZXJzGAIgAygLMjAuTWljcm9zb2Z0LlZl",
+            "Z2EuRGlzdFRlc3RDb21tb25Qcm90by5Kb2JQYXJhbWV0ZXISRwoPdGVzdE5v",
+            "ZGVDb250ZXh0GAMgASgLMi4uTWljcm9zb2Z0LlZlZ2EuSm9iUnVubmVyUHJv",
+            "dG8uVGVzdE5vZGVDb250ZXh0MqUGCgxKb2JSdW5uZXJTdmMSagoQQ2FuY2Vs",
+            "UnVubmluZ0pvYhIpLk1pY3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29tbW9uUHJv",
+            "dG8uRW1wdHkaKS5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3Rv",
+            "LkVtcHR5IgASawoLR2V0Sm9iU3RhdGUSKS5NaWNyb3NvZnQuVmVnYS5EaXN0",
+            "VGVzdENvbW1vblByb3RvLkVtcHR5Gi8uTWljcm9zb2Z0LlZlZ2EuSm9iUnVu",
+            "bmVyUHJvdG8uR2V0Sm9iU3RhdGVSZXBseSIAEnkKDUdldEpvYk1ldHJpY3MS",
+            "My5NaWNyb3NvZnQuVmVnYS5Kb2JSdW5uZXJQcm90by5HZXRKb2JNZXRyaWNz",
+            "UmVxdWVzdBoxLk1pY3Jvc29mdC5WZWdhLkpvYlJ1bm5lclByb3RvLkdldEpv",
+            "Yk1ldHJpY3NSZXBseSIAEokBChpHZXRTZXJ2aWNlSW5zdGFuY2VJZGVudGl0",
+            "eRIpLk1pY3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29tbW9uUHJvdG8uRW1wdHka",
+            "Pi5NaWNyb3NvZnQuVmVnYS5Kb2JSdW5uZXJQcm90by5HZXRTZXJ2aWNlSW5z",
+            "dGFuY2VJZGVudGl0eVJlcGx5IgASawoNSW5pdGlhbGl6ZUpvYhItLk1pY3Jv",
+            "c29mdC5WZWdhLkpvYlJ1bm5lclByb3RvLkluaXRKb2JSZXF1ZXN0GikuTWlj",
+            "cm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90by5FbXB0eSIAEmIKCFN0",
+            "YXJ0Sm9iEikuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90by5F",
+            "bXB0eRopLk1pY3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29tbW9uUHJvdG8uRW1w",
+            "dHkiABJkCgpDbGVhbnVwSm9iEikuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RD",
+            "b21tb25Qcm90by5FbXB0eRopLk1pY3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29t",
+            "bW9uUHJvdG8uRW1wdHkiAGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Microsoft.Vega.DistTestCommonProto.DistTestCommonProtoReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -55,7 +63,8 @@ namespace Microsoft.Vega.JobRunnerProto {
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.GetJobMetricsRequest), global::Microsoft.Vega.JobRunnerProto.GetJobMetricsRequest.Parser, new[]{ "MetricName", "StartIndex", "PageSize" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.GetJobMetricsReply), global::Microsoft.Vega.JobRunnerProto.GetJobMetricsReply.Parser, new[]{ "JobMetrics" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.GetServiceInstanceIdentityReply), global::Microsoft.Vega.JobRunnerProto.GetServiceInstanceIdentityReply.Parser, new[]{ "ServiceInstanceIdentity" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.StartJobRequest), global::Microsoft.Vega.JobRunnerProto.StartJobRequest.Parser, new[]{ "Scenario", "Parameters" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.TestNodeContext), global::Microsoft.Vega.JobRunnerProto.TestNodeContext.Parser, new[]{ "TestNodeId", "TargetServiceIndex" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.JobRunnerProto.InitJobRequest), global::Microsoft.Vega.JobRunnerProto.InitJobRequest.Parser, new[]{ "Scenario", "Parameters", "TestNodeContext" }, null, null, null)
           }));
     }
     #endregion
@@ -633,11 +642,11 @@ namespace Microsoft.Vega.JobRunnerProto {
 
   }
 
-  public sealed partial class StartJobRequest : pb::IMessage<StartJobRequest> {
-    private static readonly pb::MessageParser<StartJobRequest> _parser = new pb::MessageParser<StartJobRequest>(() => new StartJobRequest());
+  public sealed partial class TestNodeContext : pb::IMessage<TestNodeContext> {
+    private static readonly pb::MessageParser<TestNodeContext> _parser = new pb::MessageParser<TestNodeContext>(() => new TestNodeContext());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<StartJobRequest> Parser { get { return _parser; } }
+    public static pb::MessageParser<TestNodeContext> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
@@ -650,22 +659,180 @@ namespace Microsoft.Vega.JobRunnerProto {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public StartJobRequest() {
+    public TestNodeContext() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public StartJobRequest(StartJobRequest other) : this() {
-      scenario_ = other.scenario_;
-      parameters_ = other.parameters_.Clone();
+    public TestNodeContext(TestNodeContext other) : this() {
+      testNodeId_ = other.testNodeId_;
+      targetServiceIndex_ = other.targetServiceIndex_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public StartJobRequest Clone() {
-      return new StartJobRequest(this);
+    public TestNodeContext Clone() {
+      return new TestNodeContext(this);
+    }
+
+    /// <summary>Field number for the "testNodeId" field.</summary>
+    public const int TestNodeIdFieldNumber = 1;
+    private int testNodeId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int TestNodeId {
+      get { return testNodeId_; }
+      set {
+        testNodeId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "targetServiceIndex" field.</summary>
+    public const int TargetServiceIndexFieldNumber = 2;
+    private int targetServiceIndex_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int TargetServiceIndex {
+      get { return targetServiceIndex_; }
+      set {
+        targetServiceIndex_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as TestNodeContext);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(TestNodeContext other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TestNodeId != other.TestNodeId) return false;
+      if (TargetServiceIndex != other.TargetServiceIndex) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TestNodeId != 0) hash ^= TestNodeId.GetHashCode();
+      if (TargetServiceIndex != 0) hash ^= TargetServiceIndex.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (TestNodeId != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(TestNodeId);
+      }
+      if (TargetServiceIndex != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(TargetServiceIndex);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (TestNodeId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(TestNodeId);
+      }
+      if (TargetServiceIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(TargetServiceIndex);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(TestNodeContext other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TestNodeId != 0) {
+        TestNodeId = other.TestNodeId;
+      }
+      if (other.TargetServiceIndex != 0) {
+        TargetServiceIndex = other.TargetServiceIndex;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            TestNodeId = input.ReadInt32();
+            break;
+          }
+          case 16: {
+            TargetServiceIndex = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class InitJobRequest : pb::IMessage<InitJobRequest> {
+    private static readonly pb::MessageParser<InitJobRequest> _parser = new pb::MessageParser<InitJobRequest>(() => new InitJobRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<InitJobRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Microsoft.Vega.JobRunnerProto.JobRunnerProtoReflection.Descriptor.MessageTypes[5]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public InitJobRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public InitJobRequest(InitJobRequest other) : this() {
+      scenario_ = other.scenario_;
+      parameters_ = other.parameters_.Clone();
+      TestNodeContext = other.testNodeContext_ != null ? other.TestNodeContext.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public InitJobRequest Clone() {
+      return new InitJobRequest(this);
     }
 
     /// <summary>Field number for the "scenario" field.</summary>
@@ -689,13 +856,24 @@ namespace Microsoft.Vega.JobRunnerProto {
       get { return parameters_; }
     }
 
+    /// <summary>Field number for the "testNodeContext" field.</summary>
+    public const int TestNodeContextFieldNumber = 3;
+    private global::Microsoft.Vega.JobRunnerProto.TestNodeContext testNodeContext_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as StartJobRequest);
+    public global::Microsoft.Vega.JobRunnerProto.TestNodeContext TestNodeContext {
+      get { return testNodeContext_; }
+      set {
+        testNodeContext_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(StartJobRequest other) {
+    public override bool Equals(object other) {
+      return Equals(other as InitJobRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(InitJobRequest other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -704,6 +882,7 @@ namespace Microsoft.Vega.JobRunnerProto {
       }
       if (Scenario != other.Scenario) return false;
       if(!parameters_.Equals(other.parameters_)) return false;
+      if (!object.Equals(TestNodeContext, other.TestNodeContext)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -712,6 +891,7 @@ namespace Microsoft.Vega.JobRunnerProto {
       int hash = 1;
       if (Scenario.Length != 0) hash ^= Scenario.GetHashCode();
       hash ^= parameters_.GetHashCode();
+      if (testNodeContext_ != null) hash ^= TestNodeContext.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -730,6 +910,10 @@ namespace Microsoft.Vega.JobRunnerProto {
         output.WriteString(Scenario);
       }
       parameters_.WriteTo(output, _repeated_parameters_codec);
+      if (testNodeContext_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(TestNodeContext);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -742,6 +926,9 @@ namespace Microsoft.Vega.JobRunnerProto {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Scenario);
       }
       size += parameters_.CalculateSize(_repeated_parameters_codec);
+      if (testNodeContext_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(TestNodeContext);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -749,7 +936,7 @@ namespace Microsoft.Vega.JobRunnerProto {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(StartJobRequest other) {
+    public void MergeFrom(InitJobRequest other) {
       if (other == null) {
         return;
       }
@@ -757,6 +944,12 @@ namespace Microsoft.Vega.JobRunnerProto {
         Scenario = other.Scenario;
       }
       parameters_.Add(other.parameters_);
+      if (other.testNodeContext_ != null) {
+        if (testNodeContext_ == null) {
+          testNodeContext_ = new global::Microsoft.Vega.JobRunnerProto.TestNodeContext();
+        }
+        TestNodeContext.MergeFrom(other.TestNodeContext);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -774,6 +967,13 @@ namespace Microsoft.Vega.JobRunnerProto {
           }
           case 18: {
             parameters_.AddEntriesFrom(input, _repeated_parameters_codec);
+            break;
+          }
+          case 26: {
+            if (testNodeContext_ == null) {
+              testNodeContext_ = new global::Microsoft.Vega.JobRunnerProto.TestNodeContext();
+            }
+            input.ReadMessage(testNodeContext_);
             break;
           }
         }

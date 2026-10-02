@@ -12,7 +12,6 @@
     <Title>Vega Client Library</Title>
     <Description>Vega Client Library</Description>
     <Copyright>Copyright (c) Microsoft Corporation</Copyright>
-    <PackageLicenseUrl>https://b</PackageLicenseUrl>
     <PackageProjectUrl>https://b</PackageProjectUrl>
     <PackageTags>RingMaster;VegaClient</PackageTags>
     <RepositoryUrl>http://aka.ms/vega</RepositoryUrl>
@@ -22,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" />
+    <ProjectReference Include="$(SRCROOT)\Common\RingMasterClient\src\RingMasterClient.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

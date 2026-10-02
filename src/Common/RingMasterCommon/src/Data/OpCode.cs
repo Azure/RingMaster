@@ -32,6 +32,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         Sync,
         Move,
         GetSubtree,
+        SetDataAndUserMetadata,
     }
 #pragma warning restore
 }

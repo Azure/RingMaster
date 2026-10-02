@@ -88,6 +88,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportSe
                         semaphore.Wait();
                         Interlocked.Increment(ref packetsReceived);
                         connection.SendAsync(packet).ContinueWith(_ => semaphore.Release());
+                        return Task.CompletedTask;
                     };
 
                     connection.OnConnectionLost = () =>

@@ -10,9 +10,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using System.IO;
     using System.Linq;
     using System.Runtime.Serialization.Formatters.Binary;
-    using RingMaster;
-    using RingMaster.Data;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Helper class to Deserialize a <see cref="RequestCall"/> or

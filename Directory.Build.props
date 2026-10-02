@@ -17,7 +17,34 @@
  
     <Configuration Condition=" '$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == ''">x64</Platform>
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    <NoWarn>NU5100</NoWarn>
+
+    <!--
+      New SDK-style projects include everything in the project directory by default.  This excludes the files left by QuickBuild local builds.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);QTestLogs\**;Logs\**;QLogs\**</DefaultItemExcludes>
+
+    <!--
+      Enable optimized NuGet restore
+    -->
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+
+    <!-- Produce deterministic assemblies, requirement for ProduceReferenceAssembly -->
+    <Deterministic>true</Deterministic>
+
   </PropertyGroup>
 
   <Import Project="$(EnlistmentRoot)\build\CustomBuild.props" />
+
+  <!-- Speed up incremental builds in VS and support interface-aware caching in CloudBuild -->
+  <PropertyGroup Condition="'$(ISOFFICIALBUILD)' != 'true'">
+    <ProduceReferenceAssembly Condition="'$(MSBuildProjectExtension)' == '.csproj' And '$(UsingMicrosoftNoTargetsSdk)' != 'true'">true</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <!-- Other global settings -->
+  <PropertyGroup>
+    <!-- Using latest available C# version based on the current toolchain -->
+    <LangVersion>Latest</LangVersion>
+  </PropertyGroup>
 </Project>

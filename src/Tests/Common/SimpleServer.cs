@@ -55,7 +55,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
             {
                 Task.Run(async () =>
                 {
-                    RequestCall call = protocol.DeserializeRequest(packet, packet.Length, this.protocolVersion);
+                    RequestCall call = protocol.DeserializeRequest(packet.GetBuffer(), packet.Length, this.protocolVersion);
+                    packet.Dispose();
                     RequestResponse response;
 
                     switch (call.Request.RequestType)
@@ -77,8 +78,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Test
                     }
 
                     response.CallId = call.CallId;
-                    connection.Send(this.protocol.SerializeResponse(response, this.protocolVersion));
+
+                    try
+                    {
+                        connection.Send(this.protocol.SerializeResponse(response, this.protocolVersion));
+                    }
+                    finally
+                    {
+                        var disposableContent = response.Content as IDisposable;
+                        if (disposableContent != null)
+                        {
+                            disposableContent.Dispose();
+                        }
+                    }
                 });
+                
+                return Task.CompletedTask;
             };
 
             connection.OnConnectionLost = () => { };

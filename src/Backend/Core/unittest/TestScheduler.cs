@@ -15,6 +15,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     using Backend;
     using Backend.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Requests;
@@ -30,7 +31,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             Close,
         }
 
-        // [TestMethod]
+        [TestMethod]
+        [Ignore]
         public void ValidateScheduler()
         {
             bool ok = false;
@@ -46,7 +48,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                     testRM.Create(path, null, null, CreateMode.PersistentAllowPathCreation);
                 }
 
-                scheduler = new ScheduledCommand(() => { return testRM.IsPrimary; }, testRM, marshaller);
+                scheduler = new ScheduledCommand(() => { return testRM.IsPrimary; }, testRM, marshaller, RingMasterServerInstrumentation.Instance);
                 scheduler.InternalOnAbandon = new Action<Exception>(ex =>
                 {
                     Assert.Fail("Scheduler Abandoned: " + ex);
@@ -427,7 +429,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                     string scheduledName = ((Backend.RequestMulti)req).ScheduledName;
                     ((Backend.RequestMulti)req).ScheduledName = null;
 
-                    Requests.RequestCreate crReq = new Requests.RequestCreate("/$metadata/scheduler/commands/" + scheduledName, ScheduledCommand.GetBytes(req, this.marshaller), null, CreateMode.Persistent);
+                    var requestBuffer = ScheduledCommand.GetBytes(req, this.marshaller);
+                    var requestBytes = requestBuffer.ToArray();
+                    requestBuffer.Dispose();
+
+                    Requests.RequestCreate crReq = new Requests.RequestCreate("/$metadata/scheduler/commands/" + scheduledName, requestBytes, null, CreateMode.Persistent);
                     RequestResponse aux = this.ProcessT(crReq, actions);
 
                     this.ev.PushEvent(this.ToString(crReq));
@@ -851,14 +857,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
         {
             private TestEvents ev;
 
-            private Dictionary<byte[], object> objectsByBytes = new Dictionary<byte[], object>();
+            private Dictionary<IMemoryBuffer, object> objectsByBytes = new Dictionary<IMemoryBuffer, object>();
 
             public TestMarshaller(TestEvents ev)
             {
                 this.ev = ev;
             }
 
-            public Backend.RequestCall DeserializeRequestFromBytes(byte[] requestBytes)
+            public Backend.RequestCall DeserializeRequestFromBytes(IMemoryBuffer requestBytes)
             {
                 if (requestBytes == null)
                 {
@@ -868,7 +874,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 return (Backend.RequestCall)this.objectsByBytes[requestBytes];
             }
 
-            public RequestResponse DeserializeResponseFromBytes(byte[] responseBytes)
+            public RequestResponse DeserializeResponseFromBytes(IMemoryBuffer responseBytes)
             {
                 if (responseBytes == null)
                 {
@@ -878,28 +884,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
                 return (RequestResponse)this.objectsByBytes[responseBytes];
             }
 
-            public byte[] SerializeRequestAsBytes(Backend.RequestCall request)
+            public IMemoryBuffer SerializeRequestAsBytes(Backend.RequestCall request)
             {
                 if (request == null)
                 {
                     return null;
                 }
 
-                byte[] resp = new byte[0];
+                var resp = new ByteArrayBackedBuffer(new byte[0]);
 
                 this.objectsByBytes[resp] = request;
 
                 return resp;
             }
 
-            public byte[] SerializeResponseAsBytes(RequestResponse response)
+            public IMemoryBuffer SerializeResponseAsBytes(RequestResponse response)
             {
                 if (response == null)
                 {
                     return null;
                 }
 
-                byte[] resp = new byte[0];
+                var resp = new ByteArrayBackedBuffer(new byte[0]);
 
                 this.objectsByBytes[resp] = response;
 

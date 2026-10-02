@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>Microsoft.Vega.CodeCoverage</RootNamespace>
+    <AssemblyName>Microsoft.Vega.CodeCoverage</AssemblyName>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <PlatformTarget>x86</PlatformTarget>
+    <DocumentationFile>$(OutputPath)\CodeCoverage.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="VisualStudio.Coverage" GeneratePathProperty="true" IncludeAssets="none" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(PkgVisualStudio_Coverage)\lib\net45\Microsoft.VisualStudio.Coverage.Analysis.dll" />
+    <Reference Include="$(PkgVisualStudio_Coverage)\lib\net45\Microsoft.VisualStudio.Coverage.Interop.dll" />
+  </ItemGroup>
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

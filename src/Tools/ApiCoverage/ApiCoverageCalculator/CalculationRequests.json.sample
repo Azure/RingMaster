@@ -1,0 +1,16 @@
+{
+  "CalculateRequests": [
+    //{
+    //  "DllFileName": "",
+    //  "CoverageFileName": "",
+    //  "AssemblyFolder": ""
+    //}
+  ],
+  "InterfacesToIgnore": [],
+  "InterfaceWrappers": {
+    //"Microsoft.Windows.Azure.Networking.Nsm.InternalContracts.Services.INetworkManager": {
+    //  "InterfaceName": "Microsoft.Windows.Azure.Fabric.DataCenterManager.Contracts.INetworkManagement",
+    //  "AssemblyName": "Nsm.Contracts.dll"
+    //}
+  }
+}

@@ -9,8 +9,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-    using RingMaster.Data;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// RecursiveDeleter manages the state of a recursive delete operation.

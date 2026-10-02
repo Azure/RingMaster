@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="FiniteModelChecker\dirs.proj" />
-    <ProjectFile Include="RingMasterBackendTool\RingMasterBackendTool.csproj" />
-    <ProjectFile Include="RingMasterClientModule\RingMasterClientModule.csproj" />
-    <ProjectFile Include="RingMasterTool\RingMasterTool.csproj" />
-    <ProjectFile Include="VegaLogAnalyzer\VegaLogAnalyzer.csproj" />
+    <ProjectReference Include="ApiCoverage\dirs.proj" />
+    <ProjectReference Include="FiniteModelChecker\dirs.proj" />
+    <ProjectReference Include="RingMasterBackendTool\RingMasterBackendTool.csproj" />
+    <ProjectReference Include="RingMasterClientModule\RingMasterClientModule.csproj" />
+    <ProjectReference Include="RingMasterTool\RingMasterTool.csproj" />
+    <ProjectReference Include="VegaCodeCoverage\VegaCodeCoverage.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="VegaLogAnalyzer\VegaLogAnalyzer.csproj" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

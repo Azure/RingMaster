@@ -25,46 +25,82 @@ namespace Microsoft.Vega.Test.Helpers
     /// </summary>
     public static class Helpers
     {
+        private const string FabricClientPathRelativeToProgramFiles = @"Microsoft Service Fabric\bin\Fabric\Fabric.Code\FabricClient.dll";
+
         /// <summary>
-        /// The ring master service name
+        /// The ring master application type name
         /// </summary>
-        private const string RingMasterServiceName = "/RINGMASTERSERVICE";
+        private const string RingMasterAppTypeName = "RingMasterApplication";
+
+        /// <summary>
+        /// Creates a Service Fabric client with a clearer error when the native runtime is missing.
+        /// </summary>
+        /// <param name="serviceHostEndpoint">Optional endpoint for connecting to a remote gateway.</param>
+        /// <param name="serverName">The expected remote server name.</param>
+        /// <param name="thumbprint">The expected remote certificate thumbprint.</param>
+        /// <returns>A configured <see cref="FabricClient"/> instance.</returns>
+        public static FabricClient CreateFabricClient(string serviceHostEndpoint = "", string serverName = "", string thumbprint = "")
+        {
+            try
+            {
+                return string.IsNullOrEmpty(serviceHostEndpoint)
+                    ? new FabricClient()
+                    : new FabricClient(GetCredential(serverName, thumbprint), serviceHostEndpoint);
+            }
+            catch (Exception ex) when (IsFabricClientLoadFailure(ex))
+            {
+                throw new InvalidOperationException(BuildFabricClientLoadFailureMessage(serviceHostEndpoint), ex);
+            }
+        }
 
         /// <summary>
         /// Gets the backend Service endpoint
         /// </summary>
-        /// <returns>The vega service endpoint and primary node name.</returns>
-        public static async Task<Tuple<string, string>> GetVegaServiceInfo()
+        /// <param name="targetServiceIndex">Index of the target service.</param>
+        /// <param name="serviceHostEndpoint">The service host endpoint.</param>
+        /// <param name="serverName">Name of the server.</param>
+        /// <param name="thumbprint">The thumbprint.</param>
+        /// <param name="serviceBaseUri">The service base URI.</param>
+        /// <returns>
+        /// The vega service endpoint and primary node name.
+        /// </returns>
+        public static async Task<Tuple<string, string>> GetVegaServiceInfo(int targetServiceIndex = 0, string serviceHostEndpoint = "", string serverName = "", string thumbprint = "", string serviceBaseUri = "fabric:/RingMaster/RingMasterService")
         {
-            var fabricClient = new FabricClient();
-            var appList = await fabricClient.QueryManager.GetApplicationListAsync();
-            foreach (var app in appList)
+            var targetServiceUri = GetTargetServiceUri();
+            var rnd = new Random();
+            using FabricClient fabricClient = CreateFabricClient(serviceHostEndpoint, serverName, thumbprint);
+
+            var ringMasterApp = (await fabricClient.QueryManager.GetApplicationListAsync()).Where(app => app.ApplicationTypeName == RingMasterAppTypeName).FirstOrDefault();
+            var svc = (await fabricClient.QueryManager.GetServiceListAsync(ringMasterApp.ApplicationName)).Where(s => s.ServiceName.AbsoluteUri == targetServiceUri).FirstOrDefault();
+            if (svc == null)
             {
-                foreach (var svc in await fabricClient.QueryManager.GetServiceListAsync(app.ApplicationName))
-                {
-                    if (!svc.ServiceName.AbsoluteUri.ToUpperInvariant().Contains(RingMasterServiceName))
-                    {
-                        continue;
-                    }
-
-                    var resolvedPartition = await fabricClient.ServiceManager.ResolveServicePartitionAsync(svc.ServiceName);
-                    var endpoint = resolvedPartition.Endpoints
-                        .Where(ep => ep.Role == ServiceEndpointRole.StatefulPrimary)
-                        .Select(ep => ep.Address)
-                        .FirstOrDefault();
-
-                    // The format of endpoint is: "name":"uri". For instance:
-                    // {"Endpoints":{"ServiceEndpoint":"Tcp:\/\/10.30.78.31:99\/","ZkprServiceEndpoint":"Tcp:\/\/10.30.78.31:100\/"}}
-                    var match = Regex.Match(endpoint, $"\"ServiceEndpoint\":\"([^\"]+)\"");
-                    var serviceEndpoint = match.Success ? match.Groups[1].Value.Replace(@"\", string.Empty) : null;
-
-                    var replicas = await fabricClient.QueryManager.GetReplicaListAsync(resolvedPartition.Info.Id);
-                    var primaryNodeName = replicas.FirstOrDefault(r => ((StatefulServiceReplica)r).ReplicaRole == ReplicaRole.Primary).NodeName;
-                    return new Tuple<string, string>(new Uri(serviceEndpoint).Authority, primaryNodeName);
-                }
+                return new Tuple<string, string>(string.Empty, string.Empty);
             }
 
-            return new Tuple<string, string>(string.Empty, string.Empty);
+            var resolvedPartition = await fabricClient.ServiceManager.ResolveServicePartitionAsync(svc.ServiceName);
+            var endpoint = resolvedPartition.Endpoints
+                .Where(ep => ep.Role == ServiceEndpointRole.StatefulPrimary)
+                .Select(ep => ep.Address)
+                .FirstOrDefault();
+
+            var match = Regex.Match(endpoint, $"\"ServiceEndpoint\":\"([^\"]+)\"");
+            var serviceEndpoint = match.Success ? match.Groups[1].Value.Replace(@"\", string.Empty) : null;
+
+            var replicas = await fabricClient.QueryManager.GetReplicaListAsync(resolvedPartition.Info.Id);
+            var primaryNodeName = replicas.FirstOrDefault(r => ((StatefulServiceReplica)r).ReplicaRole == ReplicaRole.Primary).NodeName;
+            return new Tuple<string, string>(new Uri(serviceEndpoint).Authority, primaryNodeName);
+
+            string GetTargetServiceUri()
+            {
+                if (targetServiceIndex == 0)
+                {
+                    return serviceBaseUri;
+                }
+                else
+                {
+                    return $"{serviceBaseUri}{targetServiceIndex}";
+                }
+            }
         }
 
         /// <summary>
@@ -282,9 +318,83 @@ namespace Microsoft.Vega.Test.Helpers
         /// <returns>the field value</returns>
         public static object GetInstanceField(Type type, object instance, string fieldName)
         {
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
             BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
             FieldInfo field = type.GetField(fieldName, bindFlags);
             return field.GetValue(instance);
+        }
+
+        private static X509Credentials GetCredential(string serverName, string thumbprint)
+        {
+            var xc = new X509Credentials
+            {
+                FindType = X509FindType.FindByThumbprint,
+                FindValue = thumbprint,
+                StoreLocation = StoreLocation.LocalMachine,
+                StoreName = "My",
+            };
+
+            xc.RemoteCommonNames.Add(serverName);
+            xc.RemoteCertThumbprints.Add(thumbprint);
+            xc.ProtectionLevel = ProtectionLevel.EncryptAndSign;
+            return xc;
+        }
+
+        private static string BuildFabricClientLoadFailureMessage(string serviceHostEndpoint)
+        {
+            var defaultInstallPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                FabricClientPathRelativeToProgramFiles);
+
+            var discoveryHint = string.IsNullOrEmpty(serviceHostEndpoint)
+                ? "This test is trying to discover the RingMaster endpoint through Service Fabric because no server address was provided."
+                : "This test is trying to connect through Service Fabric using the provided host endpoint.";
+
+            return
+                $"Failed to load the native Service Fabric client library 'FabricClient.dll'. " +
+                $"The 'Microsoft.ServiceFabric' NuGet package only provides the managed 'System.Fabric' assemblies; " +
+                $"the native runtime comes from a local Service Fabric installation, typically at '{defaultInstallPath}'. " +
+                $"{discoveryHint} Install the Service Fabric runtime first " +
+                $"(for CloudTest see 'src\\CloudUnitTests\\CloudTestSetup.cmd' or 'ServiceFabric.XCopyPackage\\InstallFabric.ps1'), " +
+                $"or set the test's 'ServerAddress' so it can skip Service Fabric discovery when that is supported.";
+        }
+
+        private static bool IsFabricClientLoadFailure(Exception exception)
+        {
+            while (exception != null)
+            {
+                switch (exception)
+                {
+                    case DllNotFoundException:
+                        return true;
+                    case FileNotFoundException fileNotFound when ContainsFabricClientText(fileNotFound.FileName) || ContainsFabricClientText(fileNotFound.Message):
+                        return true;
+                    case FileLoadException fileLoad when ContainsFabricClientText(fileLoad.FileName) || ContainsFabricClientText(fileLoad.Message):
+                        return true;
+                    case BadImageFormatException badImageFormat when ContainsFabricClientText(badImageFormat.FileName) || ContainsFabricClientText(badImageFormat.Message):
+                        return true;
+                    default:
+                        if (ContainsFabricClientText(exception.Message))
+                        {
+                            return true;
+                        }
+
+                        exception = exception.InnerException;
+                        break;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsFabricClientText(string text)
+        {
+            return !string.IsNullOrEmpty(text)
+                && text.IndexOf("FabricClient.dll", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

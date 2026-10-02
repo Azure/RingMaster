@@ -545,7 +545,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterCommonU
         /// This method tests white lists
         /// </summary>
         [TestMethod]
-        public void TastBreakGlass()
+        public void TestBreakGlass()
         {
             CertificateRules.CertAccessor.Instance = new TestSslWrapping.TestCertAccessor();
             Dictionary<string, TestSslWrapping.TestCertificate> dict = new Dictionary<string, TestSslWrapping.TestCertificate>();
@@ -824,6 +824,149 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterCommonU
             CertificateRules.AbstractCertificateRule[] rules = new CertificateRules.AbstractCertificateRule[] 
             {
                 new CertificateRules.AllowCertSubjectRule(new string[] { "subject3" }).SetAppliesTo(CertificateRules.AbstractCertificateRule.RoleToApply.ClientCert),
+                new CertificateRules.AllowCertificatesRule(HelperDictionary.ContainedIn(dict["thumb2"])).SetAppliesTo(CertificateRules.AbstractCertificateRule.RoleToApply.ServerCert),
+            };
+
+            wr = new TestSslWrapping(new string[] { "thumb1" }, new string[] { "thumb2" }, rules, CertificateValidator.DefaultFlags);
+            wr.SslPolicyErrors = SslPolicyErrors.None;
+            wr.SetServerCertificate(TestSslWrapping.TestCertificate.Find("thumb2"));
+            wr.SetClientCertificate(TestSslWrapping.TestCertificate.Find("thumb3"));
+
+            using (TestTcpClient client = new TestTcpClient())
+            {
+                wr.GetValidatedStreamOnClient("server1", client);
+                wr.GetValidatedStreamOnServer(client);
+            }
+        }
+
+        /// <summary>
+        /// Tests certificate validation where a standard wildcard subject name is allowed, using the "*." (greedy) wildcard operator.
+        /// This is the primary wildcard use case scenario to support in accompanying change to cert validation logic.
+        /// </summary>
+        [TestMethod]
+        public void TestGreedyWildcardSubject()
+        {
+            TestWildcardSubject(new string[] { "*.subject3" });
+        }
+
+        /// <summary>
+        /// Tests edge-case where wildcard is presented midstream in subject name allow list.
+        /// </summary>
+        [TestMethod]
+        public void TestWildCardSubjectMidstream()
+        {
+            TestWildcardSubject(new string[] { "*vice.subject3" });
+        }
+
+        /// <summary>
+        /// Tests edge-case scenario where non-greedy "?" (single character) wildcard operator is present in the allow list.
+        /// </summary>
+        [TestMethod]
+        public void TestNonGreedyWildCardSubject()
+        {
+            TestWildcardSubject(new string[] { "?er?ice.subject3" });
+        }
+
+        /// <summary>
+        /// Tests that any cert subject presented is allowed.
+        /// </summary>
+        [TestMethod]
+        public void TestAllCertSubjectsAllowed()
+        {
+            TestWildcardSubject(new string[] { "*" });
+        }
+
+        /// <summary>
+        /// Multiple subject names allow listed (some explicit, some wildcards), only one wildcard subject name ("*.subject3) passes validation.
+        /// </summary>
+        [TestMethod]
+        public void TestMultipleSubjectsAllowed()
+        {
+            TestWildcardSubject(new string[] { "false", "service", "*.subject3" , "*.notmatching"});
+        }
+
+        /// <summary>
+        /// Test explicit subject name allowed ("service.subject3") and wildcard does not.
+        /// </summary>
+        [TestMethod]
+        public void TestExplicitSubjectAllowed()
+        {
+            TestWildcardSubject(new string[] { "service.subject3", "*.notmatching" });
+        }
+
+        // The below wrapper methods test expected subject name failure scenarios. Pass test if client cert validation fails as expected.
+
+        /// <summary>
+        /// "wrong.subject" is allow listed, but "service.subject3" is presented by cert, validation fails as expected, so test passes.
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(Exception), AllowDerivedTypes = true)]
+        public void TestExplicitSubjectFailure()
+        {
+            TestWildcardSubject(new string[] { "wrong.subject" });
+        }
+
+        /// <summary>
+        /// "*.notmatching" wildcard is allow listed, but "service.subject3" is presented, cert validation fails, test passes.
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(Exception), AllowDerivedTypes = true)]
+        public void TestWildcardSubjectFailure()
+        {
+            TestWildcardSubject(new string[] { "*.notmatching" });
+        }
+
+        /// <summary>
+        /// Wildcard TestMethods above (wrapper methods) call into this standard method repeatedly to test different subject name allow-list scenarios.
+        /// </summary>
+        /// <param name="subjectNameAllowList">The allowed cert subject names</param>
+        public void TestWildcardSubject(string[] subjectNameAllowList)
+        {
+            CertificateRules.CertAccessor.Instance = new TestSslWrapping.TestCertAccessor();
+            Dictionary<string, TestSslWrapping.TestCertificate> dict = new Dictionary<string, TestSslWrapping.TestCertificate>();
+
+            TestSslWrapping.TestCertificate.SetStore(() =>
+            {
+                dict.Add("thumb1", new TestSslWrapping.TestCertificate("thumb1", "serial1", "service.subject1", "issuer1", DateTime.UtcNow - TimeSpan.FromDays(2), DateTime.UtcNow + TimeSpan.FromDays(2)));
+                dict.Add("thumb2", new TestSslWrapping.TestCertificate("thumb2", "serial2", "service.subject2", "issuer2", DateTime.UtcNow - TimeSpan.FromDays(2), DateTime.UtcNow + TimeSpan.FromDays(2)));
+                // "service.subject3" is the certificate subject name being presented to authenticate during these test cases.
+                dict.Add("thumb3", new TestSslWrapping.TestCertificate("thumb3", "serial3", "service.subject3", "issuer3", DateTime.UtcNow - TimeSpan.FromDays(2), DateTime.UtcNow + TimeSpan.FromDays(2)));
+                dict.Add("thumb4", new TestSslWrapping.TestCertificate("thumb4", "serial4", "service.subject4", "issuer4", DateTime.UtcNow - TimeSpan.FromDays(2), DateTime.UtcNow + TimeSpan.FromDays(2)));
+
+                // thumb1 was signed by thumb4
+                dict["thumb1"].SignatureStatus = new X509ChainStatus[] { TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError), TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError) };
+                dict["thumb1"].SignatureChainAsString = "thumb1,thumb4";
+
+                // thumb2 was signed by thumb4
+                dict["thumb2"].SignatureStatus = new X509ChainStatus[] { TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError), TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError) };
+                dict["thumb2"].SignatureChainAsString = "thumb2,thumb4";
+
+                // thumb3 was signed by thumb4
+                dict["thumb3"].SignatureStatus = new X509ChainStatus[] { TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError), TestSslWrapping.TestCertificate.CreateStatus(X509ChainStatusFlags.NoError) };
+                dict["thumb3"].SignatureChainAsString = "thumb3,thumb4";
+                return dict;
+            });
+
+            TestSslWrapping wr = new TestSslWrapping(new string[] { "thumb1" }, new string[] { "thumb2" }, CertificateValidator.DefaultFlags);
+
+            wr.SslPolicyErrors = SslPolicyErrors.None;
+            wr.SetServerCertificate(TestSslWrapping.TestCertificate.Find("thumb2"));
+            wr.SetClientCertificate(TestSslWrapping.TestCertificate.Find("thumb3"));
+
+            using (TestTcpClient client = new TestTcpClient())
+            {
+                wr.GetValidatedStreamOnClient("server1", client);
+
+                MustThrow<TestSslWrapping.TestValidationException>(
+                    () =>
+                    {
+                        wr.GetValidatedStreamOnServer(client);
+                    });
+            }
+
+            CertificateRules.AbstractCertificateRule[] rules = new CertificateRules.AbstractCertificateRule[]
+            {
+                new CertificateRules.AllowCertSubjectRule(subjectNameAllowList).SetAppliesTo(CertificateRules.AbstractCertificateRule.RoleToApply.ClientCert),
                 new CertificateRules.AllowCertificatesRule(HelperDictionary.ContainedIn(dict["thumb2"])).SetAppliesTo(CertificateRules.AbstractCertificateRule.RoleToApply.ServerCert),
             };
 

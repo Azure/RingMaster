@@ -1,44 +1,59 @@
 @rem Run all unit tests in Networking-Vega. Used by CDPx pipeline.
 setlocal enabledelayedexpansion
 
+set noCodeCoverage=%1
+set configuration=%2
+
+if "%noCodeCoverage%" neq "noCodeCoverage" (
+	set runSettings=--settings %~dp0\unittests.runsettings
+)
+
+if "%configuration%" equ "" (
+	set configuration=Release
+)
+
 cd /d %~dp0
-cd ..\out
+set repoRoot=%cd%\..
 
-set subdir=%~1
-if "%subdir%"=="" set subdir=Release-x64
-cd %subdir%
+cd %repoRoot%\src
 
-set ut=dotnet vstest --logger:trx
+set ut=dotnet test --logger:trx -c %configuration% -r %repoRoot%\TestResults
 set TestEnvironment=QTEST
 
-%ut% CommunicationProtocolUnitTest\Microsoft.RingMaster.CommunicationProtocolUnitTest.dll
+%ut% Common\CommunicationProtocol\unittest\CommunicationProtocolUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% EventSourceValidation\Microsoft.RingMaster.Test.EventSourceValidation.dll
+%ut% Tests\EventSourceValidation\EventSourceValidation.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% HelperTypesUnitTest\Microsoft.RingMaster.HelperTypesUnitTest.dll
+%ut% Backend\HelperTypes\unittest\HelperTypesUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% LogStreamUnitTest\Microsoft.RingMaster.LogStreamUnitTest.dll
+%ut% Infrastructure\LogStream\unittests\LogStreamUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% MiscellaneousTests\MiscellaneousTests.dll
+%ut% Tests\MiscellaneousTests\MiscellaneousTests.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% RingMasterBackendCoreStress\Microsoft.RingMaster.Backend.CoreStress.dll
+%ut% Backend\Core\stress\RingMasterBackendCoreStress.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% RingMasterBackendCoreUnitTest\Microsoft.RingMaster.Backend.CoreUnitTest.dll
+%ut% Backend\Core\unittest\RingMasterBackendCoreUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% RingMasterBackendNativeUnitTest\Microsoft.RingMaster.Backend.SortedDictExtUnitTest.dll
+%ut% Backend\Native\unittest\RingMasterBackendNativeUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% RingMasterClientUnitTest\Microsoft.RingMaster.ClientUnitTest.dll
+%ut% Common\RingMasterClient\unittest\RingMasterClientUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% RingMasterCommonUnitTest\Microsoft.RingMaster.CommonUnitTest.dll
+%ut% Common\RingMasterCommon\unittest\RingMasterCommonUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% SecureTransportUnitTest\Microsoft.RingMaster.SecureTransportUnitTest.dll
+%ut% Common\SecureTransport\unittest\SecureTransportUnitTest.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% ServiceFabricUnitTest\Microsoft.RingMaster.ServiceFabricUnitTest.dll
+%ut% Infrastructure\ServiceFabric\unittests\ServiceFabricUnitTest.csproj %runSettings%
+if "%errorlevel%" neq "0" exit /b %errorlevel%
+%ut% Tests\RingMasterBVT\RingMasterBVT.csproj %runSettings%
+if "%errorlevel%" neq "0" exit /b %errorlevel%
+%ut% Tests\EndToEndTests\EndToEndTests.csproj %runSettings%
 if "%errorlevel%" neq "0" exit /b %errorlevel%
 
-%ut% RingMasterBVT\Microsoft.RingMaster.Test.BVT.dll
-if "%errorlevel%" neq "0" exit /b %errorlevel%
-%ut% EndToEndTests\Microsoft.RingMaster.Test.EndToEnd.dll
-if "%errorlevel%" neq "0" exit /b %errorlevel%
+cd %repoRoot%\out\%configuration%-x64
+VegaCodeCoverage\Microsoft.Vega.CodeCoverage.exe %repoRoot%\TestResults %repoRoot%\CoverageReport
+
+dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
+tools\reportgenerator -reports:%repoRoot%\CoverageReport\MergedCoverage.xml -targetdir:%repoRoot%\CoverageReport -reporttypes:Cobertura
+tools\reportgenerator -reports:%repoRoot%\CoverageReport\MergedCoverage.xml -targetdir:%repoRoot%\CoverageReport -reporttypes:htmlInline
 
 endlocal

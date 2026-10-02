@@ -103,5 +103,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.TestCases
                 Assert.IsTrue(Acl.AreEqual(expected[i], actual[i]));
             }
         }
+
+        /// <summary>
+        /// Verify that all fields of the <see cref="IStat"/> data structure are set
+        /// to sensible values for a newly created node.
+        /// </summary>
+        /// <param name="stat">The stat to verify</param>
+        /// <param name="expectedDataLength">Expected data length for the newly created node</param>
+        /// <param name="context">The context in which this verification is being performed</param>
+        internal static void VerifyStatForFreshlyCreatedNode(IStat stat, int expectedDataLength = 0, string context = null)
+        {
+            // Node exists, so stat should not be null
+            Assert.IsNotNull(stat);
+
+            // Node has just been created so Czxid (create transaction id)
+            // must be equal to Mzxid (modify transaction id). Similarly,
+            // Ctime must be equal to Mtime.
+            Assert.AreEqual(stat.Czxid, stat.Mzxid, string.Format("Czxid vs Mzxid {0}", context));
+            Assert.AreEqual(stat.Ctime, stat.Mtime, string.Format("Ctime vs Mtime {0}", context));
+
+            // Since no children were added or deleted, Pzxid must be
+            // the same as Czxid.
+            Assert.AreEqual(stat.Czxid, stat.Pzxid);
+
+            // No Changes yet, so version must be 1.
+            Assert.AreEqual(1, stat.Version);
+            Assert.AreEqual(1, stat.Cversion);
+            Assert.AreEqual(1, stat.Aversion);
+
+            // There are no children and the node has no data.
+            Assert.AreEqual(0, stat.NumChildren);
+            Assert.AreEqual(expectedDataLength, stat.DataLength);
+        }
     }
 }

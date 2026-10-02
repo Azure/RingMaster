@@ -129,6 +129,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public IGetDataOptionArgument OptionArgument => this.Request.OptionArgument;
 
         /// <summary>
+        /// Gets a value indicating whether the result will contain user metadata.
+        /// </summary>
+        public bool UserMetadataRequired => this.Request.UserMetadataRequired;
+
+        /// <summary>
         /// Returns a hash code for this instance.
         /// </summary>
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>

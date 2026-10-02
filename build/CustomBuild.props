@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <PropertyGroup Condition=" '$(CdpxPostSigning)' == 'true' ">
+    <IsCleaning>false</IsCleaning>
+  </PropertyGroup>
+
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
     <!-- Default build is debug x64.  AnyCPU is slow and may causes UT failure in CloudBuild -->
     <PlatformTarget Condition="'$(PlatformTarget)' == ''">x64</PlatformTarget>
 
-    <!-- Fix the .NET core version across product, test code, and nuget packages -->
-    <DotNetCoreVersion>2.0.0</DotNetCoreVersion>
+    <!-- SDK version 8.0.303, runtime version 8.0.0 -->
+    <DotNetCoreVersion>8.0.0</DotNetCoreVersion>
+    <NetCoreAppVer>net8.0</NetCoreAppVer>
 
     <SRCROOT>$(EnlistmentRoot)\src</SRCROOT>
     <PkgRoot>$(EnlistmentRoot)\packages</PkgRoot>
 
-    <!-- Fix CDPx build issue -->
-    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">$(UserProfile)\.nuget\packages\</NuGetPackageRoot>
-
-    <NoTargets>$(MSBuildThisFileDirectory)NoTarget.targets</NoTargets>
-    <TraversalTargets>$(MSBuildThisFileDirectory)Traversal.targets</TraversalTargets>
-
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendTargetFrameworkToOutputPath Condition="'$(AppendTargetFrameworkToOutputPath)' == ''">false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 
     <OutputRoot>$(EnlistmentRoot)\out\$(Configuration)-$(Platform)\</OutputRoot>
     <OutputPath>$(OutputRoot)$(MSBuildProjectName)</OutputPath>
+  </PropertyGroup>
 
-    <!-- TODO: Workaround on CloudBuild. QTest does not work for dotnetcore for now. -->
-    <EnableNuGetDeterministic Condition="'$(QBUILD)' != ''">false</EnableNuGetDeterministic>
-
+  <!-- Make all Service Fabric services self-contained to include the .NET runtime -->
+  <PropertyGroup Condition="'$(IsServiceFabricServiceProject)' == 'True'">
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -64,6 +64,8 @@
     <_BranchFile Condition="!Exists($(_githead))">refs/heads/quickbuild</_BranchFile>
     <!-- On CloudBuild, symlink for .git does not exist -->
     <_CommitHash Condition="'$(VersionCommitHash)' == '' And '$(Q_SYNCTO_CHANGELIST)' != '' And '$(Q_SYNCTO_CHANGELIST)' != '0' ">$(Q_SYNCTO_CHANGELIST)</_CommitHash>
+    <!-- CDPX: Use the environment variable if available -->
+    <_CommitHash Condition="'$(CDP_COMMIT_ID)' != ''">$(CDP_COMMIT_ID)</_CommitHash>
     <!-- For BuildTracker buddy build, neither of above way works -->
     <_CommitHash Condition="'$(_CommitHash)' == ''">0123456789</_CommitHash>
 
@@ -72,8 +74,13 @@
     <!-- Normalize the branch name, which will be part of build number later -->
     <GitBranchName>$([System.Text.RegularExpressions.Regex]::Replace($(GitBranchName), '[/|\.\-"%3C%3E]', '_'))</GitBranchName>
 
+    <!-- If user defined branch name is too long, nuget generation will fail, and we need to truncate it -->
+    <GitBranchName Condition="$(GitBranchName.Length) > 50">$(GitBranchName.Substring(0,50))</GitBranchName>
+
     <!-- On private machine, append user name to the branch name -->
     <GitBranchName Condition="'$(BuildTracker)'=='' And Exists('$(EnlistmentRoot)\.git')">$(GitBranchName)_$(USERNAME)</GitBranchName>
+    <!-- CDPX: always detached mode, no branch name, hide it using "release" -->
+    <GitBranchName Condition="'$(CDP_COMMIT_ID)' != ''">release-cdpx</GitBranchName>
 
     <VersionCommitHash Condition="'$(VersionCommitHash)'==''">$(_CommitHash.Substring(0,7))</VersionCommitHash>
 
@@ -87,11 +94,15 @@
 
    <!-- Settings common to all projects -->
   <PropertyGroup>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Making inner dev loop more efficient by not breaking the debug build on style issues.  -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' != 'Debug'">true</TreatWarningsAsErrors>
     <StyleCopTreatErrorsAsWarnings Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</StyleCopTreatErrorsAsWarnings>
     <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
     <StyleCopProps>$(MSBuildThisFileDirectory)stylecop.props</StyleCopProps>
+    
+    <!-- Enable ASLR to pass BinSkim check in CDPx -->
+    <HighEntropyVA>true</HighEntropyVA>
   </PropertyGroup>
 
   <PropertyGroup>

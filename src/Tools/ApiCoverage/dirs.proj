@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.Build.Traversal">
+  <ItemGroup>
+    <ProjectReference Include="CoverageInfoExtractor\CoverageInfoExtractor.csproj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="ApiCoverageCalculator\ApiCoverageCalculator.csproj" />
+  </ItemGroup>
+</Project>

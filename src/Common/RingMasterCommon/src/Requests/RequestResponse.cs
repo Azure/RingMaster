@@ -1,4 +1,4 @@
-// <copyright file="RequestResponse.cs" company="Microsoft Corporation">
+﻿// <copyright file="RequestResponse.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
 
@@ -6,6 +6,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+
+#nullable enable
 
     /// <summary>
     /// Class RequestResponse.
@@ -26,21 +28,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         public int ResultCode { get; set; }
 
         /// <summary>
+        /// Gets a type-safe representation of <see cref="ResultCode"/>.
+        /// </summary>
+        public RingMasterException.Code AsResultCode => (RingMasterException.Code)this.ResultCode;
+
+        /// <summary>
         /// Gets or sets the content.
         /// </summary>
         /// <value>The content.</value>
-        public object Content { get; set; }
+        public object? Content { get; set; }
 
         /// <summary>
         /// Gets or sets the stat.
         /// </summary>
         /// <value>The stat.</value>
-        public IStat Stat { get; set; }
+        public IStat? Stat { get; set; }
 
         /// <summary>
         /// Gets or sets the path for the response (in case there was a wildcard involved and the path for the response is not the one in the request.
         /// </summary>
-        public string ResponsePath { get; set; }
+        public string? ResponsePath { get; set; }
 
         /// <inheritdoc/>
         public override string ToString()
@@ -48,15 +55,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
             var s = this.Stat;
             if (s == null)
             {
-                return $"Id:{this.CallId} Code:{this.ResultCode}";
+                return $"Id: {this.CallId} Code: {this.AsResultCode}";
             }
             else
             {
                 // Keep the string compact to not overwhelm the log
                 return string.Format(
-                    "Id:{0} Code:{1} Stat:{2}",
+                    "Id: {0} Code: {1} Stat: {2}",
                     this.CallId,
-                    this.ResultCode,
+                    this.AsResultCode,
                     $"Ver:{s.Version}/{s.Cversion}/{s.Aversion} XID:{s.Czxid}/{s.Mzxid}/{s.Pzxid} Time:{s.Ctime}/{s.Mtime} Data:{s.DataLength} Children:{s.NumChildren}");
             }
         }

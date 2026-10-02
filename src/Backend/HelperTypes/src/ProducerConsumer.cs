@@ -43,10 +43,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
 
         public void EnqueueBatch(IList<T> calls)
         {
-            if (calls == null)
-            {
-                throw new ArgumentNullException(nameof(calls));
-            }
+            calls.ThrowIfNull();
 
             // enqueue and spin a thread if needed
             bool launch = false;

@@ -26,10 +26,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         /// <param name="lastLevelIsOverflow">Whether the last level is for overflow</param>
         public MultiLevelPool(Func<TPoolObject> constructor, int[] sizesPerLevel, bool lastLevelIsOverflow)
         {
-            if (sizesPerLevel == null)
-            {
-                throw new ArgumentNullException(nameof(sizesPerLevel));
-            }
+            sizesPerLevel.ThrowIfNull();
 
             this.Levels = new LevelPool[sizesPerLevel.Length];
             for (int i = 0; i < sizesPerLevel.Length; i++)
@@ -85,10 +82,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
             /// <param name="numLocks">Number of objects</param>
             public LevelPool(Func<TPoolObject> constructor, int numLocks)
             {
-                if (constructor == null)
-                {
-                    throw new ArgumentNullException(nameof(constructor));
-                }
+                constructor.ThrowIfNull();
 
                 if (numLocks <= 0)
                 {

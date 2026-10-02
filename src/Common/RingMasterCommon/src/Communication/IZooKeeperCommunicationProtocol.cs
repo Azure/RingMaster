@@ -5,7 +5,7 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication
 {
     using System.Threading.Tasks;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Interface to the protocol used to send requests and receive responses.

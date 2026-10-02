@@ -16,6 +16,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
     [TestClass]
     public class RingMasterBackendCoreUnitTest
     {
+        public const int MaxNodeDataSize = 10240000;
+        public const int MaxUserMetadataSize = 10240000;
+
         private RingMasterBackendCore backend;
         private PseudoNodes ps;
 
@@ -52,7 +55,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
 
         protected void StartPseudoNodes()
         {
-            PseudoNodes ps = new PseudoNodes(this.backend, GetSetting);
+            PseudoNodes ps = new PseudoNodes(this.backend, GetSetting, RingMasterServerInstrumentation.Instance);
 
             ps.SetRuntimeMembersetFunction(() =>
             {
@@ -86,6 +89,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterBackend
             if (settingName == "RingMasterLimits.MaxGetChildrenEnumerationCount")
             {
                 return "256";
+            }
+
+            if (settingName == "RingMasterLimits.MaxNodeDataSize")
+            {
+                return MaxNodeDataSize.ToString();
+            }
+
+            if (settingName == "RingMasterLimits.MaxUserMetadataSize")
+            {
+                return MaxUserMetadataSize.ToString();
             }
 
             return null;

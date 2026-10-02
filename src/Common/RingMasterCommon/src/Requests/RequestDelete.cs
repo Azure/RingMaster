@@ -16,8 +16,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="version">Version of the node must match this value for delete to succeed</param>
         /// <param name="cascade">If true, the delete will recursively delete child nodes</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestDelete(string path, int version, bool cascade, ulong uid = 0)
-            : this(path, version, cascade ? DeleteMode.CascadeDelete : DeleteMode.None, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestDelete(string path, int version, bool cascade, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : this(path, version, cascade ? DeleteMode.CascadeDelete : DeleteMode.None, uid, invokeCallbackBeforeComplete)
         {
         }
 
@@ -28,8 +29,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="version">Version of the node must match this value for delete to succeed</param>
         /// <param name="deletemode">The delete options for the operation</param>
         /// <param name="uid">Unique Id of the request</param>
-        public RequestDelete(string path, int version, DeleteMode deletemode = DeleteMode.None, ulong uid = 0)
-            : base(RingMasterRequestType.Delete, path, uid)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
+        public RequestDelete(string path, int version, DeleteMode deletemode = DeleteMode.None, ulong uid = 0, bool invokeCallbackBeforeComplete = false)
+            : base(RingMasterRequestType.Delete, path, uid, invokeCallbackBeforeComplete)
         {
             this.Version = version;
             this.DeleteMode = deletemode;

@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
+<Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectFile Include="Externals\Externals.proj" Condition="'$(OSSBUILD)' == ''" />
+    <ProjectReference Include="Externals\Externals.proj" Condition="'$(OSSBUILD)' == ''" />
   </ItemGroup>
-  <Import Project="$(TraversalTargets)" />
 </Project>

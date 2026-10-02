@@ -6,11 +6,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 {
     using System;
     using System.Diagnostics;
+    using System.Fabric;
+    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
 
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Server.ZooKeeper;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
     using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -27,29 +30,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         private readonly IZooKeeperCommunicationProtocol protocol;
         private readonly SecureTransport transport;
         private readonly IRingMasterRequestExecutor executor;
-        private readonly int port;
-        private readonly string uriPublished;
         private ZooKeeperServer server;
+        private string endpoint;
+        private StatefulServiceContext serviceContext;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ZooKeeperTcpListener" /> class.
         /// </summary>
-        /// <param name="port">Port where this listener will listen</param>
-        /// <param name="uriPublished">The specific uri to listen on</param>
         /// <param name="executor">RingMaster request executor</param>
         /// <param name="instrumentation">Instrumentation consumer</param>
         /// <param name="protocol">The Marshalling protocol</param>
+        /// <param name="serviceContext">The service context.</param>
         /// <param name="maximumSupportedProtocolVersion">Maximum supported version</param>
         public ZooKeeperTcpListener(
-            int port,
-            string uriPublished,
             IRingMasterRequestExecutor executor,
             IZooKeeperServerInstrumentation instrumentation,
             IZooKeeperCommunicationProtocol protocol,
+            StatefulServiceContext serviceContext,
             uint maximumSupportedProtocolVersion)
         {
-            this.port = port;
-            this.uriPublished = uriPublished;
             this.instrumentation = instrumentation;
             this.protocol = protocol;
 
@@ -62,22 +61,53 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
             this.transport = new SecureTransport(transportConfig);
             this.executor = executor;
+            this.serviceContext = serviceContext;
+            this.endpoint = string.Empty;
+            this.Port = 0;
         }
+
+        /// <summary>
+        /// Gets or sets the port to listen on.
+        /// </summary>
+        /// <value>TCP port.</value>
+        public int Port { get; set; }
 
         /// <summary>
         /// The open callback
         /// </summary>
         /// <param name="cancellationToken">the Cancellation Token</param>
         /// <returns>A <see cref="Task"/> that tracks completion of this method</returns>
-        public Task<string> OpenAsync(CancellationToken cancellationToken)
+        public async Task<string> OpenAsync(CancellationToken cancellationToken)
         {
-            RingMasterServiceEventSource.Log.ListenerOpenAsync(this.uriPublished);
+            RingMasterServiceEventSource.Log.ListenerOpenAsync();
             this.server = new ZooKeeperServer(this.protocol, this.instrumentation, cancellationToken: cancellationToken);
 
             this.server.RegisterTransport(this.transport);
             this.server.OnInitSession = this.OnInitSession;
-            this.transport.StartServer(this.port);
-            return Task.FromResult(this.uriPublished);
+            var unused = this.transport.StartServer(this.Port);
+            while (true)
+            {
+                if (this.transport.IsActive && this.transport.LocalEndpoint != null)
+                {
+                    var port = (ushort)((IPEndPoint)this.transport.LocalEndpoint).Port;
+                    if (port != 0)
+                    {
+                        string nodeIp = this.serviceContext.NodeContext.IPAddressOrFQDN;
+
+                        if (nodeIp.Equals("LocalHost", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            nodeIp = RingMasterApplicationHelper.GetHostIp(Dns.GetHostName());
+                        }
+
+                        this.endpoint = $"TCP://{nodeIp}:{port}";
+
+                        RingMasterServiceEventSource.Log.CreateListener("ZookeeperProtocol", this.endpoint, ushort.MaxValue);
+                        return this.endpoint;
+                    }
+                }
+
+                await Task.Yield();
+            }
         }
 
         /// <summary>
@@ -87,7 +117,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// <returns>A <see cref="Task"/> that tracks completion of this method</returns>
         public Task CloseAsync(CancellationToken cancellationToken)
         {
-            RingMasterServiceEventSource.Log.ListenerCloseAsync(this.uriPublished);
+            RingMasterServiceEventSource.Log.ListenerCloseAsync(this.endpoint);
             this.transport.Stop();
             return Task.FromResult(0);
         }
@@ -97,7 +127,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
         /// </summary>
         public void Abort()
         {
-            RingMasterServiceEventSource.Log.ListenerAbort(this.uriPublished);
+            RingMasterServiceEventSource.Log.ListenerAbort(this.endpoint);
         }
 
         /// <inheritdoc />
@@ -109,7 +139,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
 
         private IRingMasterRequestHandlerOverlapped OnInitSession(RequestInit initRequest)
         {
-            RingMasterServiceEventSource.Log.ListenerInitSession(this.uriPublished, initRequest.Auth?.ClientIP, initRequest.Auth?.ClientDigest);
+            RingMasterServiceEventSource.Log.ListenerInitSession(this.endpoint, initRequest.Auth?.ClientIP, initRequest.Auth?.ClientDigest);
             return new CoreRequestHandler(this.executor, initRequest);
         }
     }

@@ -30,10 +30,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public void Set(ManualResetEvent ev)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordSet(ev);
             ev.Set();
@@ -47,10 +44,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public bool WaitOneAndReturn(ref ManualResetEvent ev)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordWait(ev);
             bool res = ev.WaitOne();
@@ -72,10 +66,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public bool WaitOneAndReturn(int timeout, ref ManualResetEvent ev)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordWait(ev);
 
@@ -98,10 +89,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public bool WaitOneAndKeep(ManualResetEvent ev, int timeoutInMillis)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordWait(ev);
             bool res = ev.WaitOne(timeoutInMillis);
@@ -116,10 +104,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public void WaitOneAndKeep(ManualResetEvent ev)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordWait(ev);
             ev.WaitOne();
@@ -135,10 +120,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTyp
         [SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Unnecessary")]
         public bool WaitOneAndKeep(int timeout, ManualResetEvent ev)
         {
-            if (ev == null)
-            {
-                throw new ArgumentNullException(nameof(ev));
-            }
+            ev.ThrowIfNull();
 
             RingMasterThreadPool.Instance.RecordWait(ev);
             bool res = ev.WaitOne(timeout);

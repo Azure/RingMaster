@@ -5,8 +5,8 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Linq;
     using System.Runtime.CompilerServices;
@@ -41,10 +41,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="data">The data.</param>
         public Node(IPersistedData data)
         {
-            if (data == null)
-            {
-                throw new ArgumentNullException("data");
-            }
+            data.ThrowIfNull();
 
             if (data.Node != null && data.Node != this)
             {
@@ -142,6 +139,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public static int MaxSortedDictionaryThreshold { get; set; } = 50000;
 
         /// <summary>
+        /// Gets or sets array pool used for sorting children of nodes that are below the sorted dictionary threshold.
+        /// </summary>
+        public static ArrayPool<string> SortingArrayPool { get; set; } = ArrayPool<string>.Shared;
+
+        /// <summary>
         /// Gets or sets the persisted data
         /// </summary>
         public IPersistedData Persisted { get; set; }
@@ -150,107 +152,70 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Gets the global unique identifier during this execution.
         /// </summary>
         /// <value>The global unique identifier.</value>
-        public string GlobalUniqueId
-        {
-            get
-            {
-                return string.Format("{0}-{1}", this.Persisted.GetType().GetHashCode(), this.Persisted.Id);
-            }
-        }
+        public string GlobalUniqueId => $"{this.Persisted.GetType().GetHashCode()}-{this.Persisted.Id}";
 
         /// <summary>
         /// Gets the children mapping in raw
         /// </summary>
-        /// <value>the children</value>
-        public virtual IDictionary<string, IPersistedData> ChildrenMapping
-        {
-            get { return emptyDictionary; }
-        }
+        /// <value>the children.</value>
+        public virtual IDictionary<string, IPersistedData> ChildrenMapping => emptyDictionary;
 
         /// <summary>
         /// Gets the children count.
         /// </summary>
         /// <value>The children count.</value>
-        public virtual int ChildrenCount
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        public virtual int ChildrenCount => 0;
 
         /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public string Name
-        {
-            get
-            {
-                return this.Persisted.Name;
-            }
-        }
+        public string Name => this.Persisted.Name;
 
         /// <summary>
         /// Gets the acl.
         /// </summary>
         /// <value>The acl.</value>
-        public IEnumerable<Acl> Acl
-        {
-            get
-            {
-                return this.Persisted.Acl;
-            }
-        }
+        public IEnumerable<Acl> Acl => this.Persisted.Acl;
 
         /// <summary>
         /// Gets the parent node.
         /// </summary>
-        public Node Parent
-        {
-            get
-            {
-                IPersistedData persistedParent = this.Persisted.Parent;
-                return persistedParent == null ? null : persistedParent.Node;
-            }
-        }
+        public Node Parent => this.Persisted.Parent?.Node;
 
         /// <summary>
         /// Gets the node stat.
         /// </summary>
         /// <value>The node stat.</value>
-        public Stat NodeStat
-        {
-            get
-            {
-                // note: we need to clone here, since "stat" is not immutable and therefore can change.
-                // No point to lock while clining, since the lock is already acquired
-                // cloning is needed since the lock will be released before we serialize the reference.
-                return new Stat(this.Persisted.Stat);
-            }
-        }
+        public Stat NodeStat =>
+
+            // note: we need to clone here, since "stat" is not immutable and therefore can change.
+            // No point to lock while cloning, since the lock is already acquired
+            // cloning is needed since the lock will be released before we serialize the reference.
+            new(this.Persisted.Stat);
 
         /// <summary>
         /// Gets the data.
         /// </summary>
         /// <value>The data.</value>
-        public byte[] Data
-        {
-            get
-            {
-                // note: no need to cloning, since the byte array is immutable, and we return here the reference
-                return this.Persisted.Data;
-            }
-        }
+        public byte[] Data =>
+
+            // note: no need to cloning, since the byte array is immutable, and we return here the reference
+            this.Persisted.Data;
+
+        /// <summary>
+        /// Gets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata => this.Persisted.UserMetadata;
 
         /// <summary>
         /// Gets a value indicating whether this instance is root.
         /// </summary>
         /// <value><c>true</c> if this instance is root; otherwise, <c>false</c>.</value>
-        public virtual bool IsRoot
-        {
-            get { return false; }
-        }
+        public virtual bool IsRoot => false;
 
         /// <summary>
         /// Gets or sets the watchers.
@@ -259,15 +224,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <exception cref="System.InvalidOperationException">Set operation not allowed</exception>
         protected virtual ICollection<IWatcher> Watchers
         {
-            get
-            {
-                return null;
-            }
-
-            set
-            {
-                throw new InvalidOperationException();
-            }
+            get => null;
+            set => throw new InvalidOperationException();
         }
 
         /// <summary>
@@ -277,10 +235,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <returns>Path to the node</returns>
         public static string BuildPath(IPersistedData d)
         {
-            if (d == null)
-            {
-                throw new ArgumentNullException("d");
-            }
+            d.ThrowIfNull();
 
             // TODO: this generates too many strings!
             string path = d.Name;
@@ -340,7 +295,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         public void SetData(byte[] data)
         {
             this.Persisted.Data = data;
-            this.Persisted.Stat.DataLength = this.Persisted.Data == null ? 0 : this.Persisted.Data.Length;
+            this.Persisted.Stat.DataLength = this.Persisted.Data?.Length ?? 0;
+        }
+
+        /// <summary>
+        /// Sets the user metadata.
+        /// </summary>
+        /// <param name="data">The data.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        public void SetDataAndUserMetadata(byte[] data, byte[] userMetadata)
+        {
+            this.SetData(data);
+            this.Persisted.UserMetadata = userMetadata;
         }
 
         /// <summary>
@@ -354,7 +320,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return this.Persisted.Node.GetWatcherList();
             }
 
-            return new string[0];
+            return Array.Empty<string>();
         }
 
         /// <summary>
@@ -462,11 +428,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <param name="chg">The CHG.</param>
         /// <param name="path">The path.</param>
         /// <param name="locklist">The locklist this triggers will be fired on.</param>
-        public void ScheduleTriggerWatchers(ChangeKind chg, string path, ILockListTransaction locklist)
+        /// <param name="childName">Name of the child.</param>
+        /// <param name="childData">The child data.</param>
+        /// <param name="childStat">The child stat.</param>
+        /// <param name="childUserMetadata">The child user metadata.</param>
+        public void ScheduleTriggerWatchers(ChangeKind chg, string path, ILockListTransaction locklist, string childName = null, byte[] childData = null, IStat childStat = null, byte[] childUserMetadata = null)
         {
             WatchedEvent.WatchedEventType evt = WatchedEvent.WatchedEventType.None;
             byte[] data = null;
             IStat stat = null;
+            byte[] userMetadata = null;
 
             switch (chg)
             {
@@ -476,17 +447,35 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     // newly created node doesn't have child, this is what we have
                     data = this.Data;
                     stat = this.NodeStat;
+                    userMetadata = this.UserMetadata;
                     break;
 
                 case ChangeKind.ChildrenAdded:
+                    evt = WatchedEvent.WatchedEventType.NodeChildrenChanged;
+                    stat = this.NodeStat;
+                    break;
+
                 case ChangeKind.ChildrenRemoved:
                     evt = WatchedEvent.WatchedEventType.NodeChildrenChanged;
                     stat = this.NodeStat;
+
+                    // even the child data and stat passed in is not null, we need explicitly
+                    // set to null here to differentiate ChildrenRemoved and ChildrenAdded event
+                    childData = null;
+                    childStat = null;
+                    childUserMetadata = null;
                     break;
 
                 case ChangeKind.DataChanged:
                     evt = WatchedEvent.WatchedEventType.NodeDataChanged;
                     data = this.Data;
+                    stat = this.NodeStat;
+                    break;
+
+                case ChangeKind.DataAndUserMetadataChanged:
+                    evt = WatchedEvent.WatchedEventType.NodeDataAndUserMetadataChanged;
+                    data = this.Data;
+                    userMetadata = this.UserMetadata;
                     stat = this.NodeStat;
                     break;
 
@@ -515,10 +504,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return;
             }
 
-            var evtWithData = new WatchedEvent(evt, WatchedEvent.WatchedEventKeeperState.SyncConnected, path, data, stat);
-            var evtNoData = data == null && stat == null
-                ? evtWithData
-                : new WatchedEvent(evt, WatchedEvent.WatchedEventKeeperState.SyncConnected, path, null, null);
+            var evtWithChild = new WatchedEvent(evt, WatchedEvent.WatchedEventKeeperState.SyncConnected, path, data, stat, childName, childData, childStat, userMetadata, childUserMetadata);
+            var evtNoChild = new WatchedEvent(evt, WatchedEvent.WatchedEventKeeperState.SyncConnected, path, null, null, null, null, null);
 
             if (watchers != null)
             {
@@ -547,21 +534,38 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             Action act = new Action(() =>
             {
-                var watchersOnPath = ClientSession.GetBulkWatchers(path);
-                if (watchers != null)
+                foreach (IWatcher watcher in ClientSession.GetBulkWatchersOnParentPath(path))
                 {
-                    watchersOnPath = watchersOnPath.Concat(watchers);
-                }
-
-                foreach (IWatcher watcher in watchersOnPath)
-                {
-                    if (watcher.Kind.HasFlag(WatcherKind.IncludeData))
+                    if (watcher.Kind.HasFlag(WatcherKind.IncludeDataAndChildChange) && (chg == ChangeKind.NodeCreated || chg == ChangeKind.NodeDeleted))
                     {
-                        watcher.Process(evtWithData);
+                        // this means the node's create/delete will be sent together with parent's watcher. No need to send here
+                        continue;
+                    }
+                    else if (watcher.Kind.HasFlag(WatcherKind.IncludeDataAndChildChange))
+                    {
+                        watcher.Process(evtWithChild);
                     }
                     else
                     {
-                        watcher.Process(evtNoData);
+                        watcher.Process(evtNoChild);
+                    }
+                }
+
+                var watchersOnNode = ClientSession.GetBulkWatchersOnNode(path);
+                if (watchers != null)
+                {
+                    watchersOnNode = watchersOnNode.Concat(watchers);
+                }
+
+                foreach (IWatcher watcher in watchersOnNode)
+                {
+                    if (watcher.Kind.HasFlag(WatcherKind.IncludeDataAndChildChange))
+                    {
+                        watcher.Process(evtWithChild);
+                    }
+                    else
+                    {
+                        watcher.Process(evtNoChild);
                     }
                 }
             });
@@ -588,13 +592,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// indicates if the node's ACLs allow the given client id to get access
         /// </summary>
         /// <param name="auth">the session auth of the requestor</param>
-        /// <param name="perm">requested permisions</param>
+        /// <param name="perm">requested permissions</param>
         public void AclAllows(ISessionAuth auth, Perm perm)
         {
-            if (auth == null)
-            {
-                throw new ArgumentNullException("auth");
-            }
+            auth.ThrowIfNull();
 
             if (this.Persisted.Acl == null || auth.IsSuperSession)
             {
@@ -719,8 +720,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <returns>Node.</returns>
         internal Node GetNode(string path, ILockListTransaction lockList, WildCardBehavior wildcardBehavior, Perm accessNode, Perm accessParent, out Node parent, bool faultBackOnParent = false, IGetDataOptionArgument getDataArg = null)
         {
-            int childlevel;
-            return this.GetNode(path, lockList, wildcardBehavior, accessNode, accessParent, out parent, out childlevel, faultBackOnParent, getDataArg);
+            return this.GetNode(path, lockList, wildcardBehavior, accessNode, accessParent, out parent, out _, faultBackOnParent, getDataArg);
         }
 
         /// <summary>
@@ -728,7 +728,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="path">The path.</param>
         /// <param name="lockList">The lock list.</param>
-        /// <param name="wildcardBehavior">if AllowInLeaf, if the last element in the path doesnt exist, it will return '*' node if it exists. if AllowInBranch, trasversing the path will replace * or ** accordingly.</param>
+        /// <param name="wildcardBehavior">if AllowInLeaf, if the last element in the path doesn't exist, it will return '*' node if it exists. if AllowInBranch, traversing the path will replace * or ** accordingly.</param>
         /// <param name="accessNode">The access node.</param>
         /// <param name="accessParent">The access parent.</param>
         /// <param name="parent">The parent.</param>
@@ -831,7 +831,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                         return lastParent;
                     }
 
-                    // otherwise, we couldnt find the node for the desired path element.
+                    // otherwise, we couldn't find the node for the desired path element.
                     lastChildName = null;
                     resultnodelevel = -1;
                     return null;
@@ -887,7 +887,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="version">The version.</param>
         /// <param name="uniqueIncarnationId">The uniqueIncarnationId.</param>
-        /// <param name="kind">if the type of validation for uniqueid.</param>
+        /// <param name="kind">if the type of validation for unique id.</param>
         /// <returns><c>true</c> if the values match; otherwise, <c>false</c>.</returns>
         internal bool IsVersion(long version, Guid uniqueIncarnationId, RequestDefinitions.RequestCheck.UniqueIncarnationIdType kind)
         {
@@ -896,13 +896,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 return false;
             }
 
-            if (kind == RequestDefinitions.RequestCheck.UniqueIncarnationIdType.None || Guid.Equals(uniqueIncarnationId, Guid.Empty))
+            if (kind == RequestDefinitions.RequestCheck.UniqueIncarnationIdType.None || uniqueIncarnationId == Guid.Empty)
             {
                 return true;
             }
 
             Guid g2 = Stat.GetUniqueIncarnationId(this.Persisted.Stat, kind == RequestDefinitions.RequestCheck.UniqueIncarnationIdType.Extended);
-            return Guid.Equals(uniqueIncarnationId, g2);
+            return uniqueIncarnationId == g2;
         }
 
         /// <summary>
@@ -923,6 +923,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         internal bool IsAclVersion(long version)
         {
             return version == -1 || this.Persisted.Stat.Aversion == version;
+        }
+
+        /// <summary>
+        /// Determines whether [is user metadata version] [the specified version].
+        /// </summary>
+        /// <param name="version">The version.</param>
+        /// <returns>
+        ///   <c>true</c> if [is user metadata version] [the specified version]; otherwise, <c>false</c>.
+        /// </returns>
+        internal bool IsUserMetadataVersion(long version)
+        {
+            return version == -1 || this.Persisted.Stat.Uversion == version;
         }
 
         /// <summary>
@@ -970,8 +982,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Acquires the lock rw.
         /// </summary>
         /// <param name="level">Level of the node</param>
+        /// <param name="acquireLockInstrumentation">The acquire lock instrumentation method delegate</param>
         /// <returns><c>true</c> if lock was not already acquired yet (and hence acquired here), <c>false</c> otherwise.</returns>
-        internal ILockObject AcquireLockRw(int level)
+        internal ILockObject AcquireLockRw(int level, Action<bool, bool, int, TimeSpan> acquireLockInstrumentation)
         {
             var duration = Stopwatch.StartNew();
 
@@ -984,11 +997,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
             bool succeeded = rwLock.AcquireWriterLock(MaxAcquireRWLockTime);
 
-            RingMasterServerInstrumentation.Instance.OnAcquireLock(false, succeeded, level, duration.Elapsed);
+            var time = duration.Elapsed;
+            acquireLockInstrumentation(false, succeeded, level, time);
 
             if (!succeeded)
             {
-                throw new RetriableOperationException("lock couldnt be promoted to write within " + MaxAcquireRWLockTime.TotalMilliseconds + " ms for " + this.Name);
+                RingMasterEventSource.Log.AcquireWriterLockFailed(time.TotalMilliseconds, level, this.Name);
+                throw new RetriableOperationException("lock couldnt be promoted to write within " + time.TotalMilliseconds + " ms for " + this.Name);
             }
 
             return rwLock;
@@ -1012,7 +1027,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         {
             if (string.IsNullOrEmpty(retrievalCondition))
             {
-                return this.GetSortedChildren(string.Empty);
+                return this.GetSortedChildren(string.Empty, null);
             }
 
             if (retrievalCondition.StartsWith(">:"))
@@ -1033,7 +1048,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
                 string startingChildName = retrievalCondition.Substring(index + 1);
 
-                return this.GetSortedChildren(startingChildName).Take(top);
+                return this.GetSortedChildren(startingChildName, top);
             }
 
             throw new ArgumentException("RetrievalCondition");
@@ -1060,8 +1075,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// Gets the children in sorted order.
         /// </summary>
         /// <param name="startingChildName">Not in use</param>
-        /// <returns>List of names of children of this node in sorted order</returns>
-        protected virtual IEnumerable<string> GetSortedChildren(string startingChildName)
+        /// <param name="top">The top.</param>
+        /// <returns>
+        /// List of names of children of this node in sorted order
+        /// </returns>
+        protected virtual IEnumerable<string> GetSortedChildren(string startingChildName, int? top)
         {
             return Enumerable.Empty<string>();
         }
@@ -1203,8 +1221,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             /// <returns>IDictionary&lt;System.String, IPersistedData&gt;.</returns>
             public static IDictionary<string, IPersistedData> CreateChildrenDictionary()
             {
-                return new SortedArrayList<string, IPersistedData>(MinDictionaryThreshold);
+                return new LinkedListDictionary<string, IPersistedData>();
 
+                // return new SortedArrayList<string, IPersistedData>(MinDictionaryThreshold);
                 // return new SortedList<string, IPersistedData>(128);
                 // return new Dictionary<string, IPersistedData>();
                 // return new SkipList<string, IPersistedData>();
@@ -1219,14 +1238,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 if (newCount > MaxSortedDictionaryThreshold)
                 {
-                    if (!(childrenNodes is AtomicDictionaryFacade<string, IPersistedData>))
+                    if (childrenNodes is not AtomicDictionaryFacade<string, IPersistedData>)
                     {
                         childrenNodes = new AtomicDictionaryFacade<string, IPersistedData>(new SortedNameValueDictionary<IPersistedData>(childrenNodes));
                     }
                 }
                 else if (newCount > MaxDictionaryThreshold)
                 {
-                    if (!(childrenNodes is Dictionary<string, IPersistedData>))
+                    if (childrenNodes is not Dictionary<string, IPersistedData>)
                     {
                         childrenNodes = new Dictionary<string, IPersistedData>(childrenNodes);
                     }

@@ -56,16 +56,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             this.WriteEvent(6, exception);
         }
 
-        [Event(7, Level = EventLevel.Error, Version = 1)]
-        public void CreateListener_GetEndpointFailed(string exception)
+        [Event(8, Level = EventLevel.LogAlways, Version = 2)]
+        public void CreateListener(string listenerName, string uri, ushort readOnlyPort)
         {
-            this.WriteEvent(7, exception);
-        }
-
-        [Event(8, Level = EventLevel.Error, Version = 1)]
-        public void CreateListener(string listenerName, ushort port, ushort readOnlyPort)
-        {
-            this.WriteEvent(8, listenerName, port, readOnlyPort);
+            this.WriteEvent(8, listenerName, uri, readOnlyPort);
         }
 
         [Event(9, Level = EventLevel.LogAlways, Version = 1)]
@@ -122,10 +116,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterService
             this.WriteEvent(17, exception);
         }
 
-        [Event(18, Level = EventLevel.LogAlways, Version = 1)]
-        public void ListenerOpenAsync(string uri)
+        [Event(18, Level = EventLevel.LogAlways, Version = 2)]
+        public void ListenerOpenAsync()
         {
-            this.WriteEvent(18, uri);
+            this.WriteEvent(18);
         }
 
         [Event(19, Level = EventLevel.LogAlways, Version = 1)]

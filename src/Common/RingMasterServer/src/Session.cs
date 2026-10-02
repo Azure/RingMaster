@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
 
     /// <summary>
     /// Represents a session established with the server.
@@ -74,15 +75,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
         public int Timeout { get; set; }
 
         /// <summary>
-        /// Callback to be used by Connection.OnPacketReceived in secure transport
+        /// Callback to be used by Connection.OnPacketReceivedAsync in secure transport
         /// </summary>
         /// <param name="packet">Packet received from the TCP connection</param>
-        public void OnPacketReceived(byte[] packet)
+        /// <returns>Task that indicates completion of the operation</returns>
+        public async Task OnPacketReceivedAsync(IMemoryBuffer packet)
         {
             var connection = this.Connection;
             var timer = Stopwatch.StartNew();
+            RequestCall call = null;
+            int packetLength = 0;
 
-            RequestCall call = this.protocol.DeserializeRequest(packet, packet.Length, connection.ProtocolVersion);
+            using (packet)
+            {
+                packetLength = packet.Length;
+                call = this.protocol.DeserializeRequest(packet.GetBuffer(), packetLength, connection.ProtocolVersion);
+            }
 
             try
             {
@@ -91,11 +99,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
                     call.CallId,
                     (int)call.Request.RequestType,
                     call.Request.Path,
-                    packet.Length,
+                    packetLength,
                     connection.ProtocolVersion);
 
                 // Wait until the previous request is started then let this one go.
-                this.requestOrdering.Wait();
+                await this.requestOrdering.WaitAsync().ConfigureAwait(false);
 
                 this.ProcessRequest(
                     call.Request,
@@ -115,13 +123,37 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
                             };
                         }
 
-                        byte[] responsePacket = this.protocol.SerializeResponse(response, connection.ProtocolVersion);
-                        connection.Send(responsePacket);
+                        try
+                        {
+                            var responsePacket = this.protocol.SerializeResponse(response, connection.ProtocolVersion);
+
+                            // Even though the enclosing method is async, we use 'connection.Send'
+                            // and not 'await connection.SendAsync',
+                            // since this code is not interested in the response.
+                            // On the other hand even synchronous Send method would fail if we want be able to add a response packet to the output queue.
+                            connection.Send(responsePacket);
+                        }
+                        catch (SecureTransportException ex)
+                        {
+                            RingMasterServerEventSource.Log.ProcessRequestFailed(this.Id, call.CallId, ex.ToString());
+                            connection.Disconnect();
+                            return;
+                        }
+                        finally
+                        {
+                            (response.Content as IDisposable)?.Dispose();
+                        }
+
                         timer.Stop();
 
                         RingMasterServerEventSource.Log.ProcessRequestCompleted(this.Id, call.CallId, timer.ElapsedMilliseconds);
                         this.instrumentation?.OnRequestCompleted(call.Request.RequestType, timer.Elapsed);
                     });
+            }
+            catch (SecureTransportException ex)
+            {
+                RingMasterServerEventSource.Log.ProcessRequestFailed(this.Id, call.CallId, ex.ToString());
+                this.connection.Disconnect();
             }
             catch (Exception ex)
             {
@@ -148,8 +180,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
             messageToClient.CallId = ulong.MaxValue;
             messageToClient.Content = watcherCall;
 
-            byte[] packet = this.protocol.SerializeResponse(messageToClient, this.connection.ProtocolVersion);
-            this.connection.Send(packet);
+            try
+            {
+                var packet = this.protocol.SerializeResponse(messageToClient, this.connection.ProtocolVersion);
+                this.connection.Send(packet);
+            }
+            catch (SecureTransportException ex)
+            {
+                RingMasterServerEventSource.Log.ProcessRequestFailed(this.Id, ulong.MaxValue, ex.ToString());
+                this.connection.Disconnect();
+                return;
+            }
 
             this.instrumentation?.OnWatcherNotified(this.sessionId);
         }
@@ -159,6 +200,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Server
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
+            }
+
+            if (request.IsRequestExpired())
+            {
+                onCompletion?.Invoke(
+                    new RequestResponse()
+                    {
+                        ResponsePath = request.Path,
+                        ResultCode = (int)RingMasterException.Code.ServerOperationTimeout,
+                        Stat = default(Stat),
+                    },
+                    null);
+
+                return;
             }
 
             switch (request.RequestType)

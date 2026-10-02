@@ -5,6 +5,8 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplication.Utilities
 {
     using System;
+    using System.Net;
+    using System.Net.Sockets;
     using System.Threading;
 
     /// <summary>
@@ -43,6 +45,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterApplica
                 // Swallow Exception and dont allow debugger to attach
                 ////
             }
+        }
+
+        /// <summary>
+        /// Converts a hostname into ip-address
+        /// </summary>
+        /// <param name="host">hostname that needs to be converted</param>
+        /// <returns>an ip-address in s tring format</returns>
+        public static string GetHostIp(string host)
+        {
+            IPAddress ip;
+            if (IPAddress.TryParse(host, out ip))
+            {
+                return ip.ToString();
+            }
+
+            IPAddress[] ips = Dns.GetHostAddresses(host);
+            foreach (IPAddress ipAddress in ips)
+            {
+                if (ipAddress.AddressFamily != AddressFamily.InterNetwork)
+                {
+                    continue;
+                }
+
+                ip = ipAddress;
+                return ip.ToString();
+            }
+
+            return null;
         }
     }
 }

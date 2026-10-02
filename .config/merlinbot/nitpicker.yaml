@@ -1,0 +1,10 @@
+branches:
+  - name: main
+  - name: master
+comments:
+  - markdown: "Risk assessment: Are changes in this PR addressing an SFI action item? If so, insert the SFI action item ID in the reply. (Example: [SFI-ID4.1.1] Entra ID Apps - Safe Secrets Standard)"
+    id: "RASFI"
+    blocking: true
+    verbose: false
+    pathFilter:
+      - /**/*.*

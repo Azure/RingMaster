@@ -23,15 +23,9 @@ namespace Microsoft.Vega.Test.Helpers
         public bool OneUse => this.Kind.HasFlag(WatcherKind.OneUse);
 
         /// <summary>
-        /// Gets the kind of the watcher, if it is for single use and if the data is included on notification
+        /// Gets or sets the kind of the watcher, if it is for single use and if the data is included on notification
         /// </summary>
-        public WatcherKind Kind
-        {
-            get
-            {
-                return WatcherKind.IncludeData;
-            }
-        }
+        public WatcherKind Kind { get; set; } = WatcherKind.IncludeDataAndChildChange;
 
         /// <summary>
         /// Gets or sets the delegate for processing the watcher event

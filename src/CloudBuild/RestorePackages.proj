@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"/>
-
+<Project Sdk="Microsoft.Build.NoTargets">
   <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
     <PackagesConfig>$(MSBuildThisFileDirectory)..\packages.config</PackagesConfig>
     <!-- Define this to suppress buildcop error -->
     <OutDir>$(OutputRoot)$(MSBuildProjectName)</OutDir>
@@ -15,6 +14,4 @@
   <ItemGroup>
     <QCustomInput Include="$(PackagesConfig)" />
   </ItemGroup>
-
-  <Import Project="$(NoTargets)" Condition=" Exists('$(NoTargets)') "/>
 </Project>

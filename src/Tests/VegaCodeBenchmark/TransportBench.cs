@@ -39,6 +39,59 @@ namespace Microsoft.Vega.Test
 
             SecureTransportInternal(log, "SecureTransportPingPong", 1);
             SecureTransportInternal(log, "SecureTransportThroughput", 100);
+
+            SocketPipelineInternal(log, "SocketPipelinePingPong", 1).GetAwaiter().GetResult();
+            SocketPipelineInternal(log, "SocketPipelineThroughput", 100).GetAwaiter().GetResult();
+        }
+
+        private static async Task SocketPipelineInternal(Action<string> log, string testCaseName, int numberOfClients)
+        {
+            log($"Starting {testCaseName} with {numberOfClients} clients ...");
+
+            using (var cancellationSource = new CancellationTokenSource())
+            {
+                var cancellation = cancellationSource.Token;
+
+                var server = new SocketPipelineEcho();
+                var serverTask = Task.Run(async () => await server.StartServer(cancellation));
+                var port = 0;
+
+                SpinWait.SpinUntil(() =>
+                {
+                    return (port = server.ServerPort) != 0;
+                });
+
+                var clients = Enumerable.Range(0, numberOfClients).Select(_ => new SocketPipelineEcho()).ToArray();
+                var clientTasks = clients
+                    .Select(c => Task.Run(async () => await c.StartClient(port, cancellation)))
+                    .ToArray();
+
+                var sw = new Stopwatch();
+
+                log($"    Warming up for {WarmupMilliSeconds / 1000} seconds");
+                await Task.Delay(WarmupMilliSeconds);
+
+                log($"    Start measuring for {MeasureMilliSeconds} seconds");
+                sw.Start();
+                server.ResetCount();
+
+                int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2);
+
+                for (int i = 0; i < MeasureMilliSeconds / PrintStatusInterval; i++)
+                {
+                    await Task.Delay(PrintStatusInterval);
+                    log($"    {DateTime.Now.ToString()} count={server.ReceiveCount}");
+                }
+
+                sw.Stop();
+                var count = server.ReceiveCount;
+                var rate = count / sw.Elapsed.TotalSeconds;
+
+                log($"{testCaseName}: {count} in {sw.Elapsed} with {numberOfClients} clients. QPS={rate}");
+                log($"  Gen0={GC.CollectionCount(0) - gen0} Gen1={GC.CollectionCount(1) - gen1} Gen2={GC.CollectionCount(2) - gen2}\n");
+
+                await Task.WhenAll(clientTasks);
+            }
         }
 
         private static void SecureTransportInternal(Action<string> log, string testCaseName, int numberOfClients)
@@ -69,6 +122,7 @@ namespace Microsoft.Vega.Test
                         Interlocked.Increment(ref packetCount);
                         serverSendTask.GetAwaiter().GetResult();
                         serverSendTask = connection.SendAsync(packet);
+                        return Task.CompletedTask;
                     };
 
                     Trace.TraceInformation("Server accepted a new connection: {0}", connection.RemoteIdentity);
@@ -96,9 +150,10 @@ namespace Microsoft.Vega.Test
                         {
                             clientSendTask.GetAwaiter().GetResult();
                             clientSendTask = connection.SendAsync(packet);
+                            return Task.CompletedTask;
                         };
 
-                        clientSendTask = connection.SendAsync(new byte[PacketLength]);
+                        clientSendTask = connection.SendAsync(new ByteArrayBackedBuffer(new byte[PacketLength]));
                     });
 
                 Parallel.ForEach(

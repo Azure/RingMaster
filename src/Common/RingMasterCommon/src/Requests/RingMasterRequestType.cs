@@ -105,5 +105,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// Retrieve the subtree of a node
         /// </summary>
         GetSubtree,
+
+        /// <summary>
+        /// The set data and user metadata
+        /// </summary>
+        SetDataAndUserMetadata,
     }
 }

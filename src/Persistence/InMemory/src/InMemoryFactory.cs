@@ -124,15 +124,22 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
         }
 
         /// <inheritdoc />
-        protected override async Task StartLoadingData(CancellationToken cancellation)
+        protected override Task StartLoadingData(CancellationToken cancellation)
         {
             if (this.LoadState != null)
             {
-                await Task.Run(() => this.LoadState());
+                var tcs = new TaskCompletionSource<bool>();
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    this.LoadState();
+                    tcs.SetResult(true);
+                });
+                return tcs.Task;
             }
             else
             {
                 this.Load(new PersistedData[0]);
+                return Task.CompletedTask;
             }
         }
 
@@ -170,6 +177,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             InMemoryPersistenceEventSource.Log.OnDeactivate_WaitingForProcessPendingChangelistsTask();
             this.processPendingChangeListsTask.GetAwaiter().GetResult();
             InMemoryPersistenceEventSource.Log.OnDeactivate_Completed(timer.ElapsedMilliseconds);
+        }
+
+        /// <inheritdoc />
+        protected override bool IsRetriable(Exception ex)
+        {
+            if (ex == null)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private Task QueueChangeList(ulong id, List<byte[]> serializedChanges)
@@ -359,6 +377,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Persistence.InMem
             {
                 InMemoryPersistenceEventSource.Log.StartReplication(this.Id, this.serializedChanges.Count);
                 var tasks = new List<Task>();
+
                 tasks.Add(this.primary.QueueChangeList(this.Id, this.serializedChanges));
                 foreach (var secondary in this.secondaries)
                 {

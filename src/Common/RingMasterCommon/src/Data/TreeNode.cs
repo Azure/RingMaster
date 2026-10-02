@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
 {
     using System.Collections.Generic;
     using System.IO;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Represents a node in the ringmaster tree.
@@ -13,18 +14,20 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
     public class TreeNode
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="TreeNode"/> class.
+        /// Initializes a new instance of the <see cref="TreeNode" /> class.
         /// </summary>
         /// <param name="name">Name of the node</param>
         /// <param name="data">Data associated with the node</param>
         /// <param name="stat">Stat of the node</param>
         /// <param name="children">Children of the node</param>
-        private TreeNode(string name, byte[] data, Stat stat, IReadOnlyList<TreeNode> children)
+        /// <param name="userMetadata">The user metadata.</param>
+        private TreeNode(string name, byte[] data, Stat stat, IReadOnlyList<TreeNode> children, byte[] userMetadata)
         {
             this.Name = name;
             this.Data = data;
             this.Stat = stat;
             this.Children = children;
+            this.UserMetadata = userMetadata;
         }
 
         /// <summary>
@@ -41,6 +44,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
         /// Gets the data associated with the node.
         /// </summary>
         public byte[] Data { get; private set; }
+
+        /// <summary>
+        /// Gets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        public byte[] UserMetadata { get; private set; }
 
         /// <summary>
         /// Gets the stat of the node
@@ -93,10 +104,32 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 data = reader.ReadBytes(dataLength);
             }
 
-            // Stat is optional.
-            var stat = reader.ReadBoolean()
-                ? Stat.ReadStat(reader)
-                : null;
+            var optionNumber = (int)reader.ReadByte();
+            Stat stat = null;
+            byte[] userMetadata = null;
+            if (optionNumber <= 1)
+            {
+                // from old server
+                stat = optionNumber == 0 ? null : Stat.ReadStat(reader, false);
+            }
+            else
+            {
+                var options = (RequestGetSubtree.GetSubtreeOptions)optionNumber;
+
+                // Stat is optional.
+                stat = options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeStats)
+                    ? Stat.ReadStat(reader, true)
+                    : null;
+
+                if (options.HasFlag(RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata))
+                {
+                    int metadataLength = reader.ReadInt32();
+                    if (metadataLength >= 0)
+                    {
+                        userMetadata = reader.ReadBytes(metadataLength);
+                    }
+                }
+            }
 
             List<TreeNode> children = null;
             while (true)
@@ -115,7 +148,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Data
                 children.Add(child);
             }
 
-            return new TreeNode(name, data, stat, children);
+            return new TreeNode(name, data, stat, children, userMetadata);
         }
     }
 }

@@ -9,9 +9,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading;
-    using Azure.Networking.Infrastructure.RingMaster.Communication;
-    using Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
-    using Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Communication;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProtocol;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport;
 

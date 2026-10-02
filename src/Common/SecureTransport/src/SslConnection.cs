@@ -223,9 +223,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                     throw SecureTransportException.SslValidationTimedOut();
                 }
 
-                // Task is already completed, await it to ensure that it successfully
-                // completed.
-                await task;
+                // Task is already completed, observer its exception if there is any.
+                task.GetAwaiter().GetResult();
 
                 return sslStream;
             }
@@ -291,9 +290,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Transport
                     throw SecureTransportException.SslValidationTimedOut();
                 }
 
-                // Task is already completed, await it to ensure that it successfully
-                // completed.
-                await task;
+                // Task is already completed, observe its exception if there is any.
+                // TODO: also observe the exception in the timeout case.
+                task.GetAwaiter().GetResult();
 
                 return sslStream;
             }

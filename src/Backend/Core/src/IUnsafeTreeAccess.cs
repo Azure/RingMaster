@@ -32,13 +32,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
 
         void UnsafeRemoveChild(IPersistedData parent, IPersistedData node, long txtime, string path, long xid, ILockListTransaction locklist, bool triggerWatcher = true);
 
-        void UnsafeDeleteNode(IPersistedData parent, IPersistedData node, long txtime, string path, long xid, ILockListTransaction locklist, bool triggerWatcher = true);
+        void UnsafeDeleteNode(IPersistedData parent, IPersistedData node, long txtime, string path, long xid, ILockListTransaction locklist);
 
         void UnsafeSetAcl(IPersistedData node, IReadOnlyList<Acl> list, long txtime, string path, long xid, ILockListTransaction locklist);
 
         void UnsafeSetPoisonPill(IPersistedData node, string spec, long txtime, long xid);
 
         void UnsafeSetData(IPersistedData node, byte[] data, long txtime, string path, long xid, ILockListTransaction locklist);
+
+        void UnsafeSetDataAndUserMetadata(IPersistedData node, byte[] data, byte[] userMetadata, long txtime, string path, long xid, ILockListTransaction locklist);
 
         void UnsafeClearTree();
 #pragma warning restore

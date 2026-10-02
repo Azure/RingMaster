@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>CoverageInfoExtractor</RootNamespace>
+    <AssemblyName>CoverageInfoExtractor</AssemblyName>
+    <TargetFramework>net462</TargetFramework>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <PlatformTarget>x86</PlatformTarget>
+    <DocumentationFile>$(OutputPath)\CoverageInfoExtractor.xml</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(PkgVisualStudio_Coverage)\lib\net45\Microsoft.VisualStudio.Coverage.Analysis.dll" />
+    <Reference Include="$(PkgVisualStudio_Coverage)\lib\net45\Microsoft.VisualStudio.Coverage.Interop.dll" />
+    <Reference Include="System.Data.DataSetExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="VisualStudio.Coverage" GeneratePathProperty="true" IncludeAssets="none" />
+  </ItemGroup>
+
+  <Import Project="$(StyleCopProps)" />
+</Project>

@@ -10,14 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Cloud.InstrumentationFramework.NetStd" Version="1.0.1005100001-preview" Condition="'$(OSSBUILD)' == ''" />
+    <PackageReference Include="Microsoft.Cloud.InstrumentationFramework.NetStd" Condition="'$(OSSBUILD)' == ''" />
+    <PackageReference Include="Bond.CSharp" />
+    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="IfxInstrumentation.cs" />
     <Compile Include="IfxMetricsFactory.cs" />
     <Compile Include="IfxTraceListener.cs" />
-    <Compile Include="MockIfx.cs" Condition="'$(OSSBUILD)' != ''"/>
+    <Compile Include="MockIfx.cs" Condition="'$(OSSBUILD)' != ''" />
   </ItemGroup>
 
   <ItemGroup>

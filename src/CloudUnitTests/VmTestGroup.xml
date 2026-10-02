@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestJobGroup>
+  <ResourceSpec>
+    <!--Resource Type="VirtualMachine" SKU="Standard_D2s_v3" Image="OneBranchWin2016" /-->
+    <Resource Type="VirtualMachine" SKU="Standard_D8s_v3" Image="OneBranchWS2016Image" />
+  </ResourceSpec>
+
+  <Setup>
+    <!-- All references to the build should be made from <BuildFiles> and <Services> sections. 
+         All references to the data  should be made from <DataFiles> section. 
+         Other sections should reference files in the working directory. -->
+    <BuildFiles>
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\CloudUnitTests\*" Dest="[WorkingDirectory]\CloudUnitTests" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\ServiceFabric.XCopyPackage\*" Dest="[WorkingDirectory]\ServiceFabric.XCopyPackage" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\RingMasterApplication-Pkg\*" Dest="[WorkingDirectory]\RingMasterApplication-Pkg" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\VegaDistributedTestClient\*" Dest="[WorkingDirectory]\VegaDistributedTestClient" IsRecursive="true" Writable="false" />
+
+      <!-- Individual test cases -->
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\RingMasterPerformance\*" Dest="[WorkingDirectory]\RingMasterPerformance" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\VegaInMemoryPerf\*" Dest="[WorkingDirectory]\VegaInMemoryPerf" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\VegaServiceFabricPerf\*" Dest="[WorkingDirectory]\VegaServiceFabricPerf" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\VegaUpgradeTest\*" Dest="[WorkingDirectory]\VegaUpgradeTest" IsRecursive="true" Writable="false" />
+      <Copy Src="[BuildRoot]\outputs\build\Release-x64\VegaFailoverCorrectness\*" Dest="[WorkingDirectory]\VegaFailoverCorrectness" IsRecursive="true" Writable="false" />
+    </BuildFiles>
+    <Scripts>
+      <Script Path="[WorkingDirectory]\CloudUnitTests\CloudTestSetup.cmd" Args="" />
+    </Scripts>
+  </Setup>
+
+  <TestJob Name="CloudTest.RunRingMasterPerformance" Type="SingleBox" Size="Small" Tags="" OwnerAliases="vegab;zhyao">
+    <Execution Type="Exe"
+      Path="[WorkingDirectory]\CloudUnitTests\RunTest.cmd"
+      Args="vstest [WorkingDirectory]\RingMasterPerformance\Microsoft.RingMaster.Test.RingMasterPerformance.dll" />
+  </TestJob>
+  <TestJob Name="CloudTest.VegaInMemoryPerf" Type="SingleBox" Size="Small" Tags="" OwnerAliases="vegab;zhyao">
+    <Execution Type="Exe"
+      Path="[WorkingDirectory]\CloudUnitTests\RunTest.cmd"
+      Args="vstest [WorkingDirectory]\VegaInMemoryPerf\VegaInMemoryPerf.dll" />
+  </TestJob>
+  <TestJob Name="CloudTest.VegaServiceFabricPerf" Type="SingleBox" Size="Small" Tags="" OwnerAliases="vegab;zhyao">
+    <Execution Type="Exe"
+      Path="[WorkingDirectory]\CloudUnitTests\RunTest.cmd"
+      Args="vstest [WorkingDirectory]\VegaServiceFabricPerf\VegaServiceFabricPerf.dll" />
+  </TestJob>
+  <TestJob Name="CloudTest.VegaUpgradeTest" Type="SingleBox" Size="Small" Tags="" OwnerAliases="vegab;zhyao">
+    <Execution Type="Exe"
+      Path="[WorkingDirectory]\CloudUnitTests\RunTest.cmd"
+      Args="vstest [WorkingDirectory]\VegaUpgradeTest\VegaUpgradeTest.dll" />
+  </TestJob>
+  <TestJob Name="CloudTest.VegaFailoverCorrectness" Type="SingleBox" Size="Small" Tags="" OwnerAliases="vegab;zhyao">
+    <Execution Type="Exe"
+      Path="[WorkingDirectory]\CloudUnitTests\RunTest.cmd"
+      Args="vstest [WorkingDirectory]\VegaFailoverCorrectness\VegaFailoverCorrectness.dll" />
+  </TestJob>
+  
+  <Cleanup>
+    <Scripts>
+      <Script Path="[WorkingDirectory]\CloudUnitTests\CloudTestCleanup.cmd" Args="" />
+    </Scripts>
+  </Cleanup>
+</TestJobGroup>

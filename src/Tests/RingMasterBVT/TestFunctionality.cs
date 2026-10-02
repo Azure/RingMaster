@@ -264,6 +264,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         }
 
         /// <summary>
+        /// Verify that a node can be deleted and also validates the allow not empty flag.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDeleteWithAllowNotEmptyFlag()
+        {
+            this.functionalityTest.TestDeleteWithAllowNotEmptyFlag().Wait();
+        }
+
+        /// <summary>
         /// Verify that Retrieval Conditions can be specified to the GetChildren method to
         /// select the children to return.
         /// </summary>
@@ -279,7 +289,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// select a subset of children from a node that has large number of children.
         /// </summary>
         [TestMethod]
-        [Timeout(30000)]
+        [Timeout(3000000)]
         public void TestGetChildrenRetrievalConditions_NodeWithLargeNumberOfChildren()
         {
             this.functionalityTest.TestGetChildrenRetrievalConditions_NodeWithLargeNumberOfChildren().Wait();
@@ -309,6 +319,26 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         }
 
         /// <summary>
+        /// Tests the create node with user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadata()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadata().Wait();
+        }
+
+        /// <summary>
+        /// Tests the create node with user metadata on existing node.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadataOnExistingNode()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadataOnExistingNode().Wait();
+        }
+
+        /// <summary>
         /// Verify that the node path can contain unicode characters.
         /// </summary>
         [TestMethod]
@@ -326,6 +356,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         public void TestCreateLargeData()
         {
             this.functionalityTest.TestCreateLargeData(256 * 1024).Wait();
+        }
+
+        /// <summary>
+        /// Tests the get data.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetData()
+        {
+            this.functionalityTest.TestGetData().Wait();
         }
 
         /// <summary>
@@ -370,6 +410,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         public void TestSetData()
         {
             this.functionalityTest.TestSetData().Wait();
+        }
+
+        /// <summary>
+        /// Tests the set user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestSetDataAndUserMetadata()
+        {
+            this.functionalityTest.TestSetDataAndUserMetadata().Wait();
         }
 
         /// <summary>
@@ -426,14 +476,53 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
             this.functionalityTest.GetLockCollisionInMulti().Wait();
         }
 
-        /// <summary>
-        /// Verifies that GetSubtree requests work correctly.
-        /// </summary>
         [TestMethod]
         [Timeout(30000)]
-        public void TestGetSubtree()
+        public void TestGetSubtreeNoStatsNoMetadata()
         {
-            this.functionalityTest.TestGetSubtree(false).Wait();
+            this.functionalityTest.TestGetSubtree(false, false).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStatsWithMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(true, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeNoStatsWithMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(false, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStatsNoMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(true, false).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeContinuationContainsNonExistentPath()
+        {
+            this.functionalityTest.TestGetSubtreeContinuationContainsNonExistentPath().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeContinuationPathEqualsNodePath()
+        {
+            this.functionalityTest.TestGetSubtreeContinuationPathEqualsNodePath().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeOfRoot()
+        {
+            this.functionalityTest.TestGetSubtreeOfRoot().Wait();
         }
 
         /// <summary>

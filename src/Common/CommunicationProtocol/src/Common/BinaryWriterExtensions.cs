@@ -183,7 +183,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
             if (string.IsNullOrEmpty(s))
             {
-                binaryWriter.WriteBE((int)-1);
+                binaryWriter.WriteBE(-1);
             }
             else
             {
@@ -208,7 +208,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
             if (dataBuffer == null)
             {
-                binaryWriter.WriteBE((int)-1);
+                binaryWriter.WriteBE(-1);
             }
             else
             {

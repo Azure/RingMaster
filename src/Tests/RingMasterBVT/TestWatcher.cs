@@ -45,7 +45,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         [Timeout(30000)]
         public void TestChildrenChangedEvent()
         {
-            this.watcherTest.TestChildrenChangedEvent().Wait();
+            this.watcherTest.TestChildrenChangedEvent(false).Wait();
+        }
+
+        /// <summary>
+        /// Verifies that the watcher is notified when children of the watched
+        /// nodes change and the change include child's info.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestChildrenChangedEventIncludechildChange()
+        {
+            this.watcherTest.TestChildrenChangedEvent(true).Wait();
         }
 
         /// <summary>
@@ -66,7 +77,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         [Timeout(30000)]
         public void TestDeletedEvent()
         {
-            this.watcherTest.TestDeletedEvent().Wait();
+            this.watcherTest.TestDeletedEvent(false).Wait();
+        }
+
+        /// <summary>
+        /// Verifies that the watcher is notified when a watched node is deleted
+        /// and the change include child's information.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDeletedEventIncludeDataAndChildChange()
+        {
+            this.watcherTest.TestDeletedEvent(true).Wait();
         }
 
         /// <summary>
@@ -76,7 +98,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         [Timeout(30000)]
         public void TestDataChangedEvent()
         {
-            this.watcherTest.TestDataChangedEvent().Wait();
+            this.watcherTest.TestDataChangedEvent(false).Wait();
+        }
+
+        /// <summary>
+        /// Verifies that the watcher is notified when the data of a watched node is changed
+        /// and the change include data and stat of changed node.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestDataChangedEventIncludeData()
+        {
+            this.watcherTest.TestDataChangedEvent(true).Wait();
+        }
+
+        /// <summary>
+        /// Tests the user metadata changed event.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestUserMetadataChangedEvent()
+        {
+            this.watcherTest.TestDataAndUserMetadataChanged(false).Wait();
         }
 
         /// <summary>
@@ -84,9 +127,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         /// </summary>
         [TestMethod]
         [Timeout(30000)]
-        public void TestDataChangedEventWithChangeDelivery()
+        public void TestUserMetadataChangedEventIncludeData()
         {
-            this.watcherTest.TestDataChangedEvent(true).Wait();
+            this.watcherTest.TestDataAndUserMetadataChanged(true).Wait();
         }
 
         /// <summary>
@@ -106,7 +149,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.BVT
         [Timeout(30000)]
         public void TestBulkWatcher()
         {
-            this.watcherTest.TestBulkWatcher().Wait();
+            this.watcherTest.TestBulkWatcher(false).Wait();
+        }
+
+        /// <summary>
+        /// Verify that the bulk watcher is notified when modifications are made under the watched path
+        /// and the change include the parent's data as well as child's info.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestBulkWatcherIncludeDataAndChildChange()
+        {
+            this.watcherTest.TestBulkWatcher(true).Wait();
         }
     }
 }

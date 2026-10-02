@@ -94,6 +94,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 new RequestCreate("/create/data", data: RandomData(), acl: null, createMode: CreateMode.Persistent, uid: 0),
                 new RequestCreate("/create/acl", data: null, acl: RandomAclList(), createMode: CreateMode.Persistent, uid: 0),
                 new RequestCreate("/create/uid", data: null, acl: null, createMode: CreateMode.Persistent, uid: RandomUlongValue()),
+                new RequestCreate("/create/usermetadata", data: null, acl: null, createMode: CreateMode.Persistent, uid: 0, userMetadata: RandomData()),
             };
 
             VerifyRequestSerializationAndDeserialization(
@@ -103,6 +104,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     VerifyData(expected.Data, actual.Data);
                     VerifyAclLists(expected.Acl, actual.Acl);
                     Assert.AreEqual(expected.CreateMode, actual.CreateMode);
+
+                    if (protocolVersion >= 29)
+                    {
+                        VerifyData(expected.UserMetadata, actual.UserMetadata);
+                    }
                 },
                 originalRequests);
         }
@@ -263,7 +269,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 new RequestDelete("/delete/cascadeAndIgnoreNoNode", version: 0, deletemode: DeleteMode.SuccessEvenIfNodeDoesntExist | DeleteMode.CascadeDelete),
                 new RequestDelete("/delete/uid", version: 0, cascade: false, uid: RandomUlongValue()),
                 new RequestDelete("/delete", version: -1, deletemode: DeleteMode.FastDelete | DeleteMode.SuccessEvenIfNodeDoesntExist),
-                new RequestDelete("/delete", version: -1, deletemode: DeleteMode.FastDelete | DeleteMode.SuccessEvenIfNodeDoesntExist | DeleteMode.CascadeDelete)
+                new RequestDelete("/delete", version: -1, deletemode: DeleteMode.FastDelete | DeleteMode.SuccessEvenIfNodeDoesntExist | DeleteMode.CascadeDelete),
+                new RequestDelete("/delete", version: -1, deletemode: DeleteMode.SuccessEvenIfNotEmpty),
             };
 
             VerifyRequestSerializationAndDeserialization<RequestDelete>(
@@ -447,7 +454,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 new RequestGetData("/getdata/faultbackonparentdata", options: RequestGetData.GetDataOptions.FaultbackOnParentData, watcher: null, uid: 0),
                 new RequestGetData("/getdata/nostatrequired", options: RequestGetData.GetDataOptions.NoStatRequired, watcher: null, uid: 0),
                 new RequestGetData("/getdata/nowildcardsforpath", options: RequestGetData.GetDataOptions.NoWildcardsForPath, watcher: null, uid: 0),
-                new RequestGetData("/getdata/faultbackonparentdatawithmatch", options: RequestGetData.GetDataOptions.FaultbackOnParentDataWithMatch, optionArgument: new RequestGetData.GetDataOptionArgumentForMatch(RandomData(), RandomIntValue(), RequestGetData.GetDataOptionArgumentForMatch.Comparison.Smaller), watcher: null, uid: 0)
+                new RequestGetData("/getdata/faultbackonparentdatawithmatch", options: RequestGetData.GetDataOptions.FaultbackOnParentDataWithMatch, optionArgument: new RequestGetData.GetDataOptionArgumentForMatch(RandomData(), RandomIntValue(), RequestGetData.GetDataOptionArgumentForMatch.Comparison.Smaller), watcher: null, uid: 0),
+                new RequestGetData("/getdata/usermetadatarequired", options: RequestGetData.GetDataOptions.UserMetadataRequired, watcher: null, uid: 0),
             };
 
             VerifyRequestSerializationAndDeserialization(
@@ -458,6 +466,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     Assert.AreEqual(expected.FaultbackOnParentData, actual.FaultbackOnParentData);
                     Assert.AreEqual(expected.NoStatRequired, actual.NoStatRequired);
                     Assert.AreEqual(expected.NoWildcardsForPath, actual.NoWildcardsForPath);
+                    Assert.AreEqual(expected.UserMetadataRequired, actual.UserMetadataRequired);
                     Assert.AreEqual(expected.Options, actual.Options);
                     if (expected.OptionArgument != null)
                     {
@@ -549,9 +558,40 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     VerifyData(expected.Data, actual.Data);
                     Assert.AreEqual(expected.Version, actual.Version);
                     Assert.AreEqual(expected.IsDataCommand, actual.IsDataCommand);
+                    Assert.AreEqual(expected.Uid, actual.Uid);
                 },
                 originalRequests);
         }
+
+        /// <summary>
+        /// Verify serialization and deserialization works for <see cref="RequestSetDataAndUserMetadata"/> requests.
+        /// </summary>
+        [TestMethod]
+        public void TestRequestSetDataAndUserMetadata()
+        {
+            var originalRequests = new RequestSetDataAndUserMetadata[]
+            {
+                new RequestSetDataAndUserMetadata("/setdataandusermetadata", data: null, userMetadata: null, dataVersion: 0, userMetadataVersion:0, uid: 0),
+                PopulateCommonFields(new RequestSetDataAndUserMetadata("/setdataandusermetadata", data: null, userMetadata: null, dataVersion: 0, userMetadataVersion:0, uid: 0)),
+                new RequestSetDataAndUserMetadata("/setdataandusermetadata/data", data: RandomData(), dataVersion:0, userMetadata: RandomData(), userMetadataVersion: 0, uid: 0),
+                new RequestSetDataAndUserMetadata("/setdataandusermetadata/version", data: null, dataVersion: RandomIntValue(), userMetadata: null, userMetadataVersion: RandomIntValue(), uid: 0),
+                new RequestSetDataAndUserMetadata("/setdataandusermetadata/uid",  data: null, userMetadata: null, dataVersion: 0, userMetadataVersion:0, uid: RandomUlongValue()),
+            };
+
+            VerifyRequestSerializationAndDeserialization(
+                (expected, actual, protocolVersion) =>
+                {
+                    Assert.AreEqual(RingMasterRequestType.SetDataAndUserMetadata, actual.RequestType);
+                    VerifyData(expected.UserMetadata, actual.UserMetadata);
+                    VerifyData(expected.Data, actual.Data);
+                    Assert.AreEqual(expected.DataVersion, actual.DataVersion);
+                    Assert.AreEqual(expected.UserMetadataVersion, actual.UserMetadataVersion);
+                    Assert.AreEqual(expected.Uid, actual.Uid);
+                },
+                (prot) => { return prot >= 29; },
+                originalRequests);
+        }
+
 
         /// <summary>
         /// Verify serialization and deserialization works for <see cref="RequestSetAcl"/> requests.
@@ -626,7 +666,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = RandomList(RandomOpResult), Stat = null, ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = new RedirectSuggested() { SuggestedConnectionString = RandomString() }, Stat = null, ResponsePath = null },
                 new RequestResponse() { CallId = 0, ResultCode = 0, Content = (Func<object>)(() => RandomList(RandomString)), Stat = null, ResponsePath = null },
-                new RequestResponse() { CallId = 0, ResultCode = 0, Content = new Uri("http://example.com"), Stat = null, ResponsePath = null },
             };
 
             VerifyResponseSerializationAndDeserialization(
@@ -977,7 +1016,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case 0:
                     return new OpResult.CheckResult(stat: RandomStat());
                 case 1:
-                    return new OpResult.GetDataResult(stat: RandomStat(), bytes: RandomData(), path: RandomString());
+                    return new OpResult.GetDataResult(stat: RandomStat(), data: RandomData(), path: RandomString(), userMetadata: RandomData());
                 case 2:
                     return new OpResult.CreateResult(stat: RandomStat(), path: RandomString());
                 case 3:
@@ -1129,12 +1168,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                         }
 
                         Trace.TraceInformation("Protocol version={0}", protocolVersion);
-                        var serializer = new Serializer(protocolVersion);
+                        var serializer = new Serializer(protocolVersion, new RecyclableMemoryStreamFactory());
                         serializer.SerializeResponse(expected);
 
-                        byte[] serializedBytes = serializer.GetBytes();
+                        var serializedBytes = serializer.GetBytes();
 
-                        var deserializer = new Deserializer(serializedBytes, serializedBytes.Length, protocolVersion);
+                        var deserializer = new Deserializer(serializedBytes.GetBuffer(), serializedBytes.Length, protocolVersion);
 
                         RequestResponse actual = deserializer.DeserializeResponse();
                         Assert.AreEqual(expected.CallId, actual.CallId);
@@ -1373,12 +1412,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// <returns>The deserialized request</returns>
         private static RequestCall SerializeAndDeserialize(RequestCall request, uint protocolVersion)
         {
-            var serializer = new Serializer(protocolVersion);
+            var serializer = new Serializer(protocolVersion, new RecyclableMemoryStreamFactory());
             serializer.SerializeRequest(request);
 
-            byte[] serializedBytes = serializer.GetBytes();
+            var serializedBytes = serializer.GetBytes();
 
-            var deserializer = new Deserializer(serializedBytes, serializedBytes.Length, protocolVersion);
+            var deserializer = new Deserializer(serializedBytes.GetBuffer(), serializedBytes.Length, protocolVersion);
 
             return deserializer.DeserializeRequest();
         }

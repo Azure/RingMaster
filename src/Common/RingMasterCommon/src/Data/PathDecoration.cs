@@ -5,6 +5,8 @@
 namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
     using System;
+    using System.Text.RegularExpressions;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Collection of helper methods to handle bulk operations, get full sub-tree, etc.
@@ -37,30 +39,62 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         private const string FullSubtreeStatPostfix = "$fullsubtreestat$";
 
         /// <summary>
+        /// The full subtree user metadata postfix
+        /// </summary>
+        private const string FullSubtreeUserMetadataPostfix = "$fullsubtreeusermetadata$";
+
+        /// <summary>
+        /// The full subtree stat and metadata postfix
+        /// </summary>
+        private const string FullSubtreeStatAndMetadataPostfix = "$fullsubtreestatandmetadata$";
+
+        private static readonly Regex ApiVersionPattern = new Regex($@"\{ApiVersion.ApiVersionString}=(\d+)\$");
+
+        /// <summary>
         /// Gets the full content path.
         /// </summary>
         /// <param name="path">The path.</param>
-        /// <param name="withStat">Should the node stat be returned or not</param>
-        /// <returns>Decorated path to retrieve the full sub-tree</returns>
-        public static string GetFullContentPath(string path, bool withStat)
+        /// <param name="option">The option.</param>
+        /// <returns>
+        /// Decorated path to retrieve the full sub-tree
+        /// </returns>
+        public static string GetFullContentPath(string path, RequestGetSubtree.GetSubtreeOptions option)
         {
+            string postfix = FullSubtreePostfix;
+            switch (option)
+            {
+                case RequestGetSubtree.GetSubtreeOptions.IncludeStats | RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata:
+                    postfix = FullSubtreeStatAndMetadataPostfix;
+                    break;
+                case RequestGetSubtree.GetSubtreeOptions.IncludeStats:
+                    postfix = FullSubtreeStatPostfix;
+                    break;
+                case RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata:
+                    postfix = FullSubtreeUserMetadataPostfix;
+                    break;
+
+                default:
+                    break;
+            }
+
             return string.Join(
                 PathDelimiter,
                 path,
-                withStat ? FullSubtreeStatPostfix : FullSubtreePostfix);
+                postfix);
         }
 
         /// <summary>
         /// Determines whether [is full content path] [the specified path].
         /// </summary>
         /// <param name="path">The path.</param>
-        /// <param name="withStat">Should the node stat be returned or not</param>
-        /// <returns><c>true</c> if the specified path is a 'full contents' path; otherwise, <c>false</c>.</returns>
-        public static bool IsFullContentPath(string path, out bool withStat)
+        /// <param name="options">The options.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified path is a 'full contents' path; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsFullContentPath(string path, out RequestGetSubtree.GetSubtreeOptions options)
         {
             bool isFullSubTree = false;
-
-            withStat = false;
+            options = RequestGetSubtree.GetSubtreeOptions.None;
 
             if (!string.IsNullOrEmpty(path) && path[path.Length - 1] == MagicChar)
             {
@@ -71,7 +105,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
                 }
                 else if (postfix.Equals(FullSubtreeStatPostfix, StringComparison.Ordinal))
                 {
-                    withStat = true;
+                    options = RequestGetSubtree.GetSubtreeOptions.IncludeStats;
+                    isFullSubTree = true;
+                }
+                else if (postfix.Equals(FullSubtreeUserMetadataPostfix, StringComparison.Ordinal))
+                {
+                    options = RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata;
+                    isFullSubTree = true;
+                }
+                else if (postfix.Equals(FullSubtreeStatAndMetadataPostfix, StringComparison.Ordinal))
+                {
+                    options = RequestGetSubtree.GetSubtreeOptions.IncludeStats | RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata;
                     isFullSubTree = true;
                 }
             }
@@ -92,6 +136,39 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             }
 
             return path.Substring(0, path.LastIndexOf(PathDelimiterChar));
+        }
+
+        /// <summary>
+        /// Adds the API version to path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>path with api version</returns>
+        public static string AddApiVersionToPath(string path)
+        {
+            return string.Join(PathDelimiter, path, ApiVersion.CurrentApiVersionPostfix);
+        }
+
+        /// <summary>
+        /// Gets the path without API version.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <param name="apiVersion">The API version.</param>
+        /// <returns>path without api version postfix</returns>
+        public static string GetPathWithoutApiVersion(string path, out int apiVersion)
+        {
+            apiVersion = 0;
+            if (!string.IsNullOrEmpty(path) && path[path.Length - 1] == MagicChar)
+            {
+                var postfix = path.Substring(path.LastIndexOf(PathDelimiterChar) + 1);
+                var match = ApiVersionPattern.Match(postfix);
+                if (match.Success)
+                {
+                    apiVersion = int.Parse(match.Groups[1].Value);
+                    return path.Substring(0, path.LastIndexOf(PathDelimiterChar));
+                }
+            }
+
+            return path;
         }
     }
 }

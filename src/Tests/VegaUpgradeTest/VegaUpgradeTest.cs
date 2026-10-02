@@ -12,9 +12,10 @@ namespace Microsoft.Vega.Test
     using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
-    using Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster;
     using Microsoft.Extensions.Configuration;
-    using VisualStudio.TestTools.UnitTesting;
+    using Microsoft.Vega.Test.Helpers;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     /// <summary>
     /// The Vega Service Fabric Performance test class
@@ -77,19 +78,19 @@ namespace Microsoft.Vega.Test
         [ClassInitialize]
         public static void ClassSetup(TestContext context)
         {
-            var path = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var builder = new ConfigurationBuilder().SetBasePath(Path.GetDirectoryName(path)).AddJsonFile("appSettings.json");
-            IConfiguration appSettings = builder.Build();
-
-            Helpers.Helpers.SetupTraceLog(Path.Combine(appSettings["LogFolder"], "VegaUpgradeTest.LogPath"));
             log = s => Trace.TraceInformation($"{DateTime.Now} {s}");
 
-            if (context.Properties.ContainsKey("ServerAddress"))
+            if (context.Properties.Contains("ServerAddress"))
             {
                 serverAddress = context.Properties["ServerAddress"] as string;
             }
+            else
+            {
+                var serviceInfo = Helpers.Helpers.GetVegaServiceInfo().Result;
+                serverAddress = serviceInfo.Item1;
+            }
 
-            if (context.Properties.ContainsKey("MaxDownTimeInSecond"))
+            if (context.Properties.Contains("MaxDownTimeInSecond"))
             {
                 maxDownTimeInSecond = int.Parse(context.Properties["MaxDownTimeInSecond"] as string);
             }
@@ -209,18 +210,20 @@ namespace Microsoft.Vega.Test
         private static void CreateNodeThread(CancellationToken cancellationToken)
         {
             const string rootNodeName = "UpgradeTest";
-            RingMasterClient client = null;
+            IRingMasterRequestHandler client = null;
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 if (client == null)
                 {
-                    client = new RingMasterClient(
-                        connectionString: serverAddress,
+                    client = new RetriableRingMasterClient(
+                        s => new RingMasterClient(
+                        connectionString: s,
                         clientCerts: null,
                         serverCerts: null,
                         requestTimeout: requestTimeout,
-                        watcher: null);
+                        watcher: null),
+                        serverAddress);
                 }
 
                 Parallel.For(
@@ -240,7 +243,7 @@ namespace Microsoft.Vega.Test
                                 null,
                                 CreateMode.PersistentAllowPathCreation | CreateMode.SuccessEvenIfNodeExistsFlag)
                                 .GetAwaiter().GetResult();
-                            client.GetData(path, false).GetAwaiter().GetResult();
+                            client.GetData(path, null, false).GetAwaiter().GetResult();
 
                             Interlocked.Increment(ref totalDataCount);
                             lastOpTimestamp = clock.Elapsed;

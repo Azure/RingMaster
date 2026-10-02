@@ -6,7 +6,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
 {
     using System;
     using System.Threading.Tasks;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// RingMaster request handler interface with overlapped request method

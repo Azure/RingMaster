@@ -32,25 +32,26 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
             "ZXRyaWNOYW1lGAEgASgJEhIKCnN0YXJ0SW5kZXgYAiABKAUSEAoIcGFnZVNp",
             "emUYAyABKAUiKAoSR2V0Sm9iTWV0cmljc1JlcGx5EhIKCmpvYk1ldHJpY3MY",
             "ASADKAEiRgohR2V0U2VydmljZUluc3RhbmNlSWRlbnRpdGllc1JlcGx5EiEK",
-            "GXNlcnZpY2VJbnN0YW5jZUlkZW50aXRpZXMYASADKAkiaQoPU3RhcnRKb2JS",
-            "ZXF1ZXN0EhAKCHNjZW5hcmlvGAEgASgJEkQKCnBhcmFtZXRlcnMYAiADKAsy",
-            "MC5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3RvLkpvYlBhcmFt",
-            "ZXRlcjK4BQobRGlzdHJpYnV0ZWRKb2JDb250cm9sbGVyU3ZjEmoKEENhbmNl",
-            "bFJ1bm5pbmdKb2ISKS5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblBy",
-            "b3RvLkVtcHR5GikuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90",
-            "by5FbXB0eSIAEnwKDEdldEpvYlN0YXRlcxIpLk1pY3Jvc29mdC5WZWdhLkRp",
-            "c3RUZXN0Q29tbW9uUHJvdG8uRW1wdHkaPy5NaWNyb3NvZnQuVmVnYS5EaXN0",
-            "cmlidXRlZEpvYkNvbnRyb2xsZXJQcm90by5HZXRKb2JTdGF0ZXNSZXBseSIA",
-            "EpcBCg1HZXRKb2JNZXRyaWNzEkIuTWljcm9zb2Z0LlZlZ2EuRGlzdHJpYnV0",
-            "ZWRKb2JDb250cm9sbGVyUHJvdG8uR2V0Sm9iTWV0cmljc1JlcXVlc3QaQC5N",
-            "aWNyb3NvZnQuVmVnYS5EaXN0cmlidXRlZEpvYkNvbnRyb2xsZXJQcm90by5H",
-            "ZXRKb2JNZXRyaWNzUmVwbHkiABKcAQocR2V0U2VydmljZUluc3RhbmNlSWRl",
-            "bnRpdGllcxIpLk1pY3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29tbW9uUHJvdG8u",
-            "RW1wdHkaTy5NaWNyb3NvZnQuVmVnYS5EaXN0cmlidXRlZEpvYkNvbnRyb2xs",
-            "ZXJQcm90by5HZXRTZXJ2aWNlSW5zdGFuY2VJZGVudGl0aWVzUmVwbHkiABJ2",
-            "CghTdGFydEpvYhI9Lk1pY3Jvc29mdC5WZWdhLkRpc3RyaWJ1dGVkSm9iQ29u",
-            "dHJvbGxlclByb3RvLlN0YXJ0Sm9iUmVxdWVzdBopLk1pY3Jvc29mdC5WZWdh",
-            "LkRpc3RUZXN0Q29tbW9uUHJvdG8uRW1wdHkiAGIGcHJvdG8z"));
+            "GXNlcnZpY2VJbnN0YW5jZUlkZW50aXRpZXMYASADKAkihwEKD1N0YXJ0Sm9i",
+            "UmVxdWVzdBIQCghzY2VuYXJpbxgBIAEoCRJECgpwYXJhbWV0ZXJzGAIgAygL",
+            "MjAuTWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90by5Kb2JQYXJh",
+            "bWV0ZXISHAoUc2VydmljZUluc3RhbmNlQ291bnQYAyABKAUyuAUKG0Rpc3Ry",
+            "aWJ1dGVkSm9iQ29udHJvbGxlclN2YxJqChBDYW5jZWxSdW5uaW5nSm9iEiku",
+            "TWljcm9zb2Z0LlZlZ2EuRGlzdFRlc3RDb21tb25Qcm90by5FbXB0eRopLk1p",
+            "Y3Jvc29mdC5WZWdhLkRpc3RUZXN0Q29tbW9uUHJvdG8uRW1wdHkiABJ8CgxH",
+            "ZXRKb2JTdGF0ZXMSKS5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblBy",
+            "b3RvLkVtcHR5Gj8uTWljcm9zb2Z0LlZlZ2EuRGlzdHJpYnV0ZWRKb2JDb250",
+            "cm9sbGVyUHJvdG8uR2V0Sm9iU3RhdGVzUmVwbHkiABKXAQoNR2V0Sm9iTWV0",
+            "cmljcxJCLk1pY3Jvc29mdC5WZWdhLkRpc3RyaWJ1dGVkSm9iQ29udHJvbGxl",
+            "clByb3RvLkdldEpvYk1ldHJpY3NSZXF1ZXN0GkAuTWljcm9zb2Z0LlZlZ2Eu",
+            "RGlzdHJpYnV0ZWRKb2JDb250cm9sbGVyUHJvdG8uR2V0Sm9iTWV0cmljc1Jl",
+            "cGx5IgASnAEKHEdldFNlcnZpY2VJbnN0YW5jZUlkZW50aXRpZXMSKS5NaWNy",
+            "b3NvZnQuVmVnYS5EaXN0VGVzdENvbW1vblByb3RvLkVtcHR5Gk8uTWljcm9z",
+            "b2Z0LlZlZ2EuRGlzdHJpYnV0ZWRKb2JDb250cm9sbGVyUHJvdG8uR2V0U2Vy",
+            "dmljZUluc3RhbmNlSWRlbnRpdGllc1JlcGx5IgASdgoIU3RhcnRKb2ISPS5N",
+            "aWNyb3NvZnQuVmVnYS5EaXN0cmlidXRlZEpvYkNvbnRyb2xsZXJQcm90by5T",
+            "dGFydEpvYlJlcXVlc3QaKS5NaWNyb3NvZnQuVmVnYS5EaXN0VGVzdENvbW1v",
+            "blByb3RvLkVtcHR5IgBiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Microsoft.Vega.DistTestCommonProto.DistTestCommonProtoReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -58,7 +59,7 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.DistributedJobControllerProto.GetJobMetricsRequest), global::Microsoft.Vega.DistributedJobControllerProto.GetJobMetricsRequest.Parser, new[]{ "MetricName", "StartIndex", "PageSize" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.DistributedJobControllerProto.GetJobMetricsReply), global::Microsoft.Vega.DistributedJobControllerProto.GetJobMetricsReply.Parser, new[]{ "JobMetrics" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.DistributedJobControllerProto.GetServiceInstanceIdentitiesReply), global::Microsoft.Vega.DistributedJobControllerProto.GetServiceInstanceIdentitiesReply.Parser, new[]{ "ServiceInstanceIdentities" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.DistributedJobControllerProto.StartJobRequest), global::Microsoft.Vega.DistributedJobControllerProto.StartJobRequest.Parser, new[]{ "Scenario", "Parameters" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Microsoft.Vega.DistributedJobControllerProto.StartJobRequest), global::Microsoft.Vega.DistributedJobControllerProto.StartJobRequest.Parser, new[]{ "Scenario", "Parameters", "ServiceInstanceCount" }, null, null, null)
           }));
     }
     #endregion
@@ -641,6 +642,7 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
     public StartJobRequest(StartJobRequest other) : this() {
       scenario_ = other.scenario_;
       parameters_ = other.parameters_.Clone();
+      serviceInstanceCount_ = other.serviceInstanceCount_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -670,6 +672,17 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
       get { return parameters_; }
     }
 
+    /// <summary>Field number for the "serviceInstanceCount" field.</summary>
+    public const int ServiceInstanceCountFieldNumber = 3;
+    private int serviceInstanceCount_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int ServiceInstanceCount {
+      get { return serviceInstanceCount_; }
+      set {
+        serviceInstanceCount_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as StartJobRequest);
@@ -685,6 +698,7 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
       }
       if (Scenario != other.Scenario) return false;
       if(!parameters_.Equals(other.parameters_)) return false;
+      if (ServiceInstanceCount != other.ServiceInstanceCount) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -693,6 +707,7 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
       int hash = 1;
       if (Scenario.Length != 0) hash ^= Scenario.GetHashCode();
       hash ^= parameters_.GetHashCode();
+      if (ServiceInstanceCount != 0) hash ^= ServiceInstanceCount.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -711,6 +726,10 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
         output.WriteString(Scenario);
       }
       parameters_.WriteTo(output, _repeated_parameters_codec);
+      if (ServiceInstanceCount != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(ServiceInstanceCount);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -723,6 +742,9 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Scenario);
       }
       size += parameters_.CalculateSize(_repeated_parameters_codec);
+      if (ServiceInstanceCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ServiceInstanceCount);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -738,6 +760,9 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
         Scenario = other.Scenario;
       }
       parameters_.Add(other.parameters_);
+      if (other.ServiceInstanceCount != 0) {
+        ServiceInstanceCount = other.ServiceInstanceCount;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -755,6 +780,10 @@ namespace Microsoft.Vega.DistributedJobControllerProto {
           }
           case 18: {
             parameters_.AddEntriesFrom(input, _repeated_parameters_codec);
+            break;
+          }
+          case 24: {
+            ServiceInstanceCount = input.ReadInt32();
             break;
           }
         }

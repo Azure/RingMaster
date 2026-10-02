@@ -6,8 +6,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.HelperTypes;
-    using RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
 
     /// <summary>
     /// Base class for classes that implement <see cref="IRingMasterRequest"/>.
@@ -22,7 +23,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// <param name="requestType">Type of the request</param>
         /// <param name="path">The path.</param>
         /// <param name="uid">UniqueId of the request</param>
-        public AbstractRingMasterRequest(RingMasterRequestType requestType, string path, ulong uid)
+        /// <param name="invokeCallbackBeforeComplete">if invoke callback before complete</param>
+        public AbstractRingMasterRequest(RingMasterRequestType requestType, string path, ulong uid, bool invokeCallbackBeforeComplete = false)
         {
             this.RequestType = requestType;
 
@@ -31,7 +33,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
 
             this.ExecutionQueueId = Guid.Empty;
             this.ExecutionQueueTimeoutMillis = 0;
+            this.InvokeCallbackBeforeComplete = invokeCallbackBeforeComplete;
         }
+
+        /// <summary>
+        /// Gets the request time tracker
+        /// </summary>
+        public static Stopwatch RequestTimeTracker { get; } = Stopwatch.StartNew();
 
         /// <summary>
         /// Gets the type of the request.
@@ -74,11 +82,43 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// </summary>
         public int ExecutionQueueTimeoutMillis { get; set; }
 
+        /// <inheritdoc/>
+        public TimeSpan RequestExpiryTime { get; set; }
+
+        /// <inheritdoc/>
+        public TimeSpan TimeRemaining
+        {
+            get
+            {
+                if (this.RequestExpiryTime == default(TimeSpan))
+                {
+                    return TimeSpan.FromMilliseconds(int.MaxValue);
+                }
+
+                var elapsed = RequestTimeTracker.Elapsed;
+                if (elapsed >= this.RequestExpiryTime)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                return this.RequestExpiryTime - elapsed;
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool InvokeCallbackBeforeComplete { get; set; }
+
         /// <summary>
         /// Gets a value indicating whether this request is readonly.
         /// </summary>
         /// <returns><c>true</c> if this request is read only</returns>
         public abstract bool IsReadOnly();
+
+        /// <inheritdoc/>
+        public bool IsRequestExpired()
+        {
+            return this.TimeRemaining == TimeSpan.Zero;
+        }
 
         private static ulong MakeUid(ulong uid)
         {

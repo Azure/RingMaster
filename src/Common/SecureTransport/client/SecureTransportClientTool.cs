@@ -118,6 +118,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
 
                     currentConnection.OnPacketReceived = packet =>
                     {
+                        packet.Dispose();
+                        return Task.CompletedTask;
                     };
 
                     try
@@ -128,7 +130,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.SecureTransportCl
                             continue;
                         }
 
-                        currentConnection.SendAsync(request).ContinueWith(_ => sendSemaphore.Release());
+                        currentConnection.SendAsync(new ByteArrayBackedBuffer(request)).ContinueWith(_ => sendSemaphore.Release());
                     }
                     catch (IOException ex)
                     {

@@ -38,6 +38,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="cancellation">Cancellation token for the worker threads</param>
         public void Initialize(int threadCount, CancellationToken cancellation)
         {
+            this.workers.Clear();
+
             if (threadCount <= 0)
             {
                 throw new ArgumentException("threadCount must be greater than 0", nameof(threadCount));

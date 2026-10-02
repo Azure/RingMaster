@@ -9,6 +9,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
     using System.IO;
     using System.Text;
     using Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persistence;
+    using Microsoft.IO;
+    using RequestDefinitions = Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// Class BulkOperation.
@@ -18,17 +20,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Serializes all data.
         /// </summary>
+        /// <param name="ms">The ms.</param>
         /// <param name="child">The child.</param>
-        /// <param name="writeStat">if the node stat should be serialized</param>
-        /// <returns>System.Byte[].</returns>
-        public static byte[] SerializeAllData(Node child, bool writeStat)
+        /// <param name="options">The options.</param>
+        /// <param name="apiVersion">The API version.</param>
+        public static void SerializeAllData(MemoryStream ms, Node child, RequestDefinitions.RequestGetSubtree.GetSubtreeOptions options, int apiVersion)
         {
-            using (MemoryStream ms = new MemoryStream())
-            {
-                SerializeAllData(child, new BinaryWriter(ms), writeStat);
-                ms.Flush();
-                return ms.ToArray();
-            }
+            SerializeAllData(child, new BinaryWriter(ms), options, apiVersion);
         }
 
         /// <summary>
@@ -80,34 +78,29 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// <summary>
         /// Serializes all data in a depth-first manner sorted by node name, supporting continuations.
         /// </summary>
+        /// <param name="ms">The ms.</param>
         /// <param name="child">Node to serialize all the data under.</param>
-        /// <param name="writeStat">Whether to write stats for each node or not.</param>
+        /// <param name="option">The option.</param>
         /// <param name="top">Maximum number of new nodes to serialize.</param>
         /// <param name="startingPath">Continuation path to resume from.</param>
-        /// <param name="relativeResponsePath">Continuation path result if we hit max number of nodes limit.</param>
-        /// <returns>Subtree data.</returns>
-        internal static byte[] SerializeAllDataSorted(Node child, bool writeStat, int top, Queue<string> startingPath, out string relativeResponsePath)
+        /// <param name="apiVersion">The API version.</param>
+        /// <param name="relativeResponsePath">The relative response path.</param>
+        internal static void SerializeAllDataSorted(MemoryStream ms, Node child, RequestDefinitions.RequestGetSubtree.GetSubtreeOptions option, int top, Queue<string> startingPath, int apiVersion, out string relativeResponsePath)
         {
             relativeResponsePath = null;
 
-            using (MemoryStream ms = new MemoryStream())
+            var responsePathStack = new Stack<string>();
+            SerializeAllDataSorted(child, new BinaryWriter(ms), option, startingPath, responsePathStack, apiVersion, ref top);
+
+            StringBuilder stringBuilder = new StringBuilder();
+            while (responsePathStack.Count > 0)
             {
-                var responsePathStack = new Stack<string>();
-                SerializeAllDataSorted(child, new BinaryWriter(ms), writeStat, startingPath, responsePathStack, ref top);
+                stringBuilder.Append(responsePathStack.Pop());
+            }
 
-                StringBuilder stringBuilder = new StringBuilder();
-                while (responsePathStack.Count > 0)
-                {
-                    stringBuilder.Append(responsePathStack.Pop());
-                }
-
-                if (stringBuilder.Length > 0)
-                {
-                    relativeResponsePath = stringBuilder.ToString();
-                }
-
-                ms.Flush();
-                return ms.ToArray();
+            if (stringBuilder.Length > 0)
+            {
+                relativeResponsePath = stringBuilder.ToString();
             }
         }
 
@@ -116,24 +109,31 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="child">The child node to serialize.</param>
         /// <param name="ms">The binary writer backed by memory.</param>
-        /// <param name="writeStat">If the node stat should be serialized along with node data</param>
-        private static void SerializeAllData(Node child, BinaryWriter ms, bool writeStat)
+        /// <param name="option">The option.</param>
+        /// <param name="apiVersion">The API version.</param>
+        private static void SerializeAllData(Node child, BinaryWriter ms, RequestDefinitions.RequestGetSubtree.GetSubtreeOptions option, int apiVersion)
         {
             ms.Write(child.Name);
-            if (child.Data == null)
+            SerializeByteArray(ms, child.Data);
+
+            if (apiVersion >= ApiVersion.Version1)
             {
-                ms.Write(-1);
+                ms.Write((byte)option);
             }
             else
             {
-                ms.Write(child.Data.Length);
-                ms.Write(child.Data);
+                // this means the request is from an old client. Should only serialize true/false to indicate include stat or not
+                ms.Write(option.HasFlag(RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.IncludeStats));
             }
 
-            ms.Write(writeStat);
-            if (writeStat)
+            if (option.HasFlag(RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.IncludeStats))
             {
-                child.NodeStat.Write(ms);
+                child.NodeStat.Write(ms, apiVersion);
+            }
+
+            if (option.HasFlag(RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata))
+            {
+                SerializeByteArray(ms, child.UserMetadata);
             }
 
             CompleteNode cn = child as CompleteNode;
@@ -141,7 +141,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             {
                 foreach (IPersistedData n in cn.ChildrenNodes)
                 {
-                    SerializeAllData(n.Node, ms, writeStat);
+                    SerializeAllData(n.Node, ms, option, apiVersion);
                 }
             }
 
@@ -153,12 +153,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
         /// </summary>
         /// <param name="child">Node to serialize all the data under.</param>
         /// <param name="ms">Binary writer to serialize the data to.</param>
-        /// <param name="writeStat">Whether to write stats for each node or not.</param>
+        /// <param name="options">The options.</param>
         /// <param name="startingPath">Continuation path to resume from.</param>
         /// <param name="continuationPathBuilder">Continuation path result if we hit max number of nodes limit.</param>
+        /// <param name="apiVersion">The API version.</param>
         /// <param name="maxNodes">Maximum number of new nodes to serialize.</param>
-        /// <returns>True if enumeration was fully completed, false if the max nodes limit was hit.</returns>
-        private static bool SerializeAllDataSorted(Node child, BinaryWriter ms, bool writeStat, Queue<string> startingPath, Stack<string> continuationPathBuilder, ref int maxNodes)
+        /// <returns>
+        /// True if enumeration was fully completed, false if the max nodes limit was hit.
+        /// </returns>
+        /// <exception cref="ArgumentException">Invalid starting path specified. Current node is {child.Name}, but starting name is {nextNodeName} - startingPath</exception>
+        private static bool SerializeAllDataSorted(Node child, BinaryWriter ms, RequestDefinitions.RequestGetSubtree.GetSubtreeOptions options, Queue<string> startingPath, Stack<string> continuationPathBuilder, int apiVersion, ref int maxNodes)
         {
             ms.Write(child.Name);
 
@@ -173,27 +177,24 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 // not including data for this node as it was part of previous continuation
                 ms.Write(-1);
 
-                // not including stat for this node as it was part of previous continuation
-                ms.Write(false);
+                // not including stat or metadata for this node as it was part of previous continuation
+                ms.Write((byte)RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.None);
             }
             else
             {
                 maxNodes--;
 
-                if (child.Data == null)
+                SerializeByteArray(ms, child.Data);
+
+                ms.Write((byte)options);
+                if (options.HasFlag(RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.IncludeStats))
                 {
-                    ms.Write(-1);
-                }
-                else
-                {
-                    ms.Write(child.Data.Length);
-                    ms.Write(child.Data);
+                    child.NodeStat.Write(ms, apiVersion);
                 }
 
-                ms.Write(writeStat);
-                if (writeStat)
+                if (options.HasFlag(RequestDefinitions.RequestGetSubtree.GetSubtreeOptions.IncludeUserMetadata))
                 {
-                    child.NodeStat.Write(ms);
+                    SerializeByteArray(ms, child.UserMetadata);
                 }
             }
 
@@ -215,7 +216,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                     IPersistedData n;
                     if (cn.ChildrenMapping.TryGetValue(nextNodeName, out n))
                     {
-                        if (!SerializeAllDataSorted(n.Node, ms, writeStat, startingPath, continuationPathBuilder, ref maxNodes))
+                        if (!SerializeAllDataSorted(n.Node, ms, options, startingPath, continuationPathBuilder, apiVersion, ref maxNodes))
                         {
                             continuationPathBuilder.Push(string.Concat("/", child.Name));
                             ms.Write(string.Empty);
@@ -230,11 +231,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
                 }
 
                 var sortedChildren = cn.RetrieveChildren($">:{maxNodes}:{nextNodeName}");
-
                 foreach (var childNodeName in sortedChildren)
                 {
                     IPersistedData n = cn.ChildrenMapping[childNodeName];
-                    if (!SerializeAllDataSorted(n.Node, ms, writeStat, startingPath, continuationPathBuilder, ref maxNodes))
+                    if (!SerializeAllDataSorted(n.Node, ms, options, startingPath, continuationPathBuilder, apiVersion, ref maxNodes))
                     {
                         continuationPathBuilder.Push(string.Concat("/", child.Name));
                         ms.Write(string.Empty);
@@ -246,6 +246,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend
             ms.Write(string.Empty);
 
             return true;
+        }
+
+        private static void SerializeByteArray(BinaryWriter ms, byte[] data)
+        {
+            if (data == null)
+            {
+                ms.Write(-1);
+            }
+            else
+            {
+                ms.Write(data.Length);
+                ms.Write(data);
+            }
         }
 
         /// <summary>

@@ -1,0 +1,4 @@
+{
+    "excludeFromCodeCoverageReport": true,
+    "reason": "PipelineNotSupported/OSS"
+}

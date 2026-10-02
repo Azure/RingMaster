@@ -816,7 +816,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         [Timeout(30000)]
         public void TestNotificationToNonExistentWatcher()
         {
-            var configuration = new RingMasterClient.Configuration() { DefaultTimeout = TimeSpan.FromMilliseconds(1000) };
+            var configuration = new RingMasterClient.Configuration() { DefaultTimeout = TimeSpan.FromMilliseconds(10000) };
             var instrumentation = new RingMasterClientInstrumentation();
             ICommunicationProtocol protocol = new RingMasterCommunicationProtocol();
 
@@ -1152,7 +1152,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
 
                 public Action OnConnectionLost { get; set; }
 
-                public Action<byte[]> OnPacketReceived { get; set; }
+                public Func<IMemoryBuffer, Task> OnPacketReceived { get; set; }
 
                 public ulong Id { get; private set; }
 
@@ -1201,14 +1201,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     this.transport.IsDisconnected = true;
                 }
 
-                public Task SendAsync(byte[] packet)
+                public async Task SendAsync(IMemoryBuffer packet)
                 {
                     if (packet == null)
                     {
                         throw new ArgumentNullException(nameof(packet));
                     }
 
-                    RequestCall call = this.protocol.DeserializeRequest(packet, packet.Length, this.ProtocolVersion);
+                    RequestCall call = this.protocol.DeserializeRequest(packet.GetBuffer(), packet.Length, this.ProtocolVersion);
+                    packet.Dispose();
                     RequestResponse response = new RequestResponse();
                     response.CallId = call.CallId;
                     response.ResponsePath = call.Request.Path;
@@ -1227,7 +1228,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                             else if (this.transport.MustDropInit)
                             {
                                 Trace.TraceInformation($"Dropping InitRequest {call.CallId}");
-                                return Task.FromResult<object>(null);
+                                return;
                             }
                             else
                             {
@@ -1236,8 +1237,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                                 response.Content = new string[] { string.Empty + initRequest.SessionId, Guid.NewGuid().ToString() };
                             }
 
-                            this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion));
-                            return Task.FromResult<object>(null);
+                            await this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion));
+                            return;
                         }
 
                         case RingMasterRequestType.GetData:
@@ -1248,6 +1249,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                                     this.watchers.TryAdd(getDataRequest.Watcher.Id, getDataRequest.Watcher);
                                 }
 
+                                response.Content = new GetDataResponse(null, null, null);
                                 break;
                             }
 
@@ -1263,32 +1265,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                     else if (this.transport.MustSendInvalidResponse)
                     {
                         Trace.TraceInformation($"DummyTransport.Connection SendingInvalidResponse connectionId={this.Id}, requestId={call.CallId}");
-                        this.OnPacketReceived(Guid.NewGuid().ToByteArray());
+                        await this.OnPacketReceived(new ByteArrayBackedBuffer(Guid.NewGuid().ToByteArray()));
                     }
                     else if (this.transport.MustSendInvalidClientMessage)
                     {
                         Trace.TraceInformation($"DummyTransport.Connection SendingInvalidClientMessage connectionId={this.Id}, requestId={call.CallId}");
                         RequestResponse clientMessage = new RequestResponse();
                         clientMessage.CallId = ulong.MaxValue;
-                        this.OnPacketReceived(this.protocol.SerializeResponse(clientMessage, this.ProtocolVersion));
+                        await this.OnPacketReceived(this.protocol.SerializeResponse(clientMessage, this.ProtocolVersion));
                     }
                     else if (this.transport.MustSendUnexpectedResponse)
                     {
                         Trace.TraceInformation($"DummyTransport.Connection SendingUnexpectedResponse connectionId={this.Id}, requestId={call.CallId}");
                         RequestResponse unexpectedResponse = new RequestResponse();
                         unexpectedResponse.CallId = call.CallId + 1000000;
-                        this.OnPacketReceived(this.protocol.SerializeResponse(unexpectedResponse, this.ProtocolVersion));
+                        await this.OnPacketReceived(this.protocol.SerializeResponse(unexpectedResponse, this.ProtocolVersion));
                     }
                     else if ((call.Request.RequestType == RingMasterRequestType.Exists) && (call.Request.Path == "<Fail>"))
                     {
                         Trace.TraceInformation($"DummyTransport.Connection HeartBeat connectionId={this.Id}, requestId={call.CallId}");
                         response.ResultCode = (int)RingMasterException.Code.Nonode;
-                        this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion));
+                        await this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion));
                     }
                     else if (this.transport.MustSendSuccessResponse)
                     {
-                        Trace.TraceInformation($"DummyTransport.Connection SendingSuccessResponse connectionId={this.Id}, requestId={call.CallId}");
-                        Task.Run(() => this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion)));
+                        Trace.TraceInformation(
+                            $"DummyTransport.Connection SendingSuccessResponse connectionId={this.Id}, requestId={call.CallId}");
+                        ThreadPool.QueueUserWorkItem(
+                            _ => this.OnPacketReceived(this.protocol.SerializeResponse(response, this.ProtocolVersion)));
                     }
                     else
                     {
@@ -1296,10 +1300,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
                         this.transport.Requests.Add(call);
                     }
 
-                    return Task.FromResult<object>(null);
+                    return;
                 }
 
-                public void Send(byte[] packet)
+                public void Send(IMemoryBuffer packet)
                 {
                     this.SendAsync(packet).Wait();
                 }

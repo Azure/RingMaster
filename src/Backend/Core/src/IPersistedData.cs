@@ -47,6 +47,14 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         byte[] Data { get; set; }
 
         /// <summary>
+        /// Gets or sets the user metadata.
+        /// </summary>
+        /// <value>
+        /// The user metadata.
+        /// </value>
+        byte[] UserMetadata { get; set; }
+
+        /// <summary>
         /// Gets or sets the acl.
         /// </summary>
         /// <value>The acl.</value>
@@ -144,6 +152,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Backend.Persisten
         /// </summary>
         /// <param name="chgs">The CHGS.</param>
         void AppendSetData(IChangeList chgs);
+
+        /// <summary>
+        /// Appends the set data and user metadata.
+        /// </summary>
+        /// <param name="chgs">The CHGS.</param>
+        void AppendSetDataAndUserMetadata(IChangeList chgs);
 
         /// <summary>
         /// Appends a poison pill for this node to the changelist.

@@ -95,7 +95,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         /// Verify that data sizes up to the limit are supported and the limit is enforced.
         /// </summary>
         [TestMethod]
-        [Timeout(300000)]
+        [Timeout(30000)]
         public void TestCreateLargeData()
         {
             this.functionalityTest.TestCreateLargeData(10 * 1024 * 1024).Wait();
@@ -109,6 +109,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         public void TestDelete()
         {
             this.functionalityTest.TestDelete().Wait();
+        }
+
+        /// <summary>
+        /// Tests the get data.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetData()
+        {
+            this.functionalityTest.TestGetData().Wait();
         }
 
         /// <summary>
@@ -132,6 +142,35 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         {
             this.functionalityTest.TestCreateNodeWithData().Wait();
         }
+        /// <summary>
+        /// Tests the create node with user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadata()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadata().Wait();
+        }
+
+        /// <summary>
+        /// Tests the create node with user metadata on existing node.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithUserMetadataOnExistingNode()
+        {
+            this.functionalityTest.TestCreateNodeWithUserMetadataOnExistingNode().Wait();
+        }
+
+        /// <summary>
+        /// Tests the maximum length of the create node with data or metadata exceeds.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestCreateNodeWithDataOrMetadataExceedsMaxLength()
+        {
+            this.functionalityTest.TestCreateNodeWithDataOrMetadataExceedsMaxLength(MaxNodeDataSize, MaxUserMetadataSize).Wait();
+        }
 
         /// <summary>
         /// Verify that data associated with a sub tree can be retrieved using the <c>path/$fullsubtree$</c>
@@ -142,6 +181,34 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         public void TestGetFullSubtreeData()
         {
             this.functionalityTest.TestGetFullSubtreeData().Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeNoStatsNoMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(false, false).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStatsWithMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(true, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeNoStatsWithMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(false, true).Wait();
+        }
+
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestGetSubtreeWithStatsNoMetadata()
+        {
+            this.functionalityTest.TestGetSubtree(true, false).Wait();
         }
 
         /// <summary>
@@ -175,6 +242,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.RingMasterClientU
         public void TestSetData()
         {
             this.functionalityTest.TestSetData().Wait();
+        }
+
+        /// <summary>
+        /// Tests the set user metadata.
+        /// </summary>
+        [TestMethod]
+        [Timeout(30000)]
+        public void TestSetDataAndUserMetadata()
+        {
+            this.functionalityTest.TestSetDataAndUserMetadata().Wait();
         }
 
         /// <summary>

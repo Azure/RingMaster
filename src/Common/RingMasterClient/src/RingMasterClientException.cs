@@ -34,6 +34,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
             /// Request queue is full
             /// </summary>
             RequestQueueFull,
+
+            /// <summary>
+            /// The dispatch watcher queue is empty
+            /// </summary>
+            DispatchWatcherQueueEmpty,
         }
 
         /// <summary>
@@ -49,6 +54,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         public static RingMasterClientException RequestQueueFull(int queueLength)
         {
             return new RingMasterClientException(Code.RequestQueueFull, $"RequestQueue has reached his configured limit {queueLength}");
+        }
+
+        /// <summary>
+        /// Creates an exception with DispatchWatcherQueueEmpty code.
+        /// </summary>
+        /// <param name="watcherId">The watcher identifier.</param>
+        /// <param name="path">The path.</param>
+        /// <returns>
+        /// Exception created
+        /// </returns>
+        public static RingMasterClientException DispatchWatcherEventQueueEmpty(ulong watcherId, string path)
+        {
+            return new RingMasterClientException(Code.DispatchWatcherQueueEmpty, $"Event queue to dispatch watcher events should not be empty. watcher: {watcherId} path: {path}");
         }
 
         /// <inheritdoc />

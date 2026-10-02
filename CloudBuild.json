@@ -10,7 +10,7 @@
     "VersionGenerationMode": "SkipVersionGeneration"
   },
   "MSBuild": {
-    "Version": "15.0"
+    "Version": "17.0"
   },
   "QuickBuildArgs": "-Sandbox Tracker"
 }

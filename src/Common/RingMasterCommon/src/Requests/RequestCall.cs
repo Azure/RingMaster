@@ -23,5 +23,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests
         /// </summary>
         /// <value>The request.</value>
         public IRingMasterRequest Request { get; set; }
+
+        /// <summary>
+        /// Gets or sets the server timeout in milliseconds.
+        /// </summary>
+        public int ServerTimeoutMillis { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<MonitoringManagement version="1.0" namespace="SdnPubSub" eventVersion="3" timestamp="2018-02-01T00:00:00.0000000Z">
+<MonitoringManagement version="1.0" namespace="SdnPubSub" eventVersion="3" timestamp="2018-08-25T00:00:00.0000000Z">
   <Imports>
     <Import file="MonitoringStandardEvents.xml" />
   </Imports>
@@ -68,7 +68,7 @@
           <MdmDimension name="Tenant"><![CDATA[GetEnvironmentVariable("MONITORING_TENANT")]]></MdmDimension>
           <MdmDimension name="RoleInstance"><![CDATA[GetEnvironmentVariable("MONITORING_ROLE_INSTANCE")]]></MdmDimension>
         </MdmDimensions>
-        
+
         <Counter>\Service Fabric ESE Local Store(*)\Async Commits/sec</Counter>
         <Counter>\Service Fabric ESE Local Store(*)\Avg. commit latency (us)</Counter>
         <Counter>\Service Fabric ESE Local Store(*)\Avg. completed commit batch size</Counter>
@@ -328,7 +328,7 @@
       <EtwProvider name="Microsoft-Azure-Networking-Infrastructure-RingMaster-Fabric-RingMasterService"
                    format="EventSource"
                    storeType="Local"
-                   levelFilter="5">
+                   levelFilter="4">
         <DefaultEvent eventName="RingMasterServiceEvents"/>
       </EtwProvider>
 
@@ -336,7 +336,7 @@
       <EtwProvider name="Microsoft-Azure-Networking-Infrastructure-RingMaster-Fabric-RingMasterWatchdog"
                    format="EventSource"
                    storeType="CentralBond"
-                   levelFilter="5"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="RingMasterWatchdogEvents"/>
       </EtwProvider>
@@ -345,7 +345,7 @@
       <EtwProvider name="Microsoft-Azure-Networking-Infrastructure-RingMaster-Backend-RingMasterEvents"
                    format="EventSource"
                    storeType="CentralBond"
-                   levelFilter="5"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="RingMasterEvents"/>
       </EtwProvider>
@@ -353,8 +353,8 @@
       <!-- source: src\Common\RingMasterCommon\src\CertificateRules\CertificateRulesEventSource.cs -->
       <EtwProvider name="Microsoft-Azure-Networking-Infrastructure-RingMaster-CertificateRules"
                    format="EventSource"
-                   storeType="CentralBond"
-                   levelFilter="5"
+                   storeType="Local"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="CertificateRulesEvents"/>
       </EtwProvider>
@@ -363,16 +363,16 @@
       <EtwProvider name= "Microsoft-Azure-RingMaster-RingMasterServer"
                    format="EventSource"
                    storeType="CentralBond"
-                   levelFilter="5"
+                   levelFilter="4"
                    duration="PT5M">
-        <DefaultEvent eventName="RingMasterServerEvents"/>
+        <DefaultEvent eventName="RingMasterServer"/>
       </EtwProvider>
 
       <!-- source: src\Common\SecureTransport\src\SecureTransportEventSource.cs -->
       <EtwProvider name= "Microsoft-Azure-Networking-Infrastructure-RingMaster-SecureTransport"
                    format="EventSource"
-                   storeType="CentralBond"
-                   levelFilter="5"
+                   storeType="Local"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="SecureTransportEvents"/>
       </EtwProvider>
@@ -380,8 +380,8 @@
       <!-- source: src\Common\ZooKeeperServer\src\ZooKeeperServerEventSource.cs -->
       <EtwProvider name= "Microsoft-Azure-RingMaster-ZooKeeperServer"
                    format="EventSource"
-                   storeType="CentralBond"
-                   levelFilter="5"
+                   storeType="Local"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="ZooKeeperServerEvents"/>
       </EtwProvider>
@@ -389,8 +389,8 @@
       <!-- source: src\Infrastructure\LogStream\src\LogStreamEventSource.cs -->
       <EtwProvider name= "Microsoft-Azure-Networking-Infrastructure-RingMaster-LogStream"
                    format="EventSource"
-                   storeType="CentralBond"
-                   levelFilter="5"
+                   storeType="Local"
+                   levelFilter="4"
                    duration="PT5M">
         <DefaultEvent eventName="LogStreamEvents"/>
       </EtwProvider>
@@ -399,27 +399,27 @@
       <EtwProvider name= "Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence"
                    format="EventSource"
                    storeType="CentralBond"
-                   levelFilter="5"
+                   levelFilter="4"
                    duration="PT5M">
-        <DefaultEvent eventName="RingMasterPersistenceEvents"/>
+        <DefaultEvent eventName="RingMasterPersistence"/>
       </EtwProvider>
 
       <!-- source: src\Persistence\InMemory\src\InMemoryPersistenceEventSource.cs -->
       <EtwProvider name= "Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence-InMemory"
                    format="EventSource"
-                   storeType="CentralBond"
-                   levelFilter="5"
+                   storeType="Local"
+                   levelFilter="4"
                    duration="PT5M">
-        <DefaultEvent eventName="RingMasterInMemoryPersistenceEvents"/>
+        <DefaultEvent eventName="RingMasterInMemoryPersistence"/>
       </EtwProvider>
       
       <!-- source: src\Persistence\ServiceFabric\src\ServiceFabricPersistenceEventSource.cs -->
       <EtwProvider name= "Microsoft-Azure-Networking-Infrastructure-RingMaster-Persistence-ServiceFabric"
                    format="EventSource"
                    storeType="CentralBond"
-                   levelFilter="5"
+                   levelFilter="4"
                    duration="PT5M">
-        <DefaultEvent eventName="RingMasterServiceFabricPersistenceEvents"/>
+        <DefaultEvent eventName="RingMasterServiceFabricPersistence"/>
       </EtwProvider>
     </EtwProviders>
 
@@ -453,7 +453,7 @@
 
     <!-- Configuration for Azure Watson -->
     <CrashDumpMonitor>
-      <CrashDumpItem eventName="VegaCrashDumpEvent" storeType="Central" useAzureWatson="true" watsonEndpoint="azurewatsonanalysis-prod.core.windows.net">
+      <CrashDumpItem eventName="MadariCrashDumpEvent" storeType="Central" useAzureWatson="true" watsonEndpoint="azurewatsonanalysis-prod.core.windows.net">
         <ProcessList>
           <Process>[All]</Process>
         </ProcessList>
@@ -481,109 +481,58 @@
     <!-- Enable consumption of MDM events with multi-instance mode support -->
     <Extensions>
       <Extension extensionName="MetricsExtension">
-        <CommandLine>
-          <![CDATA[start.bat -StableInstanceId VegaMetricsExtension -OwnedAccounts SDNPubSub -FrontEndUrl https://global.metrics.nsatc.net/]]>
-        </CommandLine>
+        <CommandLine><![CDATA[start.bat -StableInstanceId VegaMetricsExtension -OwnedAccounts SDNPubSub -FrontEndUrl https://global.prod.microsoftmetrics.com/]]></CommandLine>
       </Extension>
     </Extensions>
   </Events>
   <EventStreamingAnnotations>
     <EventStreamingAnnotation name="^OperationEvent$">
       <DistributedTracing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </DistributedTracing>
-
       <Error>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Error>
-
       <Indexing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Indexing>
     </EventStreamingAnnotation>
 
     <EventStreamingAnnotation name="^QoSEvent$">
       <DistributedTracing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </DistributedTracing>
-
       <Error>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Error>
-
       <Indexing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Indexing>
     </EventStreamingAnnotation>
 
     <EventStreamingAnnotation name="^TraceEvent$">
       <DistributedTracing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </DistributedTracing>
-
       <Error>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Error>
-
       <Indexing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
+        <Content><![CDATA[<Config />]]></Content>
       </Indexing>
     </EventStreamingAnnotation>
 
-    <EventStreamingAnnotation name="^TraceLogs$">
-      <Cosmos>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
-      </Cosmos>
-
-      <DistributedTracing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
-      </DistributedTracing>
+    <EventStreamingAnnotation name="^RingMasterEvents$">
+      <LogAnalytics>
+        <Content>LogAnalyticsContent</Content>
+      </LogAnalytics>
     </EventStreamingAnnotation>
 
-    <EventStreamingAnnotation name="^Message$">
-      <Cosmos>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
-      </Cosmos>
-
-      <DistributedTracing>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
-      </DistributedTracing>
+    <EventStreamingAnnotation name="^RingMasterPersistence$">
+      <LogAnalytics>
+        <Content>LogAnalyticsContent</Content>
+      </LogAnalytics>
     </EventStreamingAnnotation>
-
-    <EventStreamingAnnotation name="^GeneralException$">
-      <Error>
-        <Content>
-          <![CDATA[<Config />]]>
-        </Content>
-      </Error>
-    </EventStreamingAnnotation>
-
   </EventStreamingAnnotations>
 
   <EnvelopeSchema>

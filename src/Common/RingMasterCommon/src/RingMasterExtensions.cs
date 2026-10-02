@@ -11,8 +11,8 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
     using System.IO;
     using System.Text;
     using System.Threading.Tasks;
-    using RingMaster.Data;
-    using RingMaster.Requests;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
 
     /// <summary>
     /// RingMaster Extensions provides extension methods for <see cref="IRingMasterRequestHandler"/>
@@ -46,12 +46,15 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
         /// <param name="throwIfNodeExists">if true, and the error is <c>Nodeexists</c>, it generates an exception</param>
-        /// <returns>Task that tracks completion of this method</returns>
-        public static async Task Create(this IRingMasterRequestHandler ringMaster, string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, bool throwIfNodeExists)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that tracks completion of this method
+        /// </returns>
+        public static async Task Create(this IRingMasterRequestHandler ringMaster, string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, bool throwIfNodeExists, byte[] userMetadata = null)
         {
             try
             {
-                await Create(ringMaster, path, data, acl, createMode);
+                await Create(ringMaster, path, data, acl, createMode, userMetadata: userMetadata);
             }
             catch (RingMasterException ex)
             {
@@ -70,15 +73,19 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="data">Data to associate with the node</param>
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
-        /// <returns>Task that will resolve on success to the path to the newly created node</returns>
-        public static async Task<string> Create(this IRingMasterRequestHandler ringMaster, string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode)
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that will resolve on success to the path to the newly created node
+        /// </returns>
+        public static async Task<string> Create(this IRingMasterRequestHandler ringMaster, string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode, byte[] userMetadata = null)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestCreate(
                     path,
                     data,
                     acl,
-                    createMode));
+                    createMode,
+                    userMetadata: userMetadata));
 
             ThrowIfError(response);
             return (string)response.Content;
@@ -114,15 +121,28 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="data">Data to associate with the node</param>
         /// <param name="acl">Access Control List</param>
         /// <param name="createMode">Specifies the node will be created</param>
-        /// <returns>Task that will resolve on success to stat of the newly created node</returns>
-        public static async Task<IStat> CreateAndGetStat(this IRingMasterRequestHandler ringMaster, string path, byte[] data, IReadOnlyList<Acl> acl, CreateMode createMode)
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <returns>
+        /// Task that will resolve on success to stat of the newly created node
+        /// </returns>
+        public static async Task<IStat> CreateAndGetStat(
+            this IRingMasterRequestHandler ringMaster,
+            string path,
+            byte[] data,
+            IReadOnlyList<Acl> acl,
+            CreateMode createMode,
+            bool invokeCallbackBeforeComplete = false,
+            byte[] userMetadata = null)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestCreate(
                     path,
                     data,
                     acl,
-                    createMode));
+                    createMode,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete,
+                    userMetadata: userMetadata));
 
             ThrowIfError(response);
             return response.Stat;
@@ -152,16 +172,18 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="version">Node will be deleted only if this
         /// value matches the current version of the node</param>
         /// <param name="deletemode">delete mode of the operation</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to either <c>true</c> if the node
         /// was successfully deleted or<c>false</c> if no node was found at that path.</returns>
         [SuppressMessage("Microsoft.MSInternal", "CA908:AvoidTypesThatRequireJitCompilationInPrecompiledAssemblies", Justification = "We are not using ngen")]
-        public static async Task<bool> Delete(this IRingMasterRequestHandler ringMaster, string path, int version, DeleteMode deletemode = DeleteMode.None)
+        public static async Task<bool> Delete(this IRingMasterRequestHandler ringMaster, string path, int version, DeleteMode deletemode = DeleteMode.None, bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestDelete(
                     path,
                     version,
-                    deletemode));
+                    deletemode,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             switch (RingMasterException.GetCode(response.ResultCode))
             {
@@ -244,57 +266,61 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="path">Node path</param>
         /// <param name="watcher">Watcher interface that receives notifications for changes to this path or null</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to the data associated with the node</returns>
-        public static Task<byte[]> GetData(this IRingMasterRequestHandler ringMaster, string path, IWatcher watcher)
+        public static async Task<byte[]> GetData(this IRingMasterRequestHandler ringMaster, string path, IWatcher watcher, bool invokeCallbackBeforeComplete = false)
         {
-            return RingMasterExtensions.GetData(ringMaster, path, options: RequestGetData.GetDataOptions.None, optionArgument: null, watcher: watcher);
+            var getDataResponse = await GetData(ringMaster, path, options: RequestGetData.GetDataOptions.NoStatRequired, optionArgument: null, watcher: watcher, invokeCallbackBeforeComplete: invokeCallbackBeforeComplete);
+            return getDataResponse.Data;
         }
 
         /// <summary>
         /// Gets the data associated with the node at the given path.
         /// </summary>
-        /// <param name="ringMaster">Interface to ringmaster</param>
-        /// <param name="path">Node path</param>
-        /// <param name="options">Options for this request</param>
-        /// <param name="optionArgument">Argument for options</param>
-        /// <param name="watcher">Watcher interface that receives notifications for changes to this path or null</param>
+        /// <param name="ringMaster">The ring master.</param>
+        /// <param name="path">The path.</param>
+        /// <param name="options">The options.</param>
+        /// <param name="optionArgument">The option argument.</param>
+        /// <param name="watcher">The watcher.</param>
+        /// <param name="invokeCallbackBeforeComplete">if set to <c>true</c> [invoke callback before complete].</param>
         /// <returns>Task that will resolve on success to the data associated with the node</returns>
-        public static async Task<byte[]> GetData(
+        public static async Task<GetDataResponse> GetData(
             this IRingMasterRequestHandler ringMaster,
             string path,
             RequestGetData.GetDataOptions options,
             RequestGetData.IGetDataOptionArgument optionArgument,
-            IWatcher watcher)
+            IWatcher watcher,
+            bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestGetData(
                     path,
                     options,
                     optionArgument,
-                    watcher: watcher));
+                    watcher: watcher,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             ThrowIfError(response);
-            return (byte[])response.Content;
+            return GetDataResponse.ToGetDataResponse(response);
         }
 
         /// <summary>
-        /// Gets the data and stat associated with the node at the given path.
+        /// Gets the data.
         /// </summary>
-        /// <param name="ringMaster">Interface to ringmaster</param>
-        /// <param name="path">Node path</param>
-        /// <param name="watcher">Watcher interface that receives notifications for changes to this path or null</param>
+        /// <param name="ringMaster">The ring master.</param>
+        /// <param name="path">The path.</param>
+        /// <param name="options">The options.</param>
+        /// <param name="watcher">The watcher.</param>
+        /// <param name="invokeCallbackBeforeComplete">if set to <c>true</c> [invoke callback before complete].</param>
         /// <returns>Task that will resolve on success to the data associated with the node</returns>
-        public static async Task<Tuple<IStat, byte[]>> GetDataWithStat(this IRingMasterRequestHandler ringMaster, string path, IWatcher watcher)
+        public static async Task<GetDataResponse> GetData(
+            this IRingMasterRequestHandler ringMaster,
+            string path,
+            RequestGetData.GetDataOptions options,
+            IWatcher watcher,
+            bool invokeCallbackBeforeComplete = false)
         {
-            RequestResponse response = await ringMaster.Request(
-                new RequestGetData(
-                    path,
-                    RequestGetData.GetDataOptions.None,
-                    watcher,
-                    0));
-
-            ThrowIfError(response);
-            return new Tuple<IStat, byte[]>(response.Stat, (byte[])response.Content);
+            return await GetData(ringMaster, path, options, null, watcher, invokeCallbackBeforeComplete);
         }
 
         /// <summary>
@@ -302,11 +328,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// </summary>
         /// <param name="ringMaster">Interface to ringmaster</param>
         /// <param name="path">Node path</param>
-        /// <param name="withStat">If the stat of the node should be returned</param>
-        /// <returns>Task that will resolve on success to the root of the sub tree under the given path</returns>
-        public static async Task<TreeNode> GetFullSubtree(this IRingMasterRequestHandler ringMaster, string path, bool withStat = false)
+        /// <param name="options">The options.</param>
+        /// <returns>
+        /// Task that will resolve on success to the root of the sub tree under the given path
+        /// </returns>
+        public static async Task<TreeNode> GetFullSubtree(this IRingMasterRequestHandler ringMaster, string path, RequestGetSubtree.GetSubtreeOptions options = RequestGetSubtree.GetSubtreeOptions.None)
         {
-            return TreeNode.Deserialize(await ringMaster.GetData(PathDecoration.GetFullContentPath(path, withStat), watcher: null));
+            RequestResponse response = await ringMaster.Request(
+                new RequestGetData(
+                    PathDecoration.AddApiVersionToPath(PathDecoration.GetFullContentPath(path, options)),
+                    RequestGetData.GetDataOptions.None, // This option does not matter here. The path will specify whether to include stat/usermetadata.
+                    null,
+                    watcher: null));
+
+            ThrowIfError(response);
+            return TreeNode.Deserialize((byte[])response.Content);
         }
 
         /// <summary>
@@ -319,7 +355,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <returns>Task that will resolve on success to the root of the subtree under the given path.</returns>
         public static async Task<ResponseGetSubtree> GetSubtree(this IRingMasterRequestHandler ringMaster, string path, string retrievalCondition, RequestGetSubtree.GetSubtreeOptions options = RequestGetSubtree.GetSubtreeOptions.None)
         {
-            RequestResponse response = await ringMaster.Request(new RequestGetSubtree(path, retrievalCondition, options));
+            RequestResponse response = await ringMaster.Request(new RequestGetSubtree(PathDecoration.AddApiVersionToPath(path), retrievalCondition, options));
             ThrowIfError(response);
 
             var treeNodeData = TreeNode.Deserialize((byte[])response.Content);
@@ -335,15 +371,45 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="path">Node path</param>
         /// <param name="data">Data to associate with the node</param>
         /// <param name="version">Version to compare with the current version of the node</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to the <see cref="Stat"/> associated with the node</returns>
-        public static async Task<IStat> SetData(this IRingMasterRequestHandler ringMaster, string path, byte[] data, int version)
+        public static async Task<IStat> SetData(this IRingMasterRequestHandler ringMaster, string path, byte[] data, int version, bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestSetData(
                     path,
                     data,
                     version,
-                    dataCommand: false));
+                    dataCommand: false,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
+
+            ThrowIfError(response);
+            return response.Stat;
+        }
+
+        /// <summary>
+        /// Sets the data and user metadata of a given node.
+        /// </summary>
+        /// <param name="ringMaster">The ring master.</param>
+        /// <param name="path">The path.</param>
+        /// <param name="data">The data.</param>
+        /// <param name="dataVersion">The data version.</param>
+        /// <param name="userMetadata">The user metadata.</param>
+        /// <param name="userMetadataVersion">The user metadata version.</param>
+        /// <param name="invokeCallbackBeforeComplete">if set to <c>true</c> [invoke callback before complete].</param>
+        /// <returns>
+        /// Task that will resolve on success to the <see cref="Stat" /> associated with the node
+        /// </returns>
+        public static async Task<IStat> SetDataAndUserMetadata(this IRingMasterRequestHandler ringMaster, string path, byte[] data, int dataVersion, byte[] userMetadata, int userMetadataVersion, bool invokeCallbackBeforeComplete = false)
+        {
+            RequestResponse response = await ringMaster.Request(
+                new RequestSetDataAndUserMetadata(
+                    path,
+                    data,
+                    dataVersion,
+                    userMetadata,
+                    userMetadataVersion,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             ThrowIfError(response);
             return response.Stat;
@@ -411,14 +477,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="operations">List of operations</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until changes are guaranteed to be durable (and are applied locally).</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
-        public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false)
+        public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false, bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestMulti(
                     operations,
-                    mustCompleteSynchronously));
+                    mustCompleteSynchronously,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             ThrowIfError(response);
             return (IReadOnlyList<OpResult>)response.Content;
@@ -433,15 +501,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="scheduledName">if not null, this multi will be scheduled for background execution</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until changes are guaranteed to be durable (and are applied locally).</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
-        public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, string scheduledName, bool mustCompleteSynchronously = false)
+        public static async Task<IReadOnlyList<OpResult>> Multi(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, string scheduledName, bool mustCompleteSynchronously = false, bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestMulti(
                     operations,
                     mustCompleteSynchronously,
-                    scheduledName));
+                    scheduledName,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             ThrowIfError(response);
             return (IReadOnlyList<OpResult>)response.Content;
@@ -454,14 +524,16 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster
         /// <param name="operations">List of operations</param>
         /// <param name="mustCompleteSynchronously">If <c>true</c> the server does not complete the operation
         /// until all successful operations are guaranteed to be durable (and are applied locally).</param>
+        /// <param name="invokeCallbackBeforeComplete">If invoke callback before complete</param>
         /// <returns>Task that will resolve on success to a list of
         /// <see cref="OpResult"/>s</returns>
-        public static async Task<IReadOnlyList<OpResult>> Batch(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false)
+        public static async Task<IReadOnlyList<OpResult>> Batch(this IRingMasterRequestHandler ringMaster, IReadOnlyList<Op> operations, bool mustCompleteSynchronously = false, bool invokeCallbackBeforeComplete = false)
         {
             RequestResponse response = await ringMaster.Request(
                 new RequestBatch(
                     operations,
-                    mustCompleteSynchronously));
+                    mustCompleteSynchronously,
+                    invokeCallbackBeforeComplete: invokeCallbackBeforeComplete));
 
             ThrowIfError(response);
             return (IReadOnlyList<OpResult>)response.Content;

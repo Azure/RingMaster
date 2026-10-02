@@ -79,10 +79,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.ServiceFabric
                         return;
                     }
 
-                    Uri uri = GetReplicaEndpointUri(replica.ReplicaAddress, endpointName);
+                    if (replica.ServiceKind == ServiceKind.Stateful)
+                    {
+                        // For stateful service, only add primary replica
+                        var statefulReplica = replica as StatefulServiceReplica;
+                        if (statefulReplica != null && statefulReplica.ReplicaRole == ReplicaRole.Primary)
+                        {
+                            Uri uri = GetReplicaEndpointUri(replica.ReplicaAddress, endpointName);
 
-                    endpointList.Add(uri);
-                    await Task.FromResult<object>(null);
+                            endpointList.Add(uri);
+                            await Task.FromResult<object>(null);
+                        }
+                    }
+                    else
+                    {
+                        Uri uri = GetReplicaEndpointUri(replica.ReplicaAddress, endpointName);
+
+                        endpointList.Add(uri);
+                        await Task.FromResult<object>(null);
+                    }
                 });
             });
 

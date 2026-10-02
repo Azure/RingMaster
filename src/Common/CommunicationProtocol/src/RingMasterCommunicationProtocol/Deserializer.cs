@@ -9,10 +9,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
     using System.Diagnostics;
     using System.IO;
     using System.Runtime.Serialization.Formatters.Binary;
-    using RingMaster;
-    using RingMaster.Data;
-    using RingMaster.Requests;
-    using static Requests.RequestGetData;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Data;
+    using Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests;
+    using static Microsoft.Azure.Networking.Infrastructure.RingMaster.Requests.RequestGetData;
 
     /// <summary>
     /// Helper class to Deserialize a <see cref="RequestCall"/> or
@@ -29,11 +29,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
         /// BinaryReader that is used to read from the stream.
         /// </summary>
         private BinaryReader binaryReader;
-
-        /// <summary>
-        /// Formatter to use to read objects from their binary representation.
-        /// </summary>
-        private BinaryFormatter binaryFormatter = new BinaryFormatter();
 
         /// <summary>
         /// Version of the serialization format used.
@@ -80,8 +75,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             }
 
             ulong callId = this.binaryReader.ReadUInt64();
+            int serverTimeoutMillis = int.MaxValue;
+            if (this.serializationVersionUsed >= SerializationFormatVersions.Version27)
+            {
+                serverTimeoutMillis = this.binaryReader.ReadInt32();
+            }
+
             IRingMasterRequest ringMasterRequest;
             this.DeserializeRingMasterRequest(callId, out ringMasterRequest);
+
+            // The maximum server timeout is int.MaxValue, so convert to TimeSpan will not overflow.
+            ringMasterRequest.RequestExpiryTime = AbstractRingMasterRequest.RequestTimeTracker.Elapsed + TimeSpan.FromMilliseconds(serverTimeoutMillis);
 
             return new RequestCall()
             {
@@ -177,12 +181,10 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     return this.DeserializeStat();
                 case ContentType.Redirect:
                     return this.DeserializeRedirectSuggested();
-                case ContentType.AnyObject:
-                    {
-                        byte[] bytes = this.DeserializeByteArray();
-                        return this.FromByteArray<object>(bytes);
-                    }
-
+                case ContentType.GetDataResponse:
+                    return this.DeserializeGetDataResponse();
+                case ContentType.Null:
+                    return null;
                 case ContentType.Request:
                     {
                         IRingMasterRequest ringMasterRequest;
@@ -231,6 +233,12 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             if (this.serializationVersionUsed >= SerializationFormatVersions.Version21)
             {
                 timeStreamId = this.binaryReader.ReadUInt64();
+            }
+
+            bool invokeCallbackBeforeComplete = false;
+            if (this.serializationVersionUsed >= SerializationFormatVersions.Version28)
+            {
+                invokeCallbackBeforeComplete = this.binaryReader.ReadBoolean();
             }
 
             AbstractRingMasterRequest request = null;
@@ -284,6 +292,9 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                 case RingMasterRequestType.GetSubtree:
                     request = this.DeserializeRequestGetSubtree(uid, path);
                     break;
+                case RingMasterRequestType.SetDataAndUserMetadata:
+                    request = this.DeserializeRequestSetDataAndUserMetadata(uid, path);
+                    break;
 
                 case RingMasterRequestType.None:
                 default:
@@ -298,6 +309,7 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
 
                 request.ExecutionQueueId = executionQueueId;
                 request.ExecutionQueueTimeoutMillis = executionQueueTimeoutMilliseconds;
+                request.InvokeCallbackBeforeComplete = invokeCallbackBeforeComplete;
             }
 
             ringMasterRequest = request;
@@ -464,7 +476,25 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     stat = this.DeserializeStat();
                 }
 
-                watcherCall.WatcherEvt = new WatchedEvent(type, state, path, data, stat);
+                string childName = null;
+                byte[] childData = null;
+                IStat childStat = null;
+                if (this.serializationVersionUsed >= SerializationFormatVersions.Version26)
+                {
+                    childName = this.DeserializeNullableString();
+                    childData = this.DeserializeByteArray();
+                    childStat = this.DeserializeStat();
+                }
+
+                byte[] userMetadata = null;
+                byte[] childUserMetadata = null;
+                if (this.serializationVersionUsed >= SerializationFormatVersions.Version29)
+                {
+                    userMetadata = this.DeserializeByteArray();
+                    childUserMetadata = this.DeserializeByteArray();
+                }
+
+                watcherCall.WatcherEvt = new WatchedEvent(type, state, path, data, stat, childName, childData, childStat, userMetadata, childUserMetadata);
             }
             else
             {
@@ -526,7 +556,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                             path = this.binaryReader.ReadString();
                         }
 
-                        return new OpResult.GetDataResult(stat, bytes, path);
+                        byte[] userMetadata = null;
+                        if (this.serializationVersionUsed >= SerializationFormatVersions.Version29)
+                        {
+                            userMetadata = this.DeserializeByteArray();
+                        }
+
+                        return new OpResult.GetDataResult(stat, bytes, path, userMetadata);
                     }
 
                 case OpCode.GetChildren:
@@ -581,6 +617,17 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
                     {
                         Stat stat = this.DeserializeStat();
                         return new OpResult.SetDataResult(stat);
+                    }
+
+                case OpCode.SetDataAndUserMetadata:
+                    {
+                        if (this.serializationVersionUsed < SerializationFormatVersions.Version29)
+                        {
+                            throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support OpCode.SetDataAndUserMetadata", this.serializationVersionUsed));
+                        }
+
+                        Stat stat = this.DeserializeStat();
+                        return new OpResult.SetDataAndUserMetadataResult(stat);
                     }
 
                 case OpCode.SetACL:
@@ -693,6 +740,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             };
         }
 
+        private GetDataResponse DeserializeGetDataResponse()
+        {
+            return new GetDataResponse(this.DeserializeByteArray(), this.DeserializeByteArray(), null);
+        }
+
         /// <summary>
         /// Deserialize <see cref="IGetDataOptionArgument"/>.
         /// </summary>
@@ -750,6 +802,11 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             stat.Pzxid = this.binaryReader.ReadInt64();
             stat.Ctime = this.binaryReader.ReadInt64();
             stat.Mtime = this.binaryReader.ReadInt64();
+
+            if (this.serializationVersionUsed >= SerializationFormatVersions.Version29)
+            {
+                stat.Uversion = this.binaryReader.ReadInt32();
+            }
 
             return stat;
         }
@@ -845,6 +902,21 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             isdatacommand = this.binaryReader.ReadBoolean();
 
             return new RequestSetData(path, bytes, version, isdatacommand, uid);
+        }
+
+        private RequestSetDataAndUserMetadata DeserializeRequestSetDataAndUserMetadata(ulong uid, string path)
+        {
+            if (this.serializationVersionUsed < SerializationFormatVersions.Version29)
+            {
+                throw new NotImplementedException(string.Format("The channel is in version {0} which doesn't support SetDataAndUserMetadata", this.serializationVersionUsed));
+            }
+
+            byte[] data = this.DeserializeByteArray();
+            int dataVersion = this.binaryReader.ReadInt32();
+            byte[] userMetadata = this.DeserializeByteArray();
+            int userMetadataVersion = this.binaryReader.ReadInt32();
+
+            return new RequestSetDataAndUserMetadata(path, data, dataVersion, userMetadata, userMetadataVersion, uid);
         }
 
         /// <summary>
@@ -996,7 +1068,13 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             byte[] bytes = this.DeserializeByteArray();
             List<Acl> acls = this.DeserializeAclList();
 
-            return new RequestCreate(path, bytes, acls, createMode, uid);
+            byte[] userMetadata = null;
+            if (this.serializationVersionUsed >= SerializationFormatVersions.Version29)
+            {
+                userMetadata = this.DeserializeByteArray();
+            }
+
+            return new RequestCreate(path, bytes, acls, createMode, uid, userMetadata: userMetadata);
         }
 
         /// <summary>
@@ -1068,28 +1146,6 @@ namespace Microsoft.Azure.Networking.Infrastructure.RingMaster.CommunicationProt
             bool completeSynchronously = this.binaryReader.ReadBoolean();
 
             return new RequestBatch(req, completeSynchronously, uid);
-        }
-
-        /// <summary>
-        /// Deserializes an object from the given byte array.
-        /// </summary>
-        /// <typeparam name="T">Type of the object to deserialize</typeparam>
-        /// <param name="bytes">The bytes from which the object must be deserialize</param>
-        /// <returns>The deserialized object</returns>
-        private T FromByteArray<T>(byte[] bytes)
-            where T : class
-        {
-            if (bytes == null || (bytes.Length == 1 && bytes[0] == 1))
-            {
-                return null;
-            }
-
-            using (MemoryStream ms = new MemoryStream(bytes))
-            {
-                int isNull = ms.ReadByte();
-                Debug.Assert(isNull == 0, "IsNull is 0");
-                return (T)this.binaryFormatter.Deserialize(ms);
-            }
         }
 
         /// <summary>
